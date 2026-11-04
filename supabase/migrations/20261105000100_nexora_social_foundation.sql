@@ -492,3 +492,128 @@ drop policy if exists user_preferences_manage_self on public.user_preferences;
 create policy user_preferences_manage_self on public.user_preferences for all to authenticated
 using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 
+
+-- Safe direct-message creation: checks privacy and bilateral blocks server-side.
+create or replace function public.create_direct_conversation(p_other_user_id uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_me uuid := auth.uid();
+  v_conversation_id uuid;
+  v_message_policy text;
+begin
+  if v_me is null then
+    raise exception 'not authenticated' using errcode = '28000';
+  end if;
+  if p_other_user_id is null or p_other_user_id = v_me then
+    raise exception 'invalid recipient' using errcode = '22023';
+  end if;
+  if not exists (select 1 from public.profiles p where p.id = p_other_user_id) then
+    raise exception 'recipient not found' using errcode = 'P0002';
+  end if;
+  if exists (
+    select 1 from public.blocks b
+    where (b.blocker_id = v_me and b.blocked_id = p_other_user_id)
+       or (b.blocker_id = p_other_user_id and b.blocked_id = v_me)
+  ) then
+    raise exception 'messaging is unavailable for this relationship' using errcode = '42501';
+  end if;
+
+  select s.allow_messages_from into v_message_policy
+  from public.user_private_settings s where s.user_id = p_other_user_id;
+  v_message_policy := coalesce(v_message_policy, 'followers');
+
+  if v_message_policy = 'nobody'
+     or (v_message_policy = 'followers' and not exists (
+       select 1 from public.follows f
+       where f.follower_id = v_me and f.following_id = p_other_user_id and f.status = 'accepted'
+     ))
+     or (v_message_policy = 'friends' and not exists (
+       select 1 from public.friendships fr
+       where fr.status = 'accepted'
+         and ((fr.requester_id = v_me and fr.addressee_id = p_other_user_id)
+           or (fr.requester_id = p_other_user_id and fr.addressee_id = v_me))
+     )) then
+    raise exception 'recipient privacy settings do not allow this message' using errcode = '42501';
+  end if;
+
+  select c.id into v_conversation_id
+  from public.conversations c
+  where c.conversation_type = 'direct'
+    and exists (select 1 from public.conversation_members cm where cm.conversation_id = c.id and cm.user_id = v_me)
+    and exists (select 1 from public.conversation_members cm where cm.conversation_id = c.id and cm.user_id = p_other_user_id)
+    and (select count(*) from public.conversation_members cm where cm.conversation_id = c.id) = 2
+  order by c.created_at desc
+  limit 1;
+
+  if v_conversation_id is not null then
+    return v_conversation_id;
+  end if;
+
+  insert into public.conversations(created_by, conversation_type)
+  values (v_me, 'direct')
+  returning id into v_conversation_id;
+
+  insert into public.conversation_members(conversation_id, user_id, role)
+  values (v_conversation_id, v_me, 'owner'), (v_conversation_id, p_other_user_id, 'member');
+
+  return v_conversation_id;
+end;
+$$;
+
+revoke all on function public.create_direct_conversation(uuid) from public, anon;
+grant execute on function public.create_direct_conversation(uuid) to authenticated;
+
+create or replace function private.on_message_insert()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  update public.conversations
+  set last_message_at = new.created_at, updated_at = new.created_at
+  where id = new.conversation_id;
+
+  insert into public.notifications(recipient_id, actor_id, notification_type, entity_type, entity_id, payload)
+  select cm.user_id, new.sender_id, 'message', 'message', new.id,
+         jsonb_build_object('conversation_id', new.conversation_id)
+  from public.conversation_members cm
+  where cm.conversation_id = new.conversation_id
+    and cm.user_id <> new.sender_id;
+
+  return new;
+end;
+$$;
+revoke all on function private.on_message_insert() from public, anon, authenticated;
+
+drop trigger if exists nexora_message_after_insert on public.messages;
+create trigger nexora_message_after_insert
+after insert on public.messages
+for each row execute function private.on_message_insert();
+
+drop policy if exists profiles_visible_to_conversation_participants on public.profiles;
+create policy profiles_visible_to_conversation_participants on public.profiles
+for select to authenticated
+using (
+  exists (
+    select 1 from public.conversation_members cm
+    where cm.user_id = profiles.id
+      and private.is_conversation_member(cm.conversation_id)
+  )
+);
+
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'messages'
+     ) then
+    execute 'alter publication supabase_realtime add table public.messages';
+  end if;
+end;
+$$;
