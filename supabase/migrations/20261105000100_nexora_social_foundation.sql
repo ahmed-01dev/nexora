@@ -1083,3 +1083,52 @@ for each row execute function private.on_friendship_change();
 
 drop function if exists public.update_privacy_settings(boolean,text);
 drop function if exists private.update_privacy_settings_impl(boolean,text);
+
+-- Column-level write grants prevent clients from forging timestamps, roles, expiry, or moderation status.
+revoke insert,update on public.stories from authenticated;
+grant insert(user_id,media_path,text_content,story_type,visibility) on public.stories to authenticated;
+grant update(text_content,visibility,archived_at) on public.stories to authenticated;
+
+revoke insert on public.story_views from authenticated;
+grant insert(story_id,viewer_id) on public.story_views to authenticated;
+
+revoke insert,update on public.reports from authenticated;
+grant insert(reporter_id,target_type,target_id,reason,details) on public.reports to authenticated;
+
+revoke insert,update on public.community_members from authenticated;
+grant insert(community_id,user_id) on public.community_members to authenticated;
+grant update(role) on public.community_members to authenticated;
+
+revoke insert,update on public.conversation_members from authenticated;
+grant insert(conversation_id,user_id) on public.conversation_members to authenticated;
+grant update(last_read_at,muted_until,archived_at) on public.conversation_members to authenticated;
+
+revoke insert on public.message_attachments from authenticated;
+grant insert(message_id,uploader_id,storage_path,mime_type,size_bytes) on public.message_attachments to authenticated;
+
+revoke insert on public.message_reactions from authenticated;
+grant insert(message_id,user_id,reaction) on public.message_reactions to authenticated;
+
+revoke insert,update on public.blocks from authenticated;
+grant insert(blocker_id,blocked_id) on public.blocks to authenticated;
+
+revoke insert on public.call_participants from authenticated;
+grant insert(call_id,user_id) on public.call_participants to authenticated;
+
+revoke insert on public.media from authenticated;
+grant insert(post_id,user_id,media_type,storage_path,position) on public.media to authenticated;
+
+drop policy if exists "Add own media" on public.media;
+create policy "Add own media" on public.media for insert to authenticated
+with check (
+  user_id = (select auth.uid())
+  and (storage.foldername(storage_path))[1] = (select auth.uid())::text
+  and exists (
+    select 1 from storage.objects o
+    where o.bucket_id = 'nexora-media' and o.name = media.storage_path
+  )
+  and exists (
+    select 1 from public.posts p
+    where p.id = media.post_id and p.user_id = (select auth.uid())
+  )
+);
