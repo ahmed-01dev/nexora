@@ -699,3 +699,30 @@ with check (user_id = (select auth.uid()));
 drop policy if exists messages_delete_own on public.messages;
 create policy messages_delete_own on public.messages for delete to authenticated
 using (sender_id = (select auth.uid()));
+
+create or replace function public.update_privacy_settings(
+  p_is_private boolean,
+  p_allow_messages_from text
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare v_me uuid := auth.uid();
+begin
+  if v_me is null then raise exception 'not authenticated' using errcode = '28000'; end if;
+  if p_allow_messages_from not in ('everyone','followers','friends','nobody') then
+    raise exception 'invalid message privacy value' using errcode = '22023';
+  end if;
+  update public.profiles set is_private = p_is_private where id = v_me;
+  insert into public.user_private_settings(user_id,profile_visibility,allow_messages_from)
+  values(v_me,case when p_is_private then 'private' else 'public' end,p_allow_messages_from)
+  on conflict(user_id) do update set
+    profile_visibility = excluded.profile_visibility,
+    allow_messages_from = excluded.allow_messages_from,
+    updated_at = now();
+end;
+$$;
+revoke all on function public.update_privacy_settings(boolean,text) from public, anon;
+grant execute on function public.update_privacy_settings(boolean,text) to authenticated;
