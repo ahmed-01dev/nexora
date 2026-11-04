@@ -4,6 +4,7 @@ import 'core/app_error.dart';
 import 'core/theme/nexora_theme.dart';
 import 'features/messaging/messages_screen.dart';
 import 'features/reels/reels_screen.dart';
+import 'features/settings/privacy_settings_screen.dart';
 
 final _url = String.fromEnvironment('SUPABASE_URL').trim();
 const _key = String.fromEnvironment('SUPABASE_ANON_KEY');
@@ -352,7 +353,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     name.dispose(); handle.dispose(); bio.dispose();
   }
   @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('ملفي الشخصي', style: TextStyle(fontWeight: FontWeight.w800)), actions: [IconButton(tooltip: 'تسجيل الخروج', onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout))]), body: FutureBuilder<Map<String, dynamic>?>(future: _future, builder: (context, snap) {
+  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('ملفي الشخصي', style: TextStyle(fontWeight: FontWeight.w800)), actions: [IconButton(tooltip: 'مركز الخصوصية', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PrivacySettingsScreen())), icon: const Icon(Icons.shield_outlined)), IconButton(tooltip: 'تسجيل الخروج', onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout))]), body: FutureBuilder<Map<String, dynamic>?>(future: _future, builder: (context, snap) {
     if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
     if (snap.hasError) return AppErrorView(title: 'تعذر تحميل حسابك', error: snap.error, onRetry: () => setState(() => _future = _load()));
     final p = snap.data;
