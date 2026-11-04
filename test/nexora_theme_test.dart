@@ -15,3 +15,10 @@ void main() {
     expect(NexoraTheme.pinkAmoled.colorScheme.primary, NexoraColors.pink);
   });
 }
+
+  test('AMOLED surfaces remain true black and elevated surfaces stay distinct', () {
+    final theme = NexoraTheme.amoled;
+    expect(theme.scaffoldBackgroundColor, const Color(0xFF000000));
+    expect(theme.colorScheme.surface, const Color(0xFF101010));
+    expect(NexoraColors.border, const Color(0xFF292929));
+  });
