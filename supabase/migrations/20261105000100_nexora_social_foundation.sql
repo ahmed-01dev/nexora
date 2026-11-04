@@ -750,7 +750,7 @@ revoke all on function public.update_privacy_settings(boolean,text,boolean) from
 grant execute on function public.create_direct_conversation(uuid) to authenticated;
 grant execute on function public.request_follow(uuid) to authenticated;
 grant execute on function public.cancel_follow(uuid) to authenticated;
-grant execute on function public.update_privacy_settings(boolean,text) to authenticated;
+grant execute on function public.update_privacy_settings(boolean,text,boolean) to authenticated;
 
 grant execute on function private.create_direct_conversation_impl(uuid) to authenticated;
 grant execute on function private.request_follow_impl(uuid) to authenticated;
