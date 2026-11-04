@@ -28,7 +28,7 @@ jobs:
           SUPABASE_URL_INPUT: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY_INPUT: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          SUPABASE_URL_CLEAN="$(printf '%s' "$SUPABASE_URL_INPUT" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+          SUPABASE_URL_CLEAN="$(printf '%s' "$SUPABASE_URL_INPUT" | tr -d '[:space:]' | sed 's/[/?]*$//')"
           SUPABASE_ANON_KEY_CLEAN="$(printf '%s' "$SUPABASE_ANON_KEY_INPUT" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
           test -n "$SUPABASE_URL_CLEAN" || (echo "SUPABASE_URL secret is missing" && exit 1)
           test -n "$SUPABASE_ANON_KEY_CLEAN" || (echo "SUPABASE_ANON_KEY secret is missing" && exit 1)
