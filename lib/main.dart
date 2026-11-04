@@ -540,7 +540,9 @@ class _PostCardState extends State<PostCard> {
     final stamp = d == null ? '' : d.day.toString() + '/' + d.month.toString() + ' • ' + d.hour.toString().padLeft(2, '0') + ':' + d.minute.toString().padLeft(2, '0');
     return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [const _Avatar(), const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(fontWeight: FontWeight.w800)), Text('@' + handle + ' • ' + stamp, style: const TextStyle(fontSize: 11, color: Color(0xFF8390A4)))])), const Icon(Icons.more_horiz)]),
-      const SizedBox(height: 14), Text((widget.post['content'] ?? '').toString(), style: const TextStyle(fontSize: 15, height: 1.65)),
+      if ((widget.post['content'] ?? '').toString().isNotEmpty)
+        Text((widget.post['content'] ?? '').toString(), style: const TextStyle(fontSize: 15, height: 1.65)),
+      PostMediaGallery(postId: widget.post['id'] as String),
       const Divider(height: 24, color: Color(0xFF292929)),
       Row(children: [TextButton.icon(onPressed: _busy || _liked == null ? null : _like, icon: Icon(_liked == true ? Icons.favorite : Icons.favorite_border), label: Text(_busy && _liked == null ? '...' : (_liked == true ? 'أعجبك' : 'إعجاب'))), const Spacer(), const Icon(Icons.chat_bubble_outline, size: 18), const SizedBox(width: 6), const Text('تعليق')]),
     ])));
