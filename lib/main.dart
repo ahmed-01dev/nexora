@@ -10,6 +10,7 @@ import 'features/messaging/messages_screen.dart';
 import 'features/notifications/notifications_screen.dart';
 import 'features/reels/reels_screen.dart';
 import 'features/settings/privacy_settings_screen.dart';
+import 'features/stories/stories_screen.dart';
 
 final _url = String.fromEnvironment('SUPABASE_URL').trim();
 const _key = String.fromEnvironment('SUPABASE_ANON_KEY');
@@ -212,7 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _refresh() async { setState(() => _future = _load()); await _future; }
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('NEXORA', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2)), actions: [IconButton(tooltip: 'الإشعارات', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const NotificationsScreen())), icon: const Icon(Icons.notifications_none)), IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh))]),
+    appBar: AppBar(title: const Text('NEXORA', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2)), actions: [IconButton(tooltip: 'القصص', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const StoriesScreen())), icon: const Icon(Icons.auto_awesome)), IconButton(tooltip: 'الإشعارات', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const NotificationsScreen())), icon: const Icon(Icons.notifications_none)), IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh))]),
     body: FutureBuilder<List<Map<String, dynamic>>>(future: _future, builder: (context, snap) {
       if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
       if (snap.hasError) return AppErrorView(title: 'تعذر تحميل المنشورات', error: snap.error, onRetry: () => setState(() => _future = _load()));
