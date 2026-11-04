@@ -43,13 +43,13 @@ Status meanings:
 | Feed | Partial | Basic public text feed; no ranking, pagination cursor, offline cache, or mixed content. |
 | Posts | Partial | Text, multi-image and video upload to private storage; feed displays signed image/video URLs. Polls, drafts, scheduling, edit/restore, and media processing pending. |
 | Comments | Partial | Existing table; complete nested/reaction/moderation UX pending. |
-| Stories | Foundation | Tables exist and media bucket can authorize story paths; story composer/viewer/archive/close-friends/expiry worker pending. |
+| Stories | Partial | Text/photo/video stories with 24-hour expiry, viewer, view records, and visibility/block checks. Highlights, close friends, reactions/replies, viewer list, and cleanup worker pending. |
 | Reels/Video | Partial | Vertical swipe feed plays public uploaded videos; no transcoding, adaptive bitrate, captions, creator editing, or long-form channels yet. |
 | Messaging | Partial | Direct text chat UI, realtime message stream, last-read update, server-side block/privacy check, and in-app message notification trigger exist. Attachments, typing, delivery states, group UX, and E2EE pending. |
 | E2EE | Pending | No cryptographic protocol or key lifecycle implemented. |
 | Voice/video calls | Foundation | Call records only; WebRTC, STUN/TURN, push call delivery pending. |
 | Communities | Foundation | Tables and RLS exist; discovery, channels, admin workflows pending. |
-| Notifications | Partial | Database notifications are created for new messages and friend request/accept events; notification center, push/email delivery, grouping, and preferences pending. |
+| Notifications | Partial | In-app center lists real message/friend notifications, marks read, and routes to the relevant conversation/request screen. Push/email delivery, grouping, and full preferences pending. |
 | Search | Partial | Basic profile search only. |
 | Nearby | Pending | Must remain disabled until consent, approximate geolocation, and safety protections are implemented. |
 | Moderation | Foundation | User reports table; admin queue, enforcement, appeals, and audit workflow pending. |
