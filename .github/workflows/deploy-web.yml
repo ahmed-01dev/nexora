@@ -29,6 +29,9 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Generate Web platform files
+        run: flutter create --project-name nexora --platforms=web .
+
       - name: Normalize and validate Supabase connection
         env:
           SUPABASE_URL_INPUT: ${{ secrets.SUPABASE_URL }}
