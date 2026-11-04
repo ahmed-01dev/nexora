@@ -75,6 +75,30 @@ class MediaUploadService {
     }
   }
 
+  Future<String> uploadStoryMedia({
+    required String userId,
+    required XFile file,
+  }) async {
+    final extension = file.name.contains('.')
+        ? file.name.split('.').last.toLowerCase()
+        : '';
+    final details = _typeFor(extension);
+    if (details == null) {
+      throw FormatException('نوع الملف غير مدعوم: ${file.name}');
+    }
+    final bytes = await file.readAsBytes();
+    if (bytes.isEmpty || bytes.length > maxBytes) {
+      throw FormatException('حجم الملف غير صالح أو أكبر من 50 ميجابايت: ${file.name}');
+    }
+    final path = '$userId/stories/${DateTime.now().microsecondsSinceEpoch}.$extension';
+    await Supabase.instance.client.storage.from('nexora-media').uploadBinary(
+      path,
+      bytes,
+      fileOptions: FileOptions(contentType: details.$2, upsert: false),
+    );
+    return path;
+  }
+
   Future<void> removeUploaded(List<String> paths) async {
     if (paths.isEmpty) return;
     await Supabase.instance.client.storage.from('nexora-media').remove(paths);
