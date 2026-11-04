@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_error.dart';
+import 'core/theme/nexora_theme.dart';
 
 final _url = String.fromEnvironment('SUPABASE_URL').trim();
 const _key = String.fromEnvironment('SUPABASE_ANON_KEY');
@@ -24,15 +25,9 @@ class NexoraApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: 'NEXORA', debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      useMaterial3: true, brightness: Brightness.dark,
-      scaffoldBackgroundColor: const Color(0xFF080B12),
-      colorScheme: const ColorScheme.dark(primary: Color(0xFFB8F36B), onPrimary: Color(0xFF10160A), secondary: Color(0xFF8FA5C7), surface: Color(0xFF111827)),
-      appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF080B12), surfaceTintColor: Colors.transparent),
-      cardTheme: CardThemeData(color: const Color(0xFF111827), elevation: 0, margin: EdgeInsets.zero, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: const BorderSide(color: Color(0xFF202A3B)))),
-      inputDecorationTheme: InputDecorationTheme(filled: true, fillColor: const Color(0xFF111827), border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF263247))), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF263247)))),
-      navigationBarTheme: const NavigationBarThemeData(backgroundColor: Color(0xFF0D1320), indicatorColor: Color(0xFF283A24)),
-    ),
+    theme: NexoraTheme.light,
+    darkTheme: NexoraTheme.amoled,
+    themeMode: ThemeMode.dark,
     home: Directionality(textDirection: TextDirection.rtl, child: ready ? const AuthGate() : const _Setup()),
   );
 }
@@ -113,7 +108,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     const SizedBox(height: 8),
                     Text(_register ? 'مساحتك. صوتك. عالمك.' : 'رجعت تنوّر عالمك',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Color(0xFF9BA8BC))),
+                      style: const TextStyle(color: Color(0xFFA1A1AA))),
                     const SizedBox(height: 30),
                     if (_register) ...[
                       TextFormField(
@@ -215,7 +210,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final posts = snap.data ?? [];
       if (posts.isEmpty) return RefreshIndicator(onRefresh: _refresh, child: ListView(children: const [SizedBox(height: 80), _Empty(icon: Icons.dynamic_feed, title: 'لسه مفيش منشورات', subtitle: 'ابدأ أول حكاية في NEXORA أو تابع أشخاص جدد.')]));
       return RefreshIndicator(onRefresh: _refresh, child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 24), children: [
-        Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), gradient: const LinearGradient(colors: [Color(0xFF344B2C), Color(0xFF18283A)])), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('مساحتك. صوتك. عالمك.', style: TextStyle(color: Color(0xFFB8F36B), fontWeight: FontWeight.bold)), SizedBox(height: 7), Text('أفكارك تستحق مساحة أكبر.', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900))])),
+        Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), gradient: const LinearGradient(colors: [Color(0xFF171717), Color(0xFF050505)])), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('مساحتك. صوتك. عالمك.', style: TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.bold)), SizedBox(height: 7), Text('أفكارك تستحق مساحة أكبر.', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900))])),
         const SizedBox(height: 16), for (final p in posts) ...[PostCard(post: p), const SizedBox(height: 12)],
       ]));
     }),
@@ -361,10 +356,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (p == null) return const _Empty(icon: Icons.person_off, title: 'الملف الشخصي غير موجود', subtitle: 'راجع إعداد إنشاء صف profiles عند تسجيل الحساب.');
     final u = Supabase.instance.client.auth.currentUser!;
     return ListView(padding: const EdgeInsets.all(18), children: [
-      Container(padding: const EdgeInsets.all(22), decoration: BoxDecoration(borderRadius: BorderRadius.circular(26), gradient: const LinearGradient(colors: [Color(0xFF263A2A), Color(0xFF121C2B)]), border: Border.all(color: const Color(0xFF344536))), child: Column(children: [
+      Container(padding: const EdgeInsets.all(22), decoration: BoxDecoration(borderRadius: BorderRadius.circular(26), gradient: const LinearGradient(colors: [Color(0xFF171717), Color(0xFF050505)]), border: Border.all(color: const Color(0xFF292929))), child: Column(children: [
         const _Brand(size: 72), const SizedBox(height: 14),
         Text((p['display_name'] ?? 'مستخدم NEXORA').toString(), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
-        Text('@' + (p['username'] ?? 'user').toString(), style: const TextStyle(color: Color(0xFFB8F36B))),
+        Text('@' + (p['username'] ?? 'user').toString(), style: const TextStyle(color: Color(0xFFFFFFFF))),
         if ((p['bio'] ?? '').toString().isNotEmpty) Padding(padding: const EdgeInsets.only(top: 12), child: Text(p['bio'].toString(), textAlign: TextAlign.center)),
         const SizedBox(height: 14), OutlinedButton.icon(onPressed: () => _edit(p), icon: const Icon(Icons.edit), label: const Text('تعديل الملف الشخصي')),
       ])),
@@ -405,7 +400,7 @@ class _PostCardState extends State<PostCard> {
     return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [const _Avatar(), const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(fontWeight: FontWeight.w800)), Text('@' + handle + ' • ' + stamp, style: const TextStyle(fontSize: 11, color: Color(0xFF8390A4)))])), const Icon(Icons.more_horiz)]),
       const SizedBox(height: 14), Text((widget.post['content'] ?? '').toString(), style: const TextStyle(fontSize: 15, height: 1.65)),
-      const Divider(height: 24, color: Color(0xFF263247)),
+      const Divider(height: 24, color: Color(0xFF292929)),
       Row(children: [TextButton.icon(onPressed: _busy ? null : _like, icon: Icon(_liked ? Icons.favorite : Icons.favorite_border, color: _liked ? Colors.pinkAccent : null), label: Text(_liked ? 'أعجبك' : 'إعجاب')), const Spacer(), const Icon(Icons.chat_bubble_outline, size: 18), const SizedBox(width: 6), const Text('تعليق')]),
     ])));
   }
@@ -448,29 +443,29 @@ class _Brand extends StatelessWidget {
   const _Brand({this.size = 46});
   final double size;
   @override
-  Widget build(BuildContext context) => Container(width: size, height: size, decoration: BoxDecoration(borderRadius: BorderRadius.circular(size * .3), gradient: const LinearGradient(colors: [Color(0xFFB8F36B), Color(0xFF3E7540)]), boxShadow: const [BoxShadow(color: Color(0x333F743E), blurRadius: 20, offset: Offset(0, 7))]), child: Icon(Icons.bolt, color: const Color(0xFF10160A), size: size * .58));
+  Widget build(BuildContext context) => Container(width: size, height: size, decoration: BoxDecoration(borderRadius: BorderRadius.circular(size * .3), gradient: const LinearGradient(colors: [Color(0xFFFFFFFF), Color(0xFFC0C0C0)]), boxShadow: const [BoxShadow(color: Color(0x33FFFFFF), blurRadius: 20, offset: Offset(0, 7))]), child: Icon(Icons.bolt, color: const Color(0xFF000000), size: size * .58));
 }
 class _Avatar extends StatelessWidget {
   const _Avatar({this.size = 44});
   final double size;
   @override
-  Widget build(BuildContext context) => Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF243448), border: Border.all(color: const Color(0xFF40536A))), child: Icon(Icons.person, size: size * .58, color: const Color(0xFFB8F36B)));
+  Widget build(BuildContext context) => Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF243448), border: Border.all(color: const Color(0xFF40536A))), child: Icon(Icons.person, size: size * .58, color: const Color(0xFFFFFFFF)));
 }
 class _Info extends StatelessWidget {
   const _Info({required this.icon, required this.title, required this.value});
   final IconData icon; final String title, value;
   @override
-  Widget build(BuildContext context) => Card(child: ListTile(leading: Icon(icon, color: const Color(0xFFB8F36B)), title: Text(title, style: const TextStyle(fontSize: 12, color: Color(0xFF8F9CB0))), subtitle: Text(value)));
+  Widget build(BuildContext context) => Card(child: ListTile(leading: Icon(icon, color: const Color(0xFFFFFFFF)), title: Text(title, style: const TextStyle(fontSize: 12, color: Color(0xFF8F9CB0))), subtitle: Text(value)));
 }
 class _Notice extends StatelessWidget {
   const _Notice({required this.text, required this.error});
   final String text; final bool error;
   @override
-  Widget build(BuildContext context) => Container(margin: const EdgeInsets.only(top: 12), padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: error ? const Color(0x33FF7777) : const Color(0x333E7540), borderRadius: BorderRadius.circular(14)), child: Text(text, textAlign: TextAlign.center, style: TextStyle(color: error ? const Color(0xFFFFA0A0) : const Color(0xFFB8F36B))));
+  Widget build(BuildContext context) => Container(margin: const EdgeInsets.only(top: 12), padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: error ? const Color(0x33FF7777) : const Color(0x333E7540), borderRadius: BorderRadius.circular(14)), child: Text(text, textAlign: TextAlign.center, style: TextStyle(color: error ? const Color(0xFFFFA0A0) : const Color(0xFFFFFFFF))));
 }
 class _Empty extends StatelessWidget {
   const _Empty({required this.icon, required this.title, required this.subtitle});
   final IconData icon; final String title, subtitle;
   @override
-  Widget build(BuildContext context) => Center(child: Padding(padding: const EdgeInsets.all(30), child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 54, color: const Color(0xFFB8F36B)), const SizedBox(height: 18), Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)), const SizedBox(height: 8), Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF8E9BB0), height: 1.6))])));
+  Widget build(BuildContext context) => Center(child: Padding(padding: const EdgeInsets.all(30), child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 54, color: const Color(0xFFFFFFFF)), const SizedBox(height: 18), Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)), const SizedBox(height: 8), Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF8E9BB0), height: 1.6))])));
 }
