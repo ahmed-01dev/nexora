@@ -9,7 +9,6 @@ alter table public.profiles
   add column if not exists website text,
   add column if not exists pronouns text,
   add column if not exists country_code text,
-  add column if not exists date_of_birth date,
   add column if not exists social_links jsonb not null default '{}'::jsonb,
   add column if not exists updated_at timestamptz not null default now();
 
@@ -253,20 +252,28 @@ revoke all on public.friendships, public.blocks, public.conversations, public.co
   public.stories, public.story_views, public.communities, public.community_members,
   public.reports, public.call_sessions, public.call_participants from anon, authenticated;
 
-grant select,insert,update,delete on public.friendships, public.blocks to authenticated;
-grant select,insert,update on public.conversations to authenticated;
-grant select,insert,update,delete on public.conversation_members to authenticated;
-grant select,insert,update,delete on public.messages to authenticated;
+grant select,insert,delete on public.friendships, public.blocks to authenticated;
+grant update(status) on public.friendships to authenticated;
+grant select,insert on public.conversations to authenticated;
+grant update(title,avatar_path,updated_at) on public.conversations to authenticated;
+grant select,insert,delete on public.conversation_members to authenticated;
+grant update(last_read_at,muted_until,archived_at) on public.conversation_members to authenticated;
+grant select,insert,delete on public.messages to authenticated;
+grant update(body,edited_at,deleted_at) on public.messages to authenticated;
 grant select,insert,delete on public.message_attachments to authenticated;
 grant select,insert,delete on public.message_reactions to authenticated;
 grant select,update on public.notifications to authenticated;
 grant select,insert,update,delete on public.stories to authenticated;
 grant select,insert on public.story_views to authenticated;
-grant select,insert,update,delete on public.communities to authenticated;
-grant select,insert,update,delete on public.community_members to authenticated;
+grant select,insert,delete on public.communities to authenticated;
+grant update(name,slug,description,visibility,cover_path,updated_at) on public.communities to authenticated;
+grant select,insert,delete on public.community_members to authenticated;
+grant update(role) on public.community_members to authenticated;
 grant select,insert on public.reports to authenticated;
-grant select,insert,update on public.call_sessions to authenticated;
-grant select,insert,update on public.call_participants to authenticated;
+grant select,insert on public.call_sessions to authenticated;
+grant update(status,ended_at) on public.call_sessions to authenticated;
+grant select,insert on public.call_participants to authenticated;
+grant update(joined_at,left_at) on public.call_participants to authenticated;
 
 drop policy if exists friendships_read_participant on public.friendships;
 create policy friendships_read_participant on public.friendships for select to authenticated
@@ -375,7 +382,7 @@ create policy story_views_read_owner on public.story_views for select to authent
 using (exists (select 1 from public.stories s where s.id = story_id and s.user_id = (select auth.uid())));
 drop policy if exists story_views_insert_viewer on public.story_views;
 create policy story_views_insert_viewer on public.story_views for insert to authenticated
-with check (viewer_id = (select auth.uid()) and exists (select 1 from public.stories s where s.id = story_id));
+with check (viewer_id = (select auth.uid()) and exists (select 1 from public.stories s where s.id = story_id and s.archived_at is null and s.expires_at > now() and (s.user_id = (select auth.uid()) or s.visibility = 'public' or (s.visibility = 'followers' and exists (select 1 from public.follows f where f.follower_id = (select auth.uid()) and f.following_id = s.user_id and f.status = 'accepted')))));
 
 drop policy if exists communities_read_visible on public.communities;
 create policy communities_read_visible on public.communities for select to authenticated
@@ -435,3 +442,53 @@ create policy call_participants_update_self on public.call_participants for upda
 using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 
 -- Notifications are written by trusted database triggers or server-side workers only.
+
+-- Keep private birth-date and privacy controls out of the publicly readable profile row.
+alter table public.profiles drop column if exists date_of_birth;
+
+create table if not exists public.user_private_settings (
+  user_id uuid primary key references public.profiles(id) on delete cascade,
+  date_of_birth date,
+  profile_visibility text not null default 'public' check (profile_visibility in ('public','private')),
+  allow_friend_requests boolean not null default true,
+  allow_messages_from text not null default 'followers' check (allow_messages_from in ('everyone','followers','friends','nobody')),
+  allow_mentions_from text not null default 'everyone' check (allow_mentions_from in ('everyone','followers','friends','nobody')),
+  show_online_status boolean not null default true,
+  show_read_receipts boolean not null default true,
+  discoverable boolean not null default true,
+  location_visibility text not null default 'invisible' check (location_visibility in ('invisible','friends','selected')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.user_private_settings enable row level security;
+revoke all on public.user_private_settings from anon, authenticated;
+grant select,insert,update on public.user_private_settings to authenticated;
+drop policy if exists user_private_settings_read_self on public.user_private_settings;
+create policy user_private_settings_read_self on public.user_private_settings for select to authenticated
+using (user_id = (select auth.uid()));
+drop policy if exists user_private_settings_insert_self on public.user_private_settings;
+create policy user_private_settings_insert_self on public.user_private_settings for insert to authenticated
+with check (user_id = (select auth.uid()));
+drop policy if exists user_private_settings_update_self on public.user_private_settings;
+create policy user_private_settings_update_self on public.user_private_settings for update to authenticated
+using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+
+create table if not exists public.user_preferences (
+  user_id uuid primary key references public.profiles(id) on delete cascade,
+  language_code text not null default 'ar',
+  theme text not null default 'amoled' check (theme in ('amoled','light','pink_amoled','custom')),
+  accent_color text not null default '#FFFFFF',
+  autoplay_videos boolean not null default true,
+  reduce_motion boolean not null default false,
+  low_data_mode boolean not null default false,
+  push_notifications_enabled boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.user_preferences enable row level security;
+revoke all on public.user_preferences from anon, authenticated;
+grant select,insert,update on public.user_preferences to authenticated;
+drop policy if exists user_preferences_manage_self on public.user_preferences;
+create policy user_preferences_manage_self on public.user_preferences for all to authenticated
+using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+
