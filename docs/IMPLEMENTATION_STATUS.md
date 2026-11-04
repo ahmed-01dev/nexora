@@ -39,7 +39,7 @@ Status meanings:
 | Authentication | Partial | Email/password only; no OAuth, phone OTP, MFA, passkeys, or device center. |
 | Profiles | Partial | Basic text profile; no avatar/cover upload or profile highlights. |
 | Followers | Partial | Follow state loads from DB; private accounts create pending requests through a server-side function; request inbox/accept UI pending. |
-| Friends | Foundation | Database table/policies exist; full request/accept UI pending. |
+| Friends | Partial | Server-side request/accept/decline/cancel/remove operations with block and permission checks; incoming/outgoing request inbox and profile action buttons. Group roles and friend activity pending. |
 | Feed | Partial | Basic public text feed; no ranking, pagination cursor, offline cache, or mixed content. |
 | Posts | Partial | Text, multi-image and video upload to private storage; feed displays signed image/video URLs. Polls, drafts, scheduling, edit/restore, and media processing pending. |
 | Comments | Partial | Existing table; complete nested/reaction/moderation UX pending. |
@@ -49,7 +49,7 @@ Status meanings:
 | E2EE | Pending | No cryptographic protocol or key lifecycle implemented. |
 | Voice/video calls | Foundation | Call records only; WebRTC, STUN/TURN, push call delivery pending. |
 | Communities | Foundation | Tables and RLS exist; discovery, channels, admin workflows pending. |
-| Notifications | Foundation | Table exists; triggers, delivery worker, push provider pending. |
+| Notifications | Partial | Database notifications are created for new messages and friend request/accept events; notification center, push/email delivery, grouping, and preferences pending. |
 | Search | Partial | Basic profile search only. |
 | Nearby | Pending | Must remain disabled until consent, approximate geolocation, and safety protections are implemented. |
 | Moderation | Foundation | User reports table; admin queue, enforcement, appeals, and audit workflow pending. |
