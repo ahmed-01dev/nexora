@@ -702,7 +702,8 @@ using (sender_id = (select auth.uid()));
 
 create or replace function private.update_privacy_settings_impl(
   p_is_private boolean,
-  p_allow_messages_from text
+  p_allow_messages_from text,
+  p_allow_friend_requests boolean
 )
 returns void
 language plpgsql
@@ -726,7 +727,7 @@ begin
 end;
 $$;
 revoke all on function private.update_privacy_settings_impl(boolean,text,boolean) from public, anon;
-grant execute on function private.update_privacy_settings_impl(boolean,text) to authenticated;
+grant execute on function private.update_privacy_settings_impl(boolean,text,boolean) to authenticated;
 
 -- Expose only SECURITY INVOKER RPC wrappers; privileged implementation stays in the unexposed private schema.
 create or replace function public.create_direct_conversation(p_other_user_id uuid)
@@ -740,7 +741,7 @@ returns boolean language sql security invoker set search_path = ''
 as $$ select private.cancel_follow_impl(p_target_user_id); $$;
 create or replace function public.update_privacy_settings(p_is_private boolean, p_allow_messages_from text, p_allow_friend_requests boolean)
 returns void language sql security invoker set search_path = ''
-as $ select private.update_privacy_settings_impl(p_is_private,p_allow_messages_from,p_allow_friend_requests); $;
+as $fn$ select private.update_privacy_settings_impl(p_is_private,p_allow_messages_from,p_allow_friend_requests); $fn$;
 
 revoke all on function public.create_direct_conversation(uuid) from public, anon;
 revoke all on function public.request_follow(uuid) from public, anon;
@@ -754,7 +755,7 @@ grant execute on function public.update_privacy_settings(boolean,text) to authen
 grant execute on function private.create_direct_conversation_impl(uuid) to authenticated;
 grant execute on function private.request_follow_impl(uuid) to authenticated;
 grant execute on function private.cancel_follow_impl(uuid) to authenticated;
-grant execute on function private.update_privacy_settings_impl(boolean,text) to authenticated;
+grant execute on function private.update_privacy_settings_impl(boolean,text,boolean) to authenticated;
 
 -- Index foreign-key columns used by membership and ownership checks.
 create index if not exists call_participants_user_idx on public.call_participants(user_id);
