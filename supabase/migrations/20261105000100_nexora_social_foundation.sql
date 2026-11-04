@@ -362,10 +362,20 @@ drop policy if exists stories_read_visible on public.stories;
 create policy stories_read_visible on public.stories for select to authenticated
 using (
   user_id = (select auth.uid()) or
-  (archived_at is null and expires_at > now() and visibility = 'public') or
-  (archived_at is null and expires_at > now() and visibility = 'followers' and exists (
-    select 1 from public.follows f where f.follower_id = (select auth.uid()) and f.following_id = stories.user_id and f.status = 'accepted'
-  ))
+  (
+    archived_at is null and expires_at > now()
+    and not exists (
+      select 1 from public.blocks b
+      where (b.blocker_id = (select auth.uid()) and b.blocked_id = stories.user_id)
+         or (b.blocker_id = stories.user_id and b.blocked_id = (select auth.uid()))
+    )
+    and (
+      visibility = 'public'
+      or (visibility = 'followers' and exists (
+        select 1 from public.follows f where f.follower_id = (select auth.uid()) and f.following_id = stories.user_id and f.status = 'accepted'
+      ))
+    )
+  )
 );
 drop policy if exists stories_insert_self on public.stories;
 create policy stories_insert_self on public.stories for insert to authenticated
@@ -382,7 +392,7 @@ create policy story_views_read_owner on public.story_views for select to authent
 using (exists (select 1 from public.stories s where s.id = story_id and s.user_id = (select auth.uid())));
 drop policy if exists story_views_insert_viewer on public.story_views;
 create policy story_views_insert_viewer on public.story_views for insert to authenticated
-with check (viewer_id = (select auth.uid()) and exists (select 1 from public.stories s where s.id = story_id and s.archived_at is null and s.expires_at > now() and (s.user_id = (select auth.uid()) or s.visibility = 'public' or (s.visibility = 'followers' and exists (select 1 from public.follows f where f.follower_id = (select auth.uid()) and f.following_id = s.user_id and f.status = 'accepted')))));
+with check (viewer_id = (select auth.uid()) and exists (select 1 from public.stories s where s.id = story_id and s.archived_at is null and s.expires_at > now() and (s.user_id = (select auth.uid()) or (not exists (select 1 from public.blocks b where (b.blocker_id = (select auth.uid()) and b.blocked_id = s.user_id) or (b.blocker_id = s.user_id and b.blocked_id = (select auth.uid()))) and (s.visibility = 'public' or (s.visibility = 'followers' and exists (select 1 from public.follows f where f.follower_id = (select auth.uid()) and f.following_id = s.user_id and f.status = 'accepted'))))));
 
 drop policy if exists communities_read_visible on public.communities;
 create policy communities_read_visible on public.communities for select to authenticated
