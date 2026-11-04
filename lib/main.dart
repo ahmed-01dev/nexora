@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _urlInput = String.fromEnvironment('SUPABASE_URL');
-const _url = _urlInput.replaceAll(RegExp(r'\\s+'), '').replaceAll(RegExp(r'[/?]+
+const _url = _urlInput.replaceAll(RegExp(r'\s+'), '').replaceAll(RegExp(r'[/?]+$'), '');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
