@@ -617,3 +617,40 @@ begin
   end if;
 end;
 $$;
+
+-- Follow requests respect private profiles and mutual blocks.
+create or replace function public.request_follow(p_target_user_id uuid)
+returns text language plpgsql security definer set search_path = ''
+as $$
+declare v_me uuid := auth.uid(); v_private boolean; v_status text;
+begin
+  if v_me is null then raise exception 'not authenticated' using errcode = '28000'; end if;
+  if p_target_user_id is null or p_target_user_id = v_me then raise exception 'invalid follow target' using errcode = '22023'; end if;
+  select p.is_private into v_private from public.profiles p where p.id = p_target_user_id;
+  if not found then raise exception 'profile not found' using errcode = 'P0002'; end if;
+  if exists (select 1 from public.blocks b where (b.blocker_id=v_me and b.blocked_id=p_target_user_id) or (b.blocker_id=p_target_user_id and b.blocked_id=v_me)) then
+    raise exception 'following is unavailable for this relationship' using errcode = '42501';
+  end if;
+  insert into public.follows(follower_id,following_id,status)
+  values(v_me,p_target_user_id,case when coalesce(v_private,false) then 'pending' else 'accepted' end)
+  on conflict(follower_id,following_id) do nothing;
+  select f.status into v_status from public.follows f where f.follower_id=v_me and f.following_id=p_target_user_id;
+  return v_status;
+end;
+$$;
+
+create or replace function public.cancel_follow(p_target_user_id uuid)
+returns boolean language plpgsql security definer set search_path = ''
+as $$
+declare v_me uuid := auth.uid();
+begin
+  if v_me is null then raise exception 'not authenticated' using errcode = '28000'; end if;
+  delete from public.follows f where f.follower_id=v_me and f.following_id=p_target_user_id;
+  return found;
+end;
+$$;
+
+revoke all on function public.request_follow(uuid) from public, anon;
+revoke all on function public.cancel_follow(uuid) from public, anon;
+grant execute on function public.request_follow(uuid) to authenticated;
+grant execute on function public.cancel_follow(uuid) to authenticated;
