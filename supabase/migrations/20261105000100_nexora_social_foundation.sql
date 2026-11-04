@@ -358,41 +358,52 @@ drop policy if exists notifications_update_self on public.notifications;
 create policy notifications_update_self on public.notifications for update to authenticated
 using (recipient_id = (select auth.uid())) with check (recipient_id = (select auth.uid()));
 
+create or replace function private.can_view_story(p_story_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $fn$
+  select exists (
+    select 1 from public.stories st
+    where st.id = p_story_id
+      and st.archived_at is null
+      and st.expires_at > now()
+      and (
+        st.user_id = (select auth.uid())
+        or (
+          not exists (
+            select 1 from public.blocks b
+            where (b.blocker_id = (select auth.uid()) and b.blocked_id = st.user_id)
+               or (b.blocker_id = st.user_id and b.blocked_id = (select auth.uid()))
+          )
+          and (
+            st.visibility = 'public'
+            or (st.visibility = 'followers' and exists (
+              select 1 from public.follows f
+              where f.follower_id = (select auth.uid())
+                and f.following_id = st.user_id
+                and f.status = 'accepted'
+            ))
+          )
+        )
+      )
+  );
+$fn$;
+revoke all on function private.can_view_story(uuid) from public, anon;
+grant execute on function private.can_view_story(uuid) to authenticated;
+
 drop policy if exists stories_read_visible on public.stories;
 create policy stories_read_visible on public.stories for select to authenticated
-using (
-  user_id = (select auth.uid()) or
-  (
-    archived_at is null and expires_at > now()
-    and not exists (
-      select 1 from public.blocks b
-      where (b.blocker_id = (select auth.uid()) and b.blocked_id = stories.user_id)
-         or (b.blocker_id = stories.user_id and b.blocked_id = (select auth.uid()))
-    )
-    and (
-      visibility = 'public'
-      or (visibility = 'followers' and exists (
-        select 1 from public.follows f where f.follower_id = (select auth.uid()) and f.following_id = stories.user_id and f.status = 'accepted'
-      ))
-    )
-  )
-);
-drop policy if exists stories_insert_self on public.stories;
-create policy stories_insert_self on public.stories for insert to authenticated
-with check (user_id = (select auth.uid()));
-drop policy if exists stories_update_self on public.stories;
-create policy stories_update_self on public.stories for update to authenticated
-using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
-drop policy if exists stories_delete_self on public.stories;
-create policy stories_delete_self on public.stories for delete to authenticated
-using (user_id = (select auth.uid()));
+using (private.can_view_story(id));
 
 drop policy if exists story_views_read_owner on public.story_views;
 create policy story_views_read_owner on public.story_views for select to authenticated
 using (exists (select 1 from public.stories s where s.id = story_id and s.user_id = (select auth.uid())));
 drop policy if exists story_views_insert_viewer on public.story_views;
 create policy story_views_insert_viewer on public.story_views for insert to authenticated
-with check (viewer_id = (select auth.uid()) and exists (select 1 from public.stories s where s.id = story_id and s.archived_at is null and s.expires_at > now() and (s.user_id = (select auth.uid()) or (not exists (select 1 from public.blocks b where (b.blocker_id = (select auth.uid()) and b.blocked_id = s.user_id) or (b.blocker_id = s.user_id and b.blocked_id = (select auth.uid()))) and (s.visibility = 'public' or (s.visibility = 'followers' and exists (select 1 from public.follows f where f.follower_id = (select auth.uid()) and f.following_id = s.user_id and f.status = 'accepted'))))));
+with check (viewer_id = (select auth.uid()) and private.can_view_story(story_id));
 
 drop policy if exists communities_read_visible on public.communities;
 create policy communities_read_visible on public.communities for select to authenticated
