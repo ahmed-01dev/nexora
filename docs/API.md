@@ -7,7 +7,9 @@ The current Flutter app talks to Supabase Auth and the PostgREST Data API using 
 - Auth: email/password sign-up and sign-in through Supabase Auth.
 - Profiles: read and update the signed-in user's profile.
 - Posts: insert text posts and read public posts.
-- Follows: insert/delete follow rows.
+- Follows: server-validated `request_follow` and `cancel_follow` RPCs; private profiles produce pending requests.
+- Friendships: `request_friend`, `accept_friend_request`, `decline_friend_request`, `cancel_friend_request`, and `remove_friend` RPCs with block and recipient-permission checks.
+- Privacy: `update_privacy_settings` atomically updates profile visibility and direct-message permission.
 - Likes: insert/delete likes on posts.
 
 ## Database-backed contracts added (client integration pending)
