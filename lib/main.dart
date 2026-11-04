@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_error.dart';
 
-const _url = String.fromEnvironment('SUPABASE_URL').trim();
+final _url = String.fromEnvironment('SUPABASE_URL').trim();
 const _key = String.fromEnvironment('SUPABASE_ANON_KEY');
 
 Future<void> main() async {
@@ -80,19 +80,79 @@ class _AuthScreenState extends State<AuthScreen> {
     finally { if (mounted) setState(() => _busy = false); }
   }
   @override
-  Widget build(BuildContext context) => Scaffold(body: SafeArea(child: Center(child: SingleChildScrollView(padding: const EdgeInsets.all(24), child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 460), child: Form(key: _form, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-    const Center(child: _Brand(size: 82)), const SizedBox(height: 20),
-    const Text('NEXORA', textAlign: TextAlign.center, style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, letterSpacing: 4)),
-    const SizedBox(height: 8), Text(_register ? 'مساحتك. صوتك. عالمك.' : 'رجعت تنوّر عالمك', textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF9BA8BC))),
-    const SizedBox(height: 30),
-    if (_register) ...[TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'اسمك الظاهر', prefixIcon: Icon(Icons.person_outline)), validator: (v) => v == null || v.trim().length < 2 ? 'اكتب اسم من حرفين على الأقل' : null), const SizedBox(height: 13)],
-    TextFormField(controller: _email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'البريد الإلكتروني', prefixIcon: Icon(Icons.alternate_email)), validator: (v) => v == null || !RegExp(r'^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$').hasMatch(v.trim()) ? 'اكتب بريد إلكتروني صحيح' : null),
-    const SizedBox(height: 13),
-    TextFormField(controller: _password, obscureText: !_visible, decoration: InputDecoration(labelText: 'كلمة المرور', prefixIcon: const Icon(Icons.lock_outline), suffixIcon: IconButton(onPressed: () => setState(() => _visible = !_visible), icon: Icon(_visible ? Icons.visibility_off : Icons.visibility))), validator: (v) => v == null || v.length < 8 ? '8 أحرف على الأقل' : null),
-    if (_error != null) _Notice(text: _error!, error: true), if (_notice != null) _Notice(text: _notice!, error: false),
-    const SizedBox(height: 20), FilledButton(onPressed: _busy ? null : _submit, style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(54)), child: _busy ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)) : Text(_register ? 'إنشاء حساب' : 'تسجيل الدخول')),
-    TextButton(onPressed: _busy ? null : () => setState(() { _register = !_register; _error = null; _notice = null; }), child: Text(_register ? 'عندك حساب؟ سجّل الدخول' : 'مستخدم جديد؟ أنشئ حساب')),
-  ]))))));
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460),
+              child: Form(
+                key: _form,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Center(child: _Brand(size: 82)),
+                    const SizedBox(height: 20),
+                    const Text('NEXORA', textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, letterSpacing: 4)),
+                    const SizedBox(height: 8),
+                    Text(_register ? 'مساحتك. صوتك. عالمك.' : 'رجعت تنوّر عالمك',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Color(0xFF9BA8BC))),
+                    const SizedBox(height: 30),
+                    if (_register) ...[
+                      TextFormField(
+                        controller: _name,
+                        decoration: const InputDecoration(labelText: 'اسمك الظاهر', prefixIcon: Icon(Icons.person_outline)),
+                        validator: (v) => v == null || v.trim().length < 2 ? 'اكتب اسم من حرفين على الأقل' : null,
+                      ),
+                      const SizedBox(height: 13),
+                    ],
+                    TextFormField(
+                      controller: _email,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(labelText: 'البريد الإلكتروني', prefixIcon: Icon(Icons.alternate_email)),
+                      validator: (v) => v == null || !RegExp(r'^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$').hasMatch(v.trim()) ? 'اكتب بريد إلكتروني صحيح' : null,
+                    ),
+                    const SizedBox(height: 13),
+                    TextFormField(
+                      controller: _password,
+                      obscureText: !_visible,
+                      decoration: InputDecoration(
+                        labelText: 'كلمة المرور',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          onPressed: () => setState(() => _visible = !_visible),
+                          icon: Icon(_visible ? Icons.visibility_off : Icons.visibility),
+                        ),
+                      ),
+                      validator: (v) => v == null || v.length < 8 ? '8 أحرف على الأقل' : null,
+                    ),
+                    if (_error != null) _Notice(text: _error!, error: true),
+                    if (_notice != null) _Notice(text: _notice!, error: false),
+                    const SizedBox(height: 20),
+                    FilledButton(
+                      onPressed: _busy ? null : _submit,
+                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(54)),
+                      child: _busy
+                        ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        : Text(_register ? 'إنشاء حساب' : 'تسجيل الدخول'),
+                    ),
+                    TextButton(
+                      onPressed: _busy ? null : () => setState(() { _register = !_register; _error = null; _notice = null; }),
+                      child: Text(_register ? 'عندك حساب؟ سجّل الدخول' : 'مستخدم جديد؟ أنشئ حساب'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class MainShell extends StatefulWidget {
