@@ -540,6 +540,8 @@ begin
     raise exception 'recipient privacy settings do not allow this message' using errcode = '42501';
   end if;
 
+  perform pg_advisory_xact_lock(hashtextextended(least(v_me::text, p_other_user_id::text) || ':' || greatest(v_me::text, p_other_user_id::text), 0));
+
   select c.id into v_conversation_id
   from public.conversations c
   where c.conversation_type = 'direct'
@@ -654,3 +656,46 @@ revoke all on function public.request_follow(uuid) from public, anon;
 revoke all on function public.cancel_follow(uuid) from public, anon;
 grant execute on function public.request_follow(uuid) to authenticated;
 grant execute on function public.cancel_follow(uuid) to authenticated;
+
+-- Close privilege-escalation paths left by broad legacy table grants.
+revoke insert, update on public.profiles from authenticated;
+grant update(display_name,username,bio,is_private,avatar_url,cover_url,website,pronouns,country_code,social_links,updated_at)
+  on public.profiles to authenticated;
+
+revoke insert, update on public.follows from authenticated;
+grant update(status) on public.follows to authenticated;
+
+revoke insert, update on public.friendships from authenticated;
+grant select,delete on public.friendships to authenticated;
+
+revoke update on public.posts from authenticated;
+grant update(content,visibility,updated_at) on public.posts to authenticated;
+
+revoke insert,update on public.messages from authenticated;
+grant insert(conversation_id,sender_id,message_type,body,reply_to,encryption_mode) on public.messages to authenticated;
+grant update(body,edited_at,deleted_at) on public.messages to authenticated;
+alter table public.messages drop constraint if exists messages_encryption_mode_check;
+alter table public.messages add constraint messages_encryption_mode_check check (encryption_mode = 'server_readable');
+
+revoke insert,update on public.call_sessions from authenticated;
+grant insert(conversation_id,initiated_by,call_type) on public.call_sessions to authenticated;
+grant update(status,ended_at) on public.call_sessions to authenticated;
+
+drop policy if exists conversation_members_add_by_creator on public.conversation_members;
+create policy conversation_members_add_by_creator on public.conversation_members for insert to authenticated
+with check (
+  (private.is_conversation_creator(conversation_id) and exists (
+    select 1 from public.conversations c
+    where c.id = conversation_id and c.conversation_type in ('group','community')
+  ))
+  or (user_id = (select auth.uid()) and private.is_conversation_member(conversation_id))
+);
+
+drop policy if exists conversation_members_update_self on public.conversation_members;
+create policy conversation_members_update_self on public.conversation_members for update to authenticated
+using (user_id = (select auth.uid()))
+with check (user_id = (select auth.uid()));
+
+drop policy if exists messages_delete_own on public.messages;
+create policy messages_delete_own on public.messages for delete to authenticated
+using (sender_id = (select auth.uid()));
