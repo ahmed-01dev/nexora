@@ -22,6 +22,8 @@
 
 ## Media
 - Validate file extension, MIME type, actual file signature, size, and ownership.
+- NEXORA uses the private `nexora-media` bucket; upload paths must start with the authenticated user ID.
+- Storage SELECT checks linked post/story/message/community audience through a narrowly scoped private helper. Signed URLs are short-lived.
 - Use private storage by default; public delivery must be an explicit per-media decision.
 - Use short-lived signed URLs for private media.
 - Add malware scanning and server-side video transcoding before accepting untrusted files at scale.
