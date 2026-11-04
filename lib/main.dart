@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_error.dart';
 import 'core/theme/nexora_theme.dart';
+import 'features/messaging/messages_screen.dart';
+import 'features/reels/reels_screen.dart';
 
 final _url = String.fromEnvironment('SUPABASE_URL').trim();
 const _key = String.fromEnvironment('SUPABASE_ANON_KEY');
@@ -173,14 +175,15 @@ class _MainShellState extends State<MainShell> {
   void _posted() => setState(() { _tab = 0; _feedVersion++; });
   @override
   Widget build(BuildContext context) {
-    final pages = <Widget>[HomeScreen(key: ValueKey(_feedVersion)), const ExploreScreen(), CreateScreen(onPosted: _posted), const FriendsScreen(), const ProfileScreen()];
+    final pages = <Widget>[HomeScreen(key: ValueKey(_feedVersion)), const ExploreScreen(), CreateScreen(onPosted: _posted), const ReelsScreen(), const MessagesScreen(), const ProfileScreen()];
     return Scaffold(
       body: IndexedStack(index: _tab, children: pages),
       bottomNavigationBar: NavigationBar(selectedIndex: _tab, onDestinationSelected: (v) => setState(() => _tab = v), destinations: const [
         NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'الرئيسية'),
         NavigationDestination(icon: Icon(Icons.explore_outlined), selectedIcon: Icon(Icons.explore), label: 'استكشاف'),
         NavigationDestination(icon: Icon(Icons.add_circle_outline), selectedIcon: Icon(Icons.add_circle), label: 'إنشاء'),
-        NavigationDestination(icon: Icon(Icons.people_outline), selectedIcon: Icon(Icons.people), label: 'الأصدقاء'),
+        NavigationDestination(icon: Icon(Icons.play_circle_outline), selectedIcon: Icon(Icons.play_circle), label: 'ريلز'),
+        NavigationDestination(icon: Icon(Icons.chat_bubble_outline), selectedIcon: Icon(Icons.chat_bubble), label: 'الرسائل'),
         NavigationDestination(icon: Icon(Icons.account_circle_outlined), selectedIcon: Icon(Icons.account_circle), label: 'حسابي'),
       ]),
     );
@@ -236,7 +239,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     return List<Map<String, dynamic>>.from(await q.order('created_at', ascending: false).limit(50));
   }
   @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('اكتشف الناس', style: TextStyle(fontWeight: FontWeight.w800))), body: Column(children: [
+  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('اكتشف الناس', style: TextStyle(fontWeight: FontWeight.w800)), actions: [IconButton(tooltip: 'الأصدقاء', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const FriendsScreen())), icon: const Icon(Icons.people_outline))]), body: Column(children: [
     Padding(padding: const EdgeInsets.all(16), child: TextField(controller: _search, onSubmitted: (v) => setState(() => _future = _load(v)), decoration: InputDecoration(hintText: 'اسم أو username', prefixIcon: const Icon(Icons.search), suffixIcon: IconButton(onPressed: () => setState(() => _future = _load(_search.text)), icon: const Icon(Icons.arrow_forward))))),
     Expanded(child: FutureBuilder<List<Map<String, dynamic>>>(future: _future, builder: (context, snap) {
       if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
