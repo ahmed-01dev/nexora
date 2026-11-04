@@ -106,6 +106,9 @@ jobs:
           fi
           echo "Verified INTERNET permission inside release APK."
 
+      - name: Build Android App Bundle
+        run: flutter build appbundle --release --dart-define=SUPABASE_URL="$SUPABASE_URL_CLEAN" --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY_CLEAN"
+
       - name: Build Web
         run: flutter build web --release --dart-define=SUPABASE_URL="$SUPABASE_URL_CLEAN" --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY_CLEAN"
 
@@ -115,4 +118,5 @@ jobs:
           name: nexora-release
           path: |
             build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/bundle/release/app-release.aab
             build/web/
