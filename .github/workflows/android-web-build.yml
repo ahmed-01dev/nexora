@@ -54,16 +54,25 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          gradle = Path("android/app/build.gradle")
+          candidates = [Path("android/app/build.gradle.kts"), Path("android/app/build.gradle")]
+          gradle = next((p for p in candidates if p.is_file()), None)
+          if gradle is None:
+              raise SystemExit("Android app Gradle file not found")
           content = gradle.read_text(encoding="utf-8")
-          if "minSdk = flutter.minSdkVersion" in content:
-              content = content.replace("minSdk = flutter.minSdkVersion", "minSdk = 26")
-          elif "minSdkVersion flutter.minSdkVersion" in content:
-              content = content.replace("minSdkVersion flutter.minSdkVersion", "minSdkVersion 26")
+          replacements = (
+              ("minSdk = flutter.minSdkVersion", "minSdk = 26"),
+              ("minSdkVersion flutter.minSdkVersion", "minSdkVersion 26"),
+              ("minSdk = 21", "minSdk = 26"),
+              ("minSdkVersion 21", "minSdkVersion 26"),
+          )
+          for old, new in replacements:
+              if old in content:
+                  content = content.replace(old, new)
+                  break
           else:
               raise SystemExit("Could not safely locate Android minSdk declaration")
           gradle.write_text(content, encoding="utf-8")
-          print("Android minimum SDK is API 26 (Android 8.0+)")
+          print(f"Android minimum SDK is API 26 (Android 8.0+) in {gradle}")
           PY
 
       - name: Add and verify INTERNET permission in Android manifest
