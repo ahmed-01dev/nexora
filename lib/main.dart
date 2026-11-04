@@ -446,12 +446,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final name = TextEditingController(text: p['display_name'] as String? ?? '');
     final handle = TextEditingController(text: p['username'] as String? ?? '');
     final bio = TextEditingController(text: p['bio'] as String? ?? '');
-    var private = p['is_private'] as bool? ?? false;
     final ok = await showDialog<bool>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, setD) => AlertDialog(title: const Text('تعديل الملف الشخصي'), content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
       TextField(controller: name, decoration: const InputDecoration(labelText: 'الاسم الظاهر')), const SizedBox(height: 10),
       TextField(controller: handle, decoration: const InputDecoration(labelText: 'اسم المستخدم')), const SizedBox(height: 10),
       TextField(controller: bio, maxLines: 3, decoration: const InputDecoration(labelText: 'نبذة عنك')),
-      SwitchListTile(value: private, onChanged: (v) => setD(() => private = v), title: const Text('حساب خاص')),
     ])), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('حفظ'))])));
     if (ok == true) {
       final h = handle.text.trim().replaceFirst(RegExp(r'^@'), '').toLowerCase();
@@ -459,7 +457,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _toast('راجع الاسم واسم المستخدم (3–24 حرف إنجليزي أو رقم أو _)');
       } else {
         try {
-          await Supabase.instance.client.from('profiles').update({'display_name': name.text.trim(), 'username': h.isEmpty ? null : h, 'bio': bio.text.trim(), 'is_private': private}).eq('id', Supabase.instance.client.auth.currentUser!.id);
+          await Supabase.instance.client.from('profiles').update({'display_name': name.text.trim(), 'username': h.isEmpty ? null : h, 'bio': bio.text.trim()}).eq('id', Supabase.instance.client.auth.currentUser!.id);
           if (mounted) setState(() => _future = _load());
         } catch (e, s) { AppErrorService.report(e, s, source: 'profile_update'); _toast(AppErrorService.message(e)); }
       }
