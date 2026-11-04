@@ -14,6 +14,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
   bool _loading = true;
   bool _saving = false;
   bool _isPrivate = false;
+  bool _allowFriendRequests = true;
   String _messagesFrom = 'followers';
   String? _error;
 
@@ -35,13 +36,14 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
           .maybeSingle();
       final settings = await client
           .from('user_private_settings')
-          .select('allow_messages_from')
+          .select('allow_messages_from,allow_friend_requests')
           .eq('user_id', userId)
           .maybeSingle();
       if (!mounted) return;
       setState(() {
         _isPrivate = profile?['is_private'] as bool? ?? false;
         _messagesFrom = settings?['allow_messages_from'] as String? ?? 'followers';
+        _allowFriendRequests = settings?['allow_friend_requests'] as bool? ?? true;
         _loading = false;
       });
     } catch (error, stack) {
@@ -58,6 +60,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
         params: {
           'p_is_private': _isPrivate,
           'p_allow_messages_from': _messagesFrom,
+          'p_allow_friend_requests': _allowFriendRequests,
         },
       );
       if (!mounted) return;
@@ -94,6 +97,15 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                     subtitle: const Text(
                       'عند تفعيل الخصوصية، منشوراتك ومعلومات ملفك تخضع لسياسات الحساب الخاص.',
                     ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Card(
+                  child: SwitchListTile(
+                    value: _allowFriendRequests,
+                    onChanged: _saving ? null : (value) => setState(() => _allowFriendRequests = value),
+                    title: const Text('السماح بطلبات الصداقة'),
+                    subtitle: const Text('لو أوقفتها، مش هيقدر أي حساب يرسل لك طلب صداقة جديد.'),
                   ),
                 ),
                 const SizedBox(height: 12),
