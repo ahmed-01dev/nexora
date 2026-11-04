@@ -28,6 +28,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
         .from('stories')
         .select('id,user_id,media_path,text_content,story_type,visibility,created_at,expires_at,profiles!stories_user_id_fkey(display_name,username)')
         .isFilter('archived_at', null)
+        .gt('expires_at', DateTime.now().toUtc().toIso8601String())
         .order('created_at', ascending: false)
         .limit(100);
     final result = <Map<String, dynamic>>[];
@@ -275,12 +276,14 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> {
 
   Future<void> _markViewed() async {
     try {
-      await Supabase.instance.client.from('story_views').upsert({
+      await Supabase.instance.client.from('story_views').insert({
         'story_id': widget.story['id'],
         'viewer_id': Supabase.instance.client.auth.currentUser!.id,
       });
     } catch (error, stack) {
-      AppErrorService.report(error, stack, source: 'story_view');
+      if (!error.toString().contains('23505')) {
+        AppErrorService.report(error, stack, source: 'story_view');
+      }
     }
   }
 
