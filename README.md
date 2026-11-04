@@ -27,6 +27,8 @@ Until both secrets are configured, the app intentionally displays a setup screen
 
 ## Build
 
+Latest configuration refresh: rebuild after updating repository Actions secrets.
+
 Every push to `main` runs Flutter analysis and tests, then builds:
 - `app-release.apk` for Android.
 - The Flutter web application.
