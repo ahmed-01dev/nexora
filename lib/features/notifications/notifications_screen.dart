@@ -1,0 +1,179 @@
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../core/app_error.dart';
+import '../friends/friend_requests_screen.dart';
+import '../messaging/messages_screen.dart';
+
+class NotificationsScreen extends StatefulWidget {
+  const NotificationsScreen({super.key});
+
+  @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  late Future<List<Map<String, dynamic>>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<List<Map<String, dynamic>>> _load() async {
+    final uid = Supabase.instance.client.auth.currentUser!.id;
+    final rows = await Supabase.instance.client
+        .from('notifications')
+        .select('id,actor_id,notification_type,entity_type,entity_id,payload,read_at,created_at,profiles!notifications_actor_id_fkey(display_name,username)')
+        .eq('recipient_id', uid)
+        .order('created_at', ascending: false)
+        .limit(100);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  Future<void> _markRead(String id) async {
+    await Supabase.instance.client
+        .from('notifications')
+        .update({'read_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id)
+        .eq('recipient_id', Supabase.instance.client.auth.currentUser!.id);
+  }
+
+  Future<void> _markAllRead() async {
+    try {
+      await Supabase.instance.client
+          .from('notifications')
+          .update({'read_at': DateTime.now().toUtc().toIso8601String()})
+          .eq('recipient_id', Supabase.instance.client.auth.currentUser!.id)
+          .isFilter('read_at', null);
+      if (mounted) setState(() => _future = _load());
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'mark_all_notifications_read');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppErrorService.message(error))));
+      }
+    }
+  }
+
+  Future<void> _open(Map<String, dynamic> row) async {
+    try {
+      await _markRead(row['id'] as String);
+      if (!mounted) return;
+      setState(() => _future = _load());
+      final type = row['notification_type'] as String? ?? '';
+      final payload = row['payload'] is Map
+          ? Map<String, dynamic>.from(row['payload'] as Map)
+          : <String, dynamic>{};
+      if (type == 'message' && payload['conversation_id'] != null) {
+        final actor = row['profiles'] is Map
+            ? Map<String, dynamic>.from(row['profiles'] as Map)
+            : <String, dynamic>{};
+        Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => ChatScreen(
+            conversationId: payload['conversation_id'].toString(),
+            title: (actor['display_name'] ?? actor['username'] ?? 'محادثة').toString(),
+          ),
+        ));
+      } else if (type == 'friend_request') {
+        Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => const FriendRequestsScreen(),
+        ));
+      }
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'open_notification');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppErrorService.message(error))));
+      }
+    }
+  }
+
+  String _label(String type) => switch (type) {
+    'message' => 'أرسل لك رسالة',
+    'friend_request' => 'أرسل طلب صداقة',
+    'friend_accepted' => 'قبل طلب الصداقة',
+    'follow' => 'بدأ بمتابعتك',
+    'like' => 'أعجب بمنشورك',
+    'comment' => 'علّق على منشورك',
+    'reply' => 'رد على تعليقك',
+    'mention' => 'أشار إليك',
+    'repost' => 'أعاد نشر محتواك',
+    'security' => 'تنبيه أمني',
+    _ => 'إشعار جديد',
+  };
+
+  Future<void> _refresh() async {
+    setState(() => _future = _load());
+    await _future;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('الإشعارات'),
+        actions: [
+          TextButton(onPressed: _markAllRead, child: const Text('قراءة الكل')),
+          IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh)),
+        ],
+      ),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return AppErrorView(title: 'تعذر تحميل الإشعارات', error: snapshot.error, onRetry: _refresh);
+          }
+          final rows = snapshot.data ?? [];
+          if (rows.isEmpty) {
+            return const Center(child: Text('مفيش إشعارات لحد دلوقتي.'));
+          }
+          return RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView.separated(
+              itemCount: rows.length,
+              separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
+              itemBuilder: (context, index) {
+                final row = rows[index];
+                final actor = row['profiles'] is Map
+                    ? Map<String, dynamic>.from(row['profiles'] as Map)
+                    : <String, dynamic>{};
+                final unread = row['read_at'] == null;
+                final actorName = (actor['display_name'] ?? actor['username'] ?? 'NEXORA').toString();
+                final type = row['notification_type'] as String? ?? '';
+                return ListTile(
+                  onTap: () => _open(row),
+                  leading: CircleAvatar(
+                    backgroundColor: unread
+                        ? Theme.of(context).colorScheme.primaryContainer
+                        : Theme.of(context).colorScheme.surfaceContainerHighest,
+                    child: Icon(_icon(type)),
+                  ),
+                  title: Text(actorName, style: TextStyle(fontWeight: unread ? FontWeight.w900 : FontWeight.w600)),
+                  subtitle: Text(_label(type)),
+                  trailing: unread
+                      ? Container(width: 8, height: 8, decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          shape: BoxShape.circle,
+                        ))
+                      : null,
+                );
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  IconData _icon(String type) => switch (type) {
+    'message' => Icons.chat_bubble_outline,
+    'friend_request' || 'friend_accepted' => Icons.people_outline,
+    'security' => Icons.shield_outlined,
+    'like' => Icons.favorite_border,
+    'comment' || 'reply' => Icons.mode_comment_outlined,
+    _ => Icons.notifications_none,
+  };
+}
