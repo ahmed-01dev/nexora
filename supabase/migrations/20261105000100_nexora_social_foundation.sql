@@ -716,15 +716,16 @@ begin
     raise exception 'invalid message privacy value' using errcode = '22023';
   end if;
   update public.profiles set is_private = p_is_private where id = v_me;
-  insert into public.user_private_settings(user_id,profile_visibility,allow_messages_from)
-  values(v_me,case when p_is_private then 'private' else 'public' end,p_allow_messages_from)
+  insert into public.user_private_settings(user_id,profile_visibility,allow_messages_from,allow_friend_requests)
+  values(v_me,case when p_is_private then 'private' else 'public' end,p_allow_messages_from,p_allow_friend_requests)
   on conflict(user_id) do update set
     profile_visibility = excluded.profile_visibility,
     allow_messages_from = excluded.allow_messages_from,
+    allow_friend_requests = excluded.allow_friend_requests,
     updated_at = now();
 end;
 $$;
-revoke all on function private.update_privacy_settings_impl(boolean,text) from public, anon;
+revoke all on function private.update_privacy_settings_impl(boolean,text,boolean) from public, anon;
 grant execute on function private.update_privacy_settings_impl(boolean,text) to authenticated;
 
 -- Expose only SECURITY INVOKER RPC wrappers; privileged implementation stays in the unexposed private schema.
@@ -737,14 +738,14 @@ as $$ select private.request_follow_impl(p_target_user_id); $$;
 create or replace function public.cancel_follow(p_target_user_id uuid)
 returns boolean language sql security invoker set search_path = ''
 as $$ select private.cancel_follow_impl(p_target_user_id); $$;
-create or replace function public.update_privacy_settings(p_is_private boolean, p_allow_messages_from text)
+create or replace function public.update_privacy_settings(p_is_private boolean, p_allow_messages_from text, p_allow_friend_requests boolean)
 returns void language sql security invoker set search_path = ''
-as $$ select private.update_privacy_settings_impl(p_is_private,p_allow_messages_from); $$;
+as $ select private.update_privacy_settings_impl(p_is_private,p_allow_messages_from,p_allow_friend_requests); $;
 
 revoke all on function public.create_direct_conversation(uuid) from public, anon;
 revoke all on function public.request_follow(uuid) from public, anon;
 revoke all on function public.cancel_follow(uuid) from public, anon;
-revoke all on function public.update_privacy_settings(boolean,text) from public, anon;
+revoke all on function public.update_privacy_settings(boolean,text,boolean) from public, anon;
 grant execute on function public.create_direct_conversation(uuid) to authenticated;
 grant execute on function public.request_follow(uuid) to authenticated;
 grant execute on function public.cancel_follow(uuid) to authenticated;
@@ -1057,3 +1058,6 @@ drop trigger if exists nexora_friendship_notifications on public.friendships;
 create trigger nexora_friendship_notifications
 after insert or update of status on public.friendships
 for each row execute function private.on_friendship_change();
+
+drop function if exists public.update_privacy_settings(boolean,text);
+drop function if exists private.update_privacy_settings_impl(boolean,text);
