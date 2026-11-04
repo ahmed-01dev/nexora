@@ -787,6 +787,11 @@ using (
     where cm.user_id = profiles.id
       and private.is_conversation_member(cm.conversation_id)
   )
+  or exists (
+    select 1 from public.friendships fr
+    where (fr.requester_id = profiles.id and fr.addressee_id = (select auth.uid()))
+       or (fr.addressee_id = profiles.id and fr.requester_id = (select auth.uid()))
+  )
 );
 
 -- Private media bucket: access is granted by database ownership/visibility checks, not public URLs.
