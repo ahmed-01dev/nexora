@@ -5,6 +5,7 @@ import 'core/app_error.dart';
 import 'core/theme/nexora_theme.dart';
 import 'features/media/media_upload_service.dart';
 import 'features/media/post_media_gallery.dart';
+import 'features/friends/friend_requests_screen.dart';
 import 'features/messaging/messages_screen.dart';
 import 'features/reels/reels_screen.dart';
 import 'features/settings/privacy_settings_screen.dart';
@@ -243,7 +244,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     return List<Map<String, dynamic>>.from(await q.order('created_at', ascending: false).limit(50));
   }
   @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('اكتشف الناس', style: TextStyle(fontWeight: FontWeight.w800)), actions: [IconButton(tooltip: 'الأصدقاء', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const FriendsScreen())), icon: const Icon(Icons.people_outline))]), body: Column(children: [
+  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('اكتشف الناس', style: TextStyle(fontWeight: FontWeight.w800)), actions: [IconButton(tooltip: 'طلبات الصداقة', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const FriendRequestsScreen())), icon: const Icon(Icons.person_add_alt_1)), IconButton(tooltip: 'الأصدقاء والمتابَعون', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const FriendsScreen())), icon: const Icon(Icons.people_outline))]), body: Column(children: [
     Padding(padding: const EdgeInsets.all(16), child: TextField(controller: _search, onSubmitted: (v) => setState(() => _future = _load(v)), decoration: InputDecoration(hintText: 'اسم أو username', prefixIcon: const Icon(Icons.search), suffixIcon: IconButton(onPressed: () => setState(() => _future = _load(_search.text)), icon: const Icon(Icons.arrow_forward))))),
     Expanded(child: FutureBuilder<List<Map<String, dynamic>>>(future: _future, builder: (context, snap) {
       if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
@@ -620,6 +621,7 @@ class _PersonTileState extends State<PersonTile> {
         Text('@' + (p['username'] ?? 'user').toString(), style: const TextStyle(color: Color(0xFF9AA7BA), fontSize: 12)),
         if ((p['bio'] ?? '').toString().isNotEmpty) Text(p['bio'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF8996AA), fontSize: 12)),
       ])),
+      FriendRequestAction(otherUserId: p['id'] as String),
       if (widget.follow) OutlinedButton(onPressed: _busy ? null : _toggle, child: _busy ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2)) : Text(_followStatus == 'pending' ? 'إلغاء الطلب' : (_followStatus == 'accepted' ? 'إلغاء المتابعة' : 'متابعة'))),
     ])));
   }
