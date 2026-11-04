@@ -28,7 +28,8 @@ Status meanings:
 - [x] Reports.
 - [x] Call sessions and participants (signaling records only; not WebRTC).
 - [x] Private account settings and user preferences.
-- [ ] Storage buckets, upload policies, and media pipeline.
+- [x] Private media bucket with authenticated upload, ownership/audience read checks, delete-own policy, and signed URL delivery.
+- [ ] Background transcoding, thumbnail generation, malware scanning, resumable uploads, and CDN optimization.
 - [x] Privacy center controls for profile visibility and who can start a new direct message.
 - [ ] RLS integration tests with real authenticated test users.
 
@@ -40,10 +41,10 @@ Status meanings:
 | Followers | Partial | Follow state loads from DB; private accounts create pending requests through a server-side function; request inbox/accept UI pending. |
 | Friends | Foundation | Database table/policies exist; full request/accept UI pending. |
 | Feed | Partial | Basic public text feed; no ranking, pagination cursor, offline cache, or mixed content. |
-| Posts | Partial | Text only; media, polls, drafts, scheduling, edit/restore pending. |
+| Posts | Partial | Text, multi-image and video upload to private storage; feed displays signed image/video URLs. Polls, drafts, scheduling, edit/restore, and media processing pending. |
 | Comments | Partial | Existing table; complete nested/reaction/moderation UX pending. |
-| Stories | Foundation | Tables exist; upload, viewer, archive, close-friends, expiry worker pending. |
-| Reels/Video | Pending | No transcoding, adaptive playback, or creator workflow. |
+| Stories | Foundation | Tables exist and media bucket can authorize story paths; story composer/viewer/archive/close-friends/expiry worker pending. |
+| Reels/Video | Partial | Vertical swipe feed plays public uploaded videos; no transcoding, adaptive bitrate, captions, creator editing, or long-form channels yet. |
 | Messaging | Partial | Direct text chat UI, realtime message stream, last-read update, server-side block/privacy check, and in-app message notification trigger exist. Attachments, typing, delivery states, group UX, and E2EE pending. |
 | E2EE | Pending | No cryptographic protocol or key lifecycle implemented. |
 | Voice/video calls | Foundation | Call records only; WebRTC, STUN/TURN, push call delivery pending. |
