@@ -29,6 +29,7 @@ Status meanings:
 - [x] Call sessions and participants (signaling records only; not WebRTC).
 - [x] Private account settings and user preferences.
 - [ ] Storage buckets, upload policies, and media pipeline.
+- [x] Privacy center controls for profile visibility and who can start a new direct message.
 - [ ] RLS integration tests with real authenticated test users.
 
 ## Product feature status
@@ -36,14 +37,14 @@ Status meanings:
 |---|---|---|
 | Authentication | Partial | Email/password only; no OAuth, phone OTP, MFA, passkeys, or device center. |
 | Profiles | Partial | Basic text profile; no avatar/cover upload or profile highlights. |
-| Followers | Partial | Basic follow action; follow state initialization and private follow-request UX need work. |
+| Followers | Partial | Follow state loads from DB; private accounts create pending requests through a server-side function; request inbox/accept UI pending. |
 | Friends | Foundation | Database table/policies exist; full request/accept UI pending. |
 | Feed | Partial | Basic public text feed; no ranking, pagination cursor, offline cache, or mixed content. |
 | Posts | Partial | Text only; media, polls, drafts, scheduling, edit/restore pending. |
 | Comments | Partial | Existing table; complete nested/reaction/moderation UX pending. |
 | Stories | Foundation | Tables exist; upload, viewer, archive, close-friends, expiry worker pending. |
 | Reels/Video | Pending | No transcoding, adaptive playback, or creator workflow. |
-| Messaging | Foundation | Tables and RLS exist; realtime chat UI, attachment pipeline, delivery/read UX pending. |
+| Messaging | Partial | Direct text chat UI, realtime message stream, last-read update, server-side block/privacy check, and in-app message notification trigger exist. Attachments, typing, delivery states, group UX, and E2EE pending. |
 | E2EE | Pending | No cryptographic protocol or key lifecycle implemented. |
 | Voice/video calls | Foundation | Call records only; WebRTC, STUN/TURN, push call delivery pending. |
 | Communities | Foundation | Tables and RLS exist; discovery, channels, admin workflows pending. |
@@ -56,7 +57,7 @@ Status meanings:
 | Live streaming | Pending | No streaming provider/ingest infrastructure. |
 | AI features | Pending | No model integration or consent controls. |
 | Localization | Partial | Arabic RTL baseline; English and additional locale resources pending. |
-| Themes | Partial | AMOLED direction being established; persisted light/pink/custom theme selector pending. |
+| Themes | Partial | AMOLED-first theme system and light/pink theme definitions exist; persisted in-app theme selector pending. |
 | PWA | Partial | Web build exists; installability, offline strategy, and deployment still need verification. |
 
 ## Release gate
