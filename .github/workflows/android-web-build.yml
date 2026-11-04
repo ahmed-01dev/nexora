@@ -50,6 +50,22 @@ jobs:
       - name: Generate Android and Web platform folders
         run: flutter create --project-name nexora --platforms=android,web .
 
+      - name: Set Android minimum SDK to 26
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          gradle = Path("android/app/build.gradle")
+          content = gradle.read_text(encoding="utf-8")
+          if "minSdk = flutter.minSdkVersion" in content:
+              content = content.replace("minSdk = flutter.minSdkVersion", "minSdk = 26")
+          elif "minSdkVersion flutter.minSdkVersion" in content:
+              content = content.replace("minSdkVersion flutter.minSdkVersion", "minSdkVersion 26")
+          else:
+              raise SystemExit("Could not safely locate Android minSdk declaration")
+          gradle.write_text(content, encoding="utf-8")
+          print("Android minimum SDK is API 26 (Android 8.0+)")
+          PY
+
       - name: Add and verify INTERNET permission in Android manifest
         run: |
           python3 - <<'PY'
