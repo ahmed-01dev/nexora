@@ -309,7 +309,7 @@ class _CreateScreenState extends State<CreateScreen> {
       if (_error != null) _Notice(text: _error!, error: true), const SizedBox(height: 16),
       FilledButton.icon(onPressed: _busy ? null : _publish, icon: _busy ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send), label: const Text('نشر المنشور'), style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52))),
     ]))),
-    const SizedBox(height: 12), const Text('رفع الصور والفيديو والمحادثات الخاصة غير مفعّل في النسخة دي؛ محتاجين تجهيز Storage وجداول وسياسات آمنة قبل تفعيله.', style: TextStyle(color: Color(0xFF8996AA), height: 1.5)),
+    const SizedBox(height: 12), const Text('رفع الصور والفيديو والريلز هيتفعّل بعد تجهيز التخزين الآمن ومعالجة الوسائط.', style: TextStyle(color: Color(0xFF8996AA), height: 1.5)),
   ]));
 }
 
@@ -381,14 +381,37 @@ class PostCard extends StatefulWidget {
   State<PostCard> createState() => _PostCardState();
 }
 class _PostCardState extends State<PostCard> {
-  bool _liked = false, _busy = false;
+  bool? _liked;
+  bool _busy = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLikeState();
+  }
+
+  Future<void> _loadLikeState() async {
+    try {
+      final uid = Supabase.instance.client.auth.currentUser!.id;
+      final row = await Supabase.instance.client
+          .from('likes')
+          .select('post_id')
+          .eq('user_id', uid)
+          .eq('post_id', widget.post['id'] as String)
+          .maybeSingle();
+      if (mounted) setState(() { _liked = row != null; _busy = false; });
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'load_like_state');
+      if (mounted) setState(() { _liked = false; _busy = false; });
+    }
+  }
+
   Future<void> _like() async {
-    if (_busy) return;
+    if (_busy || _liked == null) return;
     setState(() => _busy = true);
     final db = Supabase.instance.client, uid = Supabase.instance.client.auth.currentUser!.id, pid = widget.post['id'] as String;
     try {
-      final row = await db.from('likes').select('post_id').eq('user_id', uid).eq('post_id', pid).maybeSingle();
-      if (row == null) { await db.from('likes').insert({'user_id': uid, 'post_id': pid}); if (mounted) setState(() => _liked = true); }
+      if (_liked == false) { await db.from('likes').insert({'user_id': uid, 'post_id': pid}); if (mounted) setState(() => _liked = true); }
       else { await db.from('likes').delete().eq('user_id', uid).eq('post_id', pid); if (mounted) setState(() => _liked = false); }
     } catch (e, s) { AppErrorService.report(e, s, source: 'like'); if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppErrorService.message(e)))); }
     finally { if (mounted) setState(() => _busy = false); }
@@ -404,7 +427,7 @@ class _PostCardState extends State<PostCard> {
       Row(children: [const _Avatar(), const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(fontWeight: FontWeight.w800)), Text('@' + handle + ' • ' + stamp, style: const TextStyle(fontSize: 11, color: Color(0xFF8390A4)))])), const Icon(Icons.more_horiz)]),
       const SizedBox(height: 14), Text((widget.post['content'] ?? '').toString(), style: const TextStyle(fontSize: 15, height: 1.65)),
       const Divider(height: 24, color: Color(0xFF292929)),
-      Row(children: [TextButton.icon(onPressed: _busy ? null : _like, icon: Icon(_liked ? Icons.favorite : Icons.favorite_border, color: _liked ? Colors.pinkAccent : null), label: Text(_liked ? 'أعجبك' : 'إعجاب')), const Spacer(), const Icon(Icons.chat_bubble_outline, size: 18), const SizedBox(width: 6), const Text('تعليق')]),
+      Row(children: [TextButton.icon(onPressed: _busy || _liked == null ? null : _like, icon: Icon(_liked == true ? Icons.favorite : Icons.favorite_border), label: Text(_busy && _liked == null ? '...' : (_liked == true ? 'أعجبك' : 'إعجاب'))), const Spacer(), const Icon(Icons.chat_bubble_outline, size: 18), const SizedBox(width: 6), const Text('تعليق')]),
     ])));
   }
 }
@@ -417,15 +440,60 @@ class PersonTile extends StatefulWidget {
   State<PersonTile> createState() => _PersonTileState();
 }
 class _PersonTileState extends State<PersonTile> {
-  bool _following = false, _busy = false;
-  Future<void> _toggle() async {
-    setState(() => _busy = true);
-    final db = Supabase.instance.client, me = Supabase.instance.client.auth.currentUser!.id, other = widget.profile['id'] as String;
+  String? _followStatus;
+  bool _busy = true;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.follow) _loadFollowStatus();
+    else _busy = false;
+  }
+
+  Future<void> _loadFollowStatus() async {
     try {
-      if (_following) { await db.from('follows').delete().eq('follower_id', me).eq('following_id', other); if (mounted) setState(() => _following = false); }
-      else { await db.from('follows').insert({'follower_id': me, 'following_id': other, 'status': 'accepted'}); if (mounted) setState(() => _following = true); }
-    } catch (e, s) { AppErrorService.report(e, s, source: 'follow'); if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppErrorService.message(e)))); }
-    finally { if (mounted) setState(() => _busy = false); }
+      final me = Supabase.instance.client.auth.currentUser!.id;
+      final row = await Supabase.instance.client
+          .from('follows')
+          .select('status')
+          .eq('follower_id', me)
+          .eq('following_id', widget.profile['id'] as String)
+          .maybeSingle();
+      if (mounted) setState(() { _followStatus = row?['status'] as String?; _busy = false; });
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'load_follow_status');
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _toggle() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final other = widget.profile['id'] as String;
+    try {
+      if (_followStatus == null) {
+        final status = await Supabase.instance.client.rpc(
+          'request_follow',
+          params: {'p_target_user_id': other},
+        );
+        if (mounted) setState(() => _followStatus = status.toString());
+      } else {
+        await Supabase.instance.client.rpc(
+          'cancel_follow',
+          params: {'p_target_user_id': other},
+        );
+        if (mounted) setState(() => _followStatus = null);
+      }
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'follow');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppErrorService.message(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
   @override
   Widget build(BuildContext context) {
@@ -437,7 +505,7 @@ class _PersonTileState extends State<PersonTile> {
         Text('@' + (p['username'] ?? 'user').toString(), style: const TextStyle(color: Color(0xFF9AA7BA), fontSize: 12)),
         if ((p['bio'] ?? '').toString().isNotEmpty) Text(p['bio'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF8996AA), fontSize: 12)),
       ])),
-      if (widget.follow) OutlinedButton(onPressed: _busy ? null : _toggle, child: _busy ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2)) : Text(_following ? 'تتابعه' : 'متابعة')),
+      if (widget.follow) OutlinedButton(onPressed: _busy ? null : _toggle, child: _busy ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2)) : Text(_followStatus == 'pending' ? 'إلغاء الطلب' : (_followStatus == 'accepted' ? 'إلغاء المتابعة' : 'متابعة'))),
     ])));
   }
 }
