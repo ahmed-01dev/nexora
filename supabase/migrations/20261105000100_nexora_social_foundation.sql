@@ -906,3 +906,149 @@ using (
   bucket_id = 'nexora-media'
   and (storage.foldername(name))[1] = (select auth.uid())::text
 );
+
+-- Friendship requests are created/accepted only through validated RPC operations.
+create or replace function private.request_friend_impl(p_addressee_id uuid)
+returns text language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_me uuid := auth.uid();
+  v_status text;
+  v_allowed boolean;
+begin
+  if v_me is null then raise exception 'not authenticated' using errcode = '28000'; end if;
+  if p_addressee_id is null or p_addressee_id = v_me then raise exception 'invalid friend target' using errcode = '22023'; end if;
+  if not exists (select 1 from public.profiles p where p.id = p_addressee_id) then
+    raise exception 'profile not found' using errcode = 'P0002';
+  end if;
+  if exists (select 1 from public.blocks b where
+    (b.blocker_id=v_me and b.blocked_id=p_addressee_id) or
+    (b.blocker_id=p_addressee_id and b.blocked_id=v_me)) then
+    raise exception 'friend requests are unavailable for this relationship' using errcode = '42501';
+  end if;
+  select coalesce(s.allow_friend_requests,true) into v_allowed
+  from public.user_private_settings s where s.user_id=p_addressee_id;
+  if coalesce(v_allowed,true) = false then
+    raise exception 'recipient does not accept friend requests' using errcode = '42501';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(least(v_me::text,p_addressee_id::text)||':'||greatest(v_me::text,p_addressee_id::text),0));
+
+  update public.friendships
+  set status='accepted', updated_at=now()
+  where requester_id=p_addressee_id and addressee_id=v_me and status='pending';
+  if found then return 'accepted'; end if;
+
+  select f.status into v_status from public.friendships f
+  where f.requester_id=v_me and f.addressee_id=p_addressee_id;
+  if v_status = 'accepted' or v_status = 'pending' then return v_status; end if;
+
+  insert into public.friendships(requester_id,addressee_id,status)
+  values(v_me,p_addressee_id,'pending')
+  on conflict(requester_id,addressee_id) do update
+    set status='pending', updated_at=now();
+  return 'pending';
+end;
+$$;
+
+create or replace function private.accept_friend_request_impl(p_request_id uuid)
+returns boolean language plpgsql security definer set search_path = ''
+as $$
+declare v_me uuid := auth.uid();
+begin
+  if v_me is null then raise exception 'not authenticated' using errcode = '28000'; end if;
+  update public.friendships set status='accepted',updated_at=now()
+  where id=p_request_id and addressee_id=v_me and status='pending';
+  return found;
+end;
+$$;
+
+create or replace function private.decline_friend_request_impl(p_request_id uuid)
+returns boolean language plpgsql security definer set search_path = ''
+as $$
+declare v_me uuid := auth.uid();
+begin
+  if v_me is null then raise exception 'not authenticated' using errcode = '28000'; end if;
+  update public.friendships set status='declined',updated_at=now()
+  where id=p_request_id and addressee_id=v_me and status='pending';
+  return found;
+end;
+$$;
+
+create or replace function private.cancel_friend_request_impl(p_request_id uuid)
+returns boolean language plpgsql security definer set search_path = ''
+as $$
+declare v_me uuid := auth.uid();
+begin
+  if v_me is null then raise exception 'not authenticated' using errcode = '28000'; end if;
+  delete from public.friendships where id=p_request_id and requester_id=v_me and status='pending';
+  return found;
+end;
+$$;
+
+create or replace function private.remove_friend_impl(p_other_user_id uuid)
+returns boolean language plpgsql security definer set search_path = ''
+as $$
+declare v_me uuid := auth.uid();
+begin
+  if v_me is null then raise exception 'not authenticated' using errcode = '28000'; end if;
+  delete from public.friendships
+  where status='accepted'
+    and ((requester_id=v_me and addressee_id=p_other_user_id)
+      or (requester_id=p_other_user_id and addressee_id=v_me));
+  return found;
+end;
+$$;
+
+create or replace function public.request_friend(p_addressee_id uuid)
+returns text language sql security invoker set search_path=''
+as $$ select private.request_friend_impl(p_addressee_id); $$;
+create or replace function public.accept_friend_request(p_request_id uuid)
+returns boolean language sql security invoker set search_path=''
+as $$ select private.accept_friend_request_impl(p_request_id); $$;
+create or replace function public.decline_friend_request(p_request_id uuid)
+returns boolean language sql security invoker set search_path=''
+as $$ select private.decline_friend_request_impl(p_request_id); $$;
+create or replace function public.cancel_friend_request(p_request_id uuid)
+returns boolean language sql security invoker set search_path=''
+as $$ select private.cancel_friend_request_impl(p_request_id); $$;
+create or replace function public.remove_friend(p_other_user_id uuid)
+returns boolean language sql security invoker set search_path=''
+as $$ select private.remove_friend_impl(p_other_user_id); $$;
+
+revoke all on function public.request_friend(uuid) from public,anon;
+revoke all on function public.accept_friend_request(uuid) from public,anon;
+revoke all on function public.decline_friend_request(uuid) from public,anon;
+revoke all on function public.cancel_friend_request(uuid) from public,anon;
+revoke all on function public.remove_friend(uuid) from public,anon;
+grant execute on function public.request_friend(uuid) to authenticated;
+grant execute on function public.accept_friend_request(uuid) to authenticated;
+grant execute on function public.decline_friend_request(uuid) to authenticated;
+grant execute on function public.cancel_friend_request(uuid) to authenticated;
+grant execute on function public.remove_friend(uuid) to authenticated;
+
+grant execute on function private.request_friend_impl(uuid) to authenticated;
+grant execute on function private.accept_friend_request_impl(uuid) to authenticated;
+grant execute on function private.decline_friend_request_impl(uuid) to authenticated;
+grant execute on function private.cancel_friend_request_impl(uuid) to authenticated;
+grant execute on function private.remove_friend_impl(uuid) to authenticated;
+
+create or replace function private.on_friendship_change()
+returns trigger language plpgsql security definer set search_path=''
+as $$
+begin
+  if tg_op='INSERT' and new.status='pending' then
+    insert into public.notifications(recipient_id,actor_id,notification_type,entity_type,entity_id)
+    values(new.addressee_id,new.requester_id,'friend_request','friendship',new.id);
+  elsif tg_op='UPDATE' and old.status='pending' and new.status='accepted' then
+    insert into public.notifications(recipient_id,actor_id,notification_type,entity_type,entity_id)
+    values(new.requester_id,new.addressee_id,'friend_accepted','friendship',new.id);
+  end if;
+  return new;
+end;
+$$;
+revoke all on function private.on_friendship_change() from public,anon,authenticated;
+drop trigger if exists nexora_friendship_notifications on public.friendships;
+create trigger nexora_friendship_notifications
+after insert or update of status on public.friendships
+for each row execute function private.on_friendship_change();
