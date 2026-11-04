@@ -788,3 +788,121 @@ using (
       and private.is_conversation_member(cm.conversation_id)
   )
 );
+
+-- Private media bucket: access is granted by database ownership/visibility checks, not public URLs.
+insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
+values (
+  'nexora-media',
+  'nexora-media',
+  false,
+  52428800,
+  array['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','audio/mpeg','audio/mp4','audio/ogg','audio/webm','application/pdf']
+)
+on conflict(id) do update set
+  public = false,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+create or replace function private.can_read_media_path(p_path text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select
+    exists (
+      select 1
+      from public.media m
+      join public.posts p on p.id = m.post_id
+      join public.profiles pr on pr.id = p.user_id
+      where m.storage_path = p_path
+        and (
+          p.user_id = (select auth.uid())
+          or (
+            not exists (
+              select 1 from public.blocks b
+              where (b.blocker_id = (select auth.uid()) and b.blocked_id = p.user_id)
+                 or (b.blocker_id = p.user_id and b.blocked_id = (select auth.uid()))
+            )
+            and (pr.is_private = false or exists (
+              select 1 from public.follows f
+              where f.follower_id = (select auth.uid())
+                and f.following_id = p.user_id and f.status = 'accepted'
+            ))
+            and (
+              p.visibility = 'public'
+              or (p.visibility = 'followers' and exists (
+                select 1 from public.follows f
+                where f.follower_id = (select auth.uid())
+                  and f.following_id = p.user_id and f.status = 'accepted'
+              ))
+            )
+          )
+        )
+    )
+    or exists (
+      select 1 from public.stories s
+      where s.media_path = p_path
+        and s.archived_at is null and s.expires_at > now()
+        and (
+          s.user_id = (select auth.uid())
+          or (
+            not exists (
+              select 1 from public.blocks b
+              where (b.blocker_id = (select auth.uid()) and b.blocked_id = s.user_id)
+                 or (b.blocker_id = s.user_id and b.blocked_id = (select auth.uid()))
+            )
+            and (
+              s.visibility = 'public'
+              or (s.visibility = 'followers' and exists (
+                select 1 from public.follows f
+                where f.follower_id = (select auth.uid())
+                  and f.following_id = s.user_id and f.status = 'accepted'
+              ))
+            )
+          )
+        )
+    )
+    or exists (
+      select 1
+      from public.message_attachments a
+      join public.messages m on m.id = a.message_id
+      where a.storage_path = p_path
+        and private.is_conversation_member(m.conversation_id)
+    )
+    or exists (
+      select 1 from public.communities c
+      where c.cover_path = p_path
+        and (c.owner_id = (select auth.uid()) or c.visibility = 'public' or private.is_community_member(c.id))
+    );
+$$;
+revoke all on function private.can_read_media_path(text) from public, anon;
+grant execute on function private.can_read_media_path(text) to authenticated;
+
+drop policy if exists nexora_media_upload_own_folder on storage.objects;
+create policy nexora_media_upload_own_folder on storage.objects
+for insert to authenticated
+with check (
+  bucket_id = 'nexora-media'
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+);
+
+drop policy if exists nexora_media_read_authorized on storage.objects;
+create policy nexora_media_read_authorized on storage.objects
+for select to authenticated
+using (
+  bucket_id = 'nexora-media'
+  and (
+    (storage.foldername(name))[1] = (select auth.uid())::text
+    or private.can_read_media_path(name)
+  )
+);
+
+drop policy if exists nexora_media_delete_own on storage.objects;
+create policy nexora_media_delete_own on storage.objects
+for delete to authenticated
+using (
+  bucket_id = 'nexora-media'
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+);
