@@ -1132,3 +1132,70 @@ with check (
     where p.id = media.post_id and p.user_id = (select auth.uid())
   )
 );
+
+-- Every database media reference must point to an object uploaded into the caller's own folder.
+drop policy if exists stories_insert_self on public.stories;
+create policy stories_insert_self on public.stories for insert to authenticated
+with check (
+  user_id = (select auth.uid())
+  and (
+    media_path is null
+    or (
+      (storage.foldername(media_path))[1] = (select auth.uid())::text
+      and exists (
+        select 1 from storage.objects o
+        where o.bucket_id = 'nexora-media' and o.name = stories.media_path
+      )
+    )
+  )
+);
+
+drop policy if exists attachments_insert_self on public.message_attachments;
+create policy attachments_insert_self on public.message_attachments for insert to authenticated
+with check (
+  uploader_id = (select auth.uid())
+  and (storage.foldername(storage_path))[1] = (select auth.uid())::text
+  and exists (
+    select 1 from storage.objects o
+    where o.bucket_id = 'nexora-media' and o.name = message_attachments.storage_path
+  )
+  and exists (
+    select 1 from public.messages m
+    where m.id = message_id
+      and m.sender_id = (select auth.uid())
+      and private.is_conversation_member(m.conversation_id)
+  )
+);
+
+drop policy if exists communities_create_self on public.communities;
+create policy communities_create_self on public.communities for insert to authenticated
+with check (
+  owner_id = (select auth.uid())
+  and (
+    cover_path is null
+    or (
+      (storage.foldername(cover_path))[1] = (select auth.uid())::text
+      and exists (
+        select 1 from storage.objects o
+        where o.bucket_id = 'nexora-media' and o.name = communities.cover_path
+      )
+    )
+  )
+);
+
+drop policy if exists communities_update_owner on public.communities;
+create policy communities_update_owner on public.communities for update to authenticated
+using (owner_id = (select auth.uid()))
+with check (
+  owner_id = (select auth.uid())
+  and (
+    cover_path is null
+    or (
+      (storage.foldername(cover_path))[1] = (select auth.uid())::text
+      and exists (
+        select 1 from storage.objects o
+        where o.bucket_id = 'nexora-media' and o.name = communities.cover_path
+      )
+    )
+  )
+);
