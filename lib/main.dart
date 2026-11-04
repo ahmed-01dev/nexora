@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_error.dart';
 import 'core/theme/nexora_theme.dart';
+import 'features/media/media_upload_service.dart';
+import 'features/media/post_media_gallery.dart';
 import 'features/messaging/messages_screen.dart';
 import 'features/reels/reels_screen.dart';
 import 'features/settings/privacy_settings_screen.dart';
@@ -284,34 +287,145 @@ class CreateScreen extends StatefulWidget {
 }
 class _CreateScreenState extends State<CreateScreen> {
   final _text = TextEditingController();
+  final _mediaService = MediaUploadService();
+  final List<XFile> _media = [];
   String _visibility = 'public';
-  bool _busy = false;
+  bool _busy = false, _mediaBusy = false;
   String? _error;
+
   @override
   void dispose() { _text.dispose(); super.dispose(); }
+
+  Future<void> _pickImages() async {
+    setState(() { _mediaBusy = true; _error = null; });
+    try {
+      final files = await _mediaService.pickImages();
+      if (!mounted || files.isEmpty) return;
+      if (_media.length + files.length > MediaUploadService.maxFiles) {
+        setState(() => _error = 'الحد الأقصى 10 ملفات في المنشور.');
+      } else {
+        setState(() => _media.addAll(files));
+      }
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'pick_images');
+      if (mounted) setState(() => _error = AppErrorService.message(error));
+    } finally {
+      if (mounted) setState(() => _mediaBusy = false);
+    }
+  }
+
+  Future<void> _pickVideo() async {
+    if (_media.length >= MediaUploadService.maxFiles) {
+      setState(() => _error = 'الحد الأقصى 10 ملفات في المنشور.');
+      return;
+    }
+    setState(() { _mediaBusy = true; _error = null; });
+    try {
+      final file = await _mediaService.pickVideo();
+      if (mounted && file != null) setState(() => _media.add(file));
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'pick_video');
+      if (mounted) setState(() => _error = AppErrorService.message(error));
+    } finally {
+      if (mounted) setState(() => _mediaBusy = false);
+    }
+  }
+
   Future<void> _publish() async {
     final value = _text.text.trim();
-    if (value.isEmpty || value.length > 5000) { setState(() => _error = value.isEmpty ? 'اكتب محتوى المنشور الأول.' : 'الحد الأقصى 5000 حرف.'); return; }
+    if ((value.isEmpty && _media.isEmpty) || value.length > 5000) {
+      setState(() => _error = value.length > 5000 ? 'الحد الأقصى 5000 حرف.' : 'اكتب محتوى أو أضف صورة/فيديو.');
+      return;
+    }
     setState(() { _busy = true; _error = null; });
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser!.id;
+    String? postId;
+    List<String> uploadedPaths = [];
     try {
-      await Supabase.instance.client.from('posts').insert({'user_id': Supabase.instance.client.auth.currentUser!.id, 'content': value, 'visibility': _visibility});
+      final row = await client.from('posts').insert({
+        'user_id': userId, 'content': value, 'visibility': 'private',
+      }).select('id').single();
+      postId = row['id'] as String;
+      if (_media.isNotEmpty) {
+        uploadedPaths = await _mediaService.uploadPostMedia(
+          userId: userId, postId: postId, files: List<XFile>.from(_media),
+        );
+      }
+      await client.from('posts').update({'visibility': _visibility}).eq('id', postId);
       if (!mounted) return;
-      _text.clear(); widget.onPosted();
+      _text.clear();
+      setState(() => _media.clear());
+      widget.onPosted();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم نشر المنشور')));
-    } catch (e, s) { AppErrorService.report(e, s, source: 'publish'); if (mounted) setState(() => _error = AppErrorService.message(e)); }
-    finally { if (mounted) setState(() => _busy = false); }
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'publish');
+      if (postId != null) {
+        try { await _mediaService.removeUploaded(uploadedPaths); }
+        catch (e, s) { AppErrorService.report(e, s, source: 'media_cleanup'); }
+        try { await client.from('posts').delete().eq('id', postId); }
+        catch (e, s) { AppErrorService.report(e, s, source: 'post_cleanup'); }
+      }
+      if (mounted) setState(() => _error = AppErrorService.message(error));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
+
   @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('إنشاء منشور', style: TextStyle(fontWeight: FontWeight.w800))), body: ListView(padding: const EdgeInsets.all(18), children: [
-    Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const Text('شارك لحظتك', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)), const SizedBox(height: 16),
-      TextField(controller: _text, minLines: 7, maxLines: 14, maxLength: 5000, decoration: const InputDecoration(hintText: 'إيه اللي في بالك؟', border: InputBorder.none, filled: false)),
-      DropdownButtonFormField<String>(value: _visibility, decoration: const InputDecoration(labelText: 'خصوصية المنشور'), items: const [DropdownMenuItem(value: 'public', child: Text('عام')), DropdownMenuItem(value: 'followers', child: Text('المتابعون')), DropdownMenuItem(value: 'private', child: Text('أنا فقط'))], onChanged: _busy ? null : (v) => setState(() => _visibility = v ?? 'public')),
-      if (_error != null) _Notice(text: _error!, error: true), const SizedBox(height: 16),
-      FilledButton.icon(onPressed: _busy ? null : _publish, icon: _busy ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send), label: const Text('نشر المنشور'), style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52))),
-    ]))),
-    const SizedBox(height: 12), const Text('رفع الصور والفيديو والريلز هيتفعّل بعد تجهيز التخزين الآمن ومعالجة الوسائط.', style: TextStyle(color: Color(0xFF8996AA), height: 1.5)),
-  ]));
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('إنشاء منشور', style: TextStyle(fontWeight: FontWeight.w800))),
+    body: ListView(padding: const EdgeInsets.all(18), children: [
+      Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('شارك لحظتك', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 16),
+          TextField(controller: _text, minLines: 5, maxLines: 12, maxLength: 5000,
+            decoration: const InputDecoration(hintText: 'إيه اللي في بالك؟', border: InputBorder.none, filled: false)),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            OutlinedButton.icon(onPressed: _busy || _mediaBusy ? null : _pickImages,
+              icon: const Icon(Icons.photo_library_outlined), label: const Text('صور')),
+            OutlinedButton.icon(onPressed: _busy || _mediaBusy ? null : _pickVideo,
+              icon: const Icon(Icons.video_library_outlined), label: const Text('فيديو')),
+          ]),
+          if (_mediaBusy) const LinearProgressIndicator(),
+          if (_media.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            for (var i = 0; i < _media.length; i++)
+              ListTile(
+                dense: true, contentPadding: EdgeInsets.zero,
+                leading: Icon(_media[i].name.toLowerCase().endsWith('.mp4') || _media[i].name.toLowerCase().endsWith('.webm')
+                  ? Icons.video_file_outlined : Icons.image_outlined),
+                title: Text(_media[i].name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                trailing: IconButton(tooltip: 'إزالة', onPressed: _busy ? null : () => setState(() => _media.removeAt(i)),
+                  icon: const Icon(Icons.close)),
+              ),
+          ],
+          DropdownButtonFormField<String>(
+            value: _visibility, decoration: const InputDecoration(labelText: 'خصوصية المنشور'),
+            items: const [
+              DropdownMenuItem(value: 'public', child: Text('عام')),
+              DropdownMenuItem(value: 'followers', child: Text('المتابعون')),
+              DropdownMenuItem(value: 'private', child: Text('أنا فقط')),
+            ],
+            onChanged: _busy ? null : (v) => setState(() => _visibility = v ?? 'public'),
+          ),
+          if (_error != null) _Notice(text: _error!, error: true),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: _busy || _mediaBusy ? null : _publish,
+            icon: _busy ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send),
+            label: Text(_busy ? 'جاري النشر والرفع...' : 'نشر المنشور'),
+            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+          ),
+        ],
+      ))),
+      const SizedBox(height: 12),
+      const Text('الملفات تُرفع إلى مساحة خاصة، ويُسمح بمشاهدتها حسب خصوصية المنشور والحساب.',
+        style: TextStyle(color: Color(0xFFA1A1AA), height: 1.5)),
+    ]),
+  );
 }
 
 class ProfileScreen extends StatefulWidget {
