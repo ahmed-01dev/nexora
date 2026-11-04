@@ -23,15 +23,23 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Validate Supabase connection
+      - name: Normalize and validate Supabase connection
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL_INPUT: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY_INPUT: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          test -n "$SUPABASE_URL" || (echo "SUPABASE_URL secret is missing" && exit 1)
-          test -n "$SUPABASE_ANON_KEY" || (echo "SUPABASE_ANON_KEY secret is missing" && exit 1)
-          curl --fail --silent --show-error "$SUPABASE_URL/auth/v1/settings" \
-            -H "apikey: $SUPABASE_ANON_KEY" \
+          SUPABASE_URL_CLEAN="$(printf '%s' "$SUPABASE_URL_INPUT" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+          SUPABASE_ANON_KEY_CLEAN="$(printf '%s' "$SUPABASE_ANON_KEY_INPUT" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+          test -n "$SUPABASE_URL_CLEAN" || (echo "SUPABASE_URL secret is missing" && exit 1)
+          test -n "$SUPABASE_ANON_KEY_CLEAN" || (echo "SUPABASE_ANON_KEY secret is missing" && exit 1)
+          case "$SUPABASE_URL_CLEAN" in
+            https://*.supabase.co) ;;
+            *) echo "SUPABASE_URL must be the project HTTPS URL ending in .supabase.co"; exit 1 ;;
+          esac
+          printf 'SUPABASE_URL_CLEAN=%s\n' "$SUPABASE_URL_CLEAN" >> "$GITHUB_ENV"
+          printf 'SUPABASE_ANON_KEY_CLEAN=%s\n' "$SUPABASE_ANON_KEY_CLEAN" >> "$GITHUB_ENV"
+          curl --fail --silent --show-error "$SUPABASE_URL_CLEAN/auth/v1/settings" \
+            -H "apikey: $SUPABASE_ANON_KEY_CLEAN" \
             -o /dev/null
           echo "Supabase URL and public key accepted."
 
@@ -48,10 +56,10 @@ jobs:
         run: flutter test
 
       - name: Build Android APK
-        run: flutter build apk --release --dart-define=SUPABASE_URL="${{ secrets.SUPABASE_URL }}" --dart-define=SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}"
+        run: flutter build apk --release --dart-define=SUPABASE_URL="$SUPABASE_URL_CLEAN" --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY_CLEAN"
 
       - name: Build Web
-        run: flutter build web --release --dart-define=SUPABASE_URL="${{ secrets.SUPABASE_URL }}" --dart-define=SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}"
+        run: flutter build web --release --dart-define=SUPABASE_URL="$SUPABASE_URL_CLEAN" --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY_CLEAN"
 
       - name: Upload APK and Web artifacts
         uses: actions/upload-artifact@v4
