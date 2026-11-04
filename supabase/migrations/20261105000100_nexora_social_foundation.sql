@@ -494,7 +494,7 @@ using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()))
 
 
 -- Safe direct-message creation: checks privacy and bilateral blocks server-side.
-create or replace function public.create_direct_conversation(p_other_user_id uuid)
+create or replace function private.create_direct_conversation_impl(p_other_user_id uuid)
 returns uuid
 language plpgsql
 security definer
@@ -566,8 +566,8 @@ begin
 end;
 $$;
 
-revoke all on function public.create_direct_conversation(uuid) from public, anon;
-grant execute on function public.create_direct_conversation(uuid) to authenticated;
+revoke all on function private.create_direct_conversation_impl(uuid) from public, anon;
+grant execute on function private.create_direct_conversation_impl(uuid) to authenticated;
 
 create or replace function private.on_message_insert()
 returns trigger
@@ -621,7 +621,7 @@ end;
 $$;
 
 -- Follow requests respect private profiles and mutual blocks.
-create or replace function public.request_follow(p_target_user_id uuid)
+create or replace function private.request_follow_impl(p_target_user_id uuid)
 returns text language plpgsql security definer set search_path = ''
 as $$
 declare v_me uuid := auth.uid(); v_private boolean; v_status text;
@@ -641,7 +641,7 @@ begin
 end;
 $$;
 
-create or replace function public.cancel_follow(p_target_user_id uuid)
+create or replace function private.cancel_follow_impl(p_target_user_id uuid)
 returns boolean language plpgsql security definer set search_path = ''
 as $$
 declare v_me uuid := auth.uid();
@@ -652,10 +652,10 @@ begin
 end;
 $$;
 
-revoke all on function public.request_follow(uuid) from public, anon;
-revoke all on function public.cancel_follow(uuid) from public, anon;
-grant execute on function public.request_follow(uuid) to authenticated;
-grant execute on function public.cancel_follow(uuid) to authenticated;
+revoke all on function private.request_follow_impl(uuid) from public, anon;
+revoke all on function private.cancel_follow_impl(uuid) from public, anon;
+grant execute on function private.request_follow_impl(uuid) to authenticated;
+grant execute on function private.cancel_follow_impl(uuid) to authenticated;
 
 -- Close privilege-escalation paths left by broad legacy table grants.
 revoke insert, update on public.profiles from authenticated;
@@ -700,7 +700,7 @@ drop policy if exists messages_delete_own on public.messages;
 create policy messages_delete_own on public.messages for delete to authenticated
 using (sender_id = (select auth.uid()));
 
-create or replace function public.update_privacy_settings(
+create or replace function private.update_privacy_settings_impl(
   p_is_private boolean,
   p_allow_messages_from text
 )
@@ -724,5 +724,67 @@ begin
     updated_at = now();
 end;
 $$;
+revoke all on function private.update_privacy_settings_impl(boolean,text) from public, anon;
+grant execute on function private.update_privacy_settings_impl(boolean,text) to authenticated;
+
+-- Expose only SECURITY INVOKER RPC wrappers; privileged implementation stays in the unexposed private schema.
+create or replace function public.create_direct_conversation(p_other_user_id uuid)
+returns uuid language sql security invoker set search_path = ''
+as $$ select private.create_direct_conversation_impl(p_other_user_id); $$;
+create or replace function public.request_follow(p_target_user_id uuid)
+returns text language sql security invoker set search_path = ''
+as $$ select private.request_follow_impl(p_target_user_id); $$;
+create or replace function public.cancel_follow(p_target_user_id uuid)
+returns boolean language sql security invoker set search_path = ''
+as $$ select private.cancel_follow_impl(p_target_user_id); $$;
+create or replace function public.update_privacy_settings(p_is_private boolean, p_allow_messages_from text)
+returns void language sql security invoker set search_path = ''
+as $$ select private.update_privacy_settings_impl(p_is_private,p_allow_messages_from); $$;
+
+revoke all on function public.create_direct_conversation(uuid) from public, anon;
+revoke all on function public.request_follow(uuid) from public, anon;
+revoke all on function public.cancel_follow(uuid) from public, anon;
 revoke all on function public.update_privacy_settings(boolean,text) from public, anon;
+grant execute on function public.create_direct_conversation(uuid) to authenticated;
+grant execute on function public.request_follow(uuid) to authenticated;
+grant execute on function public.cancel_follow(uuid) to authenticated;
 grant execute on function public.update_privacy_settings(boolean,text) to authenticated;
+
+grant execute on function private.create_direct_conversation_impl(uuid) to authenticated;
+grant execute on function private.request_follow_impl(uuid) to authenticated;
+grant execute on function private.cancel_follow_impl(uuid) to authenticated;
+grant execute on function private.update_privacy_settings_impl(boolean,text) to authenticated;
+
+-- Index foreign-key columns used by membership and ownership checks.
+create index if not exists call_participants_user_idx on public.call_participants(user_id);
+create index if not exists call_sessions_initiated_by_idx on public.call_sessions(initiated_by);
+create index if not exists communities_owner_idx on public.communities(owner_id);
+create index if not exists conversations_created_by_idx on public.conversations(created_by);
+create index if not exists message_attachments_uploader_idx on public.message_attachments(uploader_id);
+create index if not exists message_reactions_user_idx on public.message_reactions(user_id);
+create index if not exists messages_reply_to_idx on public.messages(reply_to);
+create index if not exists messages_sender_idx on public.messages(sender_id);
+create index if not exists notifications_actor_idx on public.notifications(actor_id);
+create index if not exists reports_reporter_idx on public.reports(reporter_id);
+create index if not exists story_views_viewer_idx on public.story_views(viewer_id);
+
+-- Merge profile visibility and conversation-member access into one SELECT policy.
+drop policy if exists "Profiles visible according to privacy" on public.profiles;
+drop policy if exists profiles_visible_to_conversation_participants on public.profiles;
+create policy "Profiles visible according to privacy" on public.profiles
+for select to authenticated
+using (
+  id = (select auth.uid())
+  or is_private = false
+  or exists (
+    select 1 from public.follows f
+    where f.follower_id = (select auth.uid())
+      and f.following_id = profiles.id
+      and f.status = 'accepted'
+  )
+  or exists (
+    select 1 from public.conversation_members cm
+    where cm.user_id = profiles.id
+      and private.is_conversation_member(cm.conversation_id)
+  )
+);
