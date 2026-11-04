@@ -124,7 +124,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       controller: _email,
                       keyboardType: TextInputType.emailAddress,
                       decoration: const InputDecoration(labelText: 'البريد الإلكتروني', prefixIcon: Icon(Icons.alternate_email)),
-                      validator: (v) => v == null || !RegExp(r'^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$').hasMatch(v.trim()) ? 'اكتب بريد إلكتروني صحيح' : null,
+                      validator: (v) => v == null || !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim()) ? 'اكتب بريد إلكتروني صحيح' : null,
                     ),
                     const SizedBox(height: 13),
                     TextFormField(
