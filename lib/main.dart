@@ -49,7 +49,20 @@ class AuthGate extends StatelessWidget {
 class _Setup extends StatelessWidget {
   const _Setup();
   @override
-  Widget build(BuildContext context) => const _Empty(icon: Icons.settings, title: 'NEXORA محتاج إعداد الاتصال', subtitle: 'راجع متغيرات SUPABASE_URL وSUPABASE_ANON_KEY في إعدادات البناء. لا تضع service_role داخل التطبيق.');
+  Widget build(BuildContext context) => Scaffold(
+    body: SafeArea(
+      child: SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: MediaQuery.sizeOf(context).height),
+          child: const _Empty(
+            icon: Icons.settings,
+            title: 'NEXORA محتاج إعداد الاتصال',
+            subtitle: 'راجع متغيرات SUPABASE_URL وSUPABASE_ANON_KEY في إعدادات البناء. لا تضع service_role داخل التطبيق.',
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class AuthScreen extends StatefulWidget {
@@ -196,7 +209,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('NEXORA', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2)), actions: [IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh))]),
-    floatingActionButton: FloatingActionButton(heroTag: 'newPost', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('افتح تبويب إنشاء لإضافة منشور'))), child: const Icon(Icons.add)),
     body: FutureBuilder<List<Map<String, dynamic>>>(future: _future, builder: (context, snap) {
       if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
       if (snap.hasError) return AppErrorView(title: 'تعذر تحميل المنشورات', error: snap.error, onRetry: () => setState(() => _future = _load()));
