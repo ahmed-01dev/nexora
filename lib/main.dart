@@ -352,4 +352,4 @@ class _BrandMark extends StatelessWidget {
         child: const Icon(Icons.bolt_rounded, size: 42, color: Color(0xFFE8EAF0)),
       );
 }
-)
+
