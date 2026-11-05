@@ -134,12 +134,9 @@ class _GlowBlob extends StatelessWidget {
   final Color color;
   final double size;
   @override
-  Widget build(BuildContext context) => ImageFiltered(
-    imageFilter: const ColorFilter.mode(Colors.transparent, BlendMode.dst),
-    child: Container(width: size, height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: .13),
-        boxShadow: [BoxShadow(color: color.withValues(alpha: .24), blurRadius: 100, spreadRadius: 28)])),
-  );
+  Widget build(BuildContext context) => Container(width: size, height: size,
+    decoration: BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: .10),
+      boxShadow: [BoxShadow(color: color.withValues(alpha: .22), blurRadius: 100, spreadRadius: 28)]));
 }
 
 class _NavItem extends StatelessWidget {
