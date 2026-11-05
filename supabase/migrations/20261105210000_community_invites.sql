@@ -18,6 +18,7 @@ create index if not exists community_invites_created_by_idx
 alter table public.community_invites enable row level security;
 revoke all on public.community_invites from public, anon, authenticated;
 
+drop policy if exists community_invites_deny_direct_access on public.community_invites;
 create policy community_invites_deny_direct_access
 on public.community_invites for all to anon, authenticated
 using (false) with check (false);
