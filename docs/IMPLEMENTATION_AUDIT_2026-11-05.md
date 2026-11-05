@@ -45,6 +45,7 @@ Firebase project: nexora-20712
 - The Supabase dashboard currently shows Email enabled and Phone disabled. Phone OTP cannot work end-to-end until Phone is enabled and a supported SMS provider is configured and tested.
 - Supabase Security Advisor currently reports one warning: leaked-password protection disabled. The dashboard shows the project on Free; this feature requires a plan upgrade for this project. Do not claim this warning is resolved.
 - The email signup UI now requires at least 12 characters plus a letter and digit, but this is client-side validation only and can be bypassed by a modified client. It does not replace the server-side Auth password policy or leaked-password protection.
+- Post uploads now enforce a 100 MiB aggregate client-side limit across up to ten files (50 MiB per file); server-side per-user storage quotas and media scanning remain release work.
 - The project owner should not paste service-role keys, Firebase private keys, database passwords, or webhook secrets into chat or source control.
 
 ## Push notification state
