@@ -1,8 +1,7 @@
 name: NEXORA Android and Web Build
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
   pull_request:
     branches: [main]
   workflow_dispatch:
