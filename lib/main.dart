@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_error.dart';
 import 'core/theme/nexora_theme.dart';
 import 'features/design_gallery/design_gallery_screen.dart';
+import 'features/preview/nexora_preview_screen.dart';
 import 'features/auth/phone_number.dart';
 import 'features/media/media_upload_service.dart';
 import 'features/media/post_media_gallery.dart';
@@ -590,6 +591,14 @@ class _AuthScreenState extends State<AuthScreen> {
                         _clearFeedback();
                       }),
                       child: Text(_register ? 'عندك حساب؟ سجّل الدخول' : 'مستخدم جديد؟ أنشئ حساب'),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: _busy ? null : () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(builder: (_) => const NexoraPreviewScreen()),
+                      ),
+                      icon: const Icon(Icons.visibility_outlined),
+                      label: const Text('استكشف NEXORA قبل التسجيل · معاينة'),
                     ),
                   ],
                 ),
