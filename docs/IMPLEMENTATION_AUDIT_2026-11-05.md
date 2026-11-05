@@ -23,6 +23,11 @@ Firebase project: nexora-20712
 - A fresh catalog check found no remaining SECURITY DEFINER functions in the `private` schema with PUBLIC EXECUTE.
 - No public or private SQL views were returned by the view inventory query.
 
+## Migration history synchronization
+- The connected Supabase project currently reports 24 applied migration records; the repository contains 23 SQL migration files.
+- The version/name lists are not a one-to-one match: eight remote migration names have no exact same-named file, while seven local migration filenames have no exact same-named remote record. Some appear to be consolidated or renamed equivalents, but this has not been proven by content comparison.
+- This is a migration-history drift risk. Do not run `supabase db push`, reset, or replay migrations until the repository and remote history are reconciled against the actual applied SQL and a recoverable database backup is available.
+
 ## Auth and provider configuration
 - The Supabase dashboard currently shows Email enabled and Phone disabled. Phone OTP cannot work end-to-end until Phone is enabled and a supported SMS provider is configured and tested.
 - Supabase Security Advisor currently reports one warning: leaked-password protection disabled. The dashboard shows the project on Free; this feature requires a plan upgrade for this project. Do not claim this warning is resolved.
