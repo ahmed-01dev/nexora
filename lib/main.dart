@@ -215,7 +215,7 @@ class _AuthScreenState extends State<AuthScreen> {
   Future<void> _verifyPhoneCode() async {
     final phone = _normalizedPhone;
     final token = _otp.text.trim();
-    if (phone == null || !RegExp(r'^\\d{6}$').hasMatch(token)) {
+    if (phone == null || !RegExp(r'^\d{6}$').hasMatch(token)) {
       setState(() => _error = 'اكتب كود التحقق المكوّن من 6 أرقام');
       return;
     }
@@ -360,7 +360,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             prefixIcon: Icon(Icons.password),
                             counterText: '',
                           ),
-                          validator: (v) => v == null || !RegExp(r'^\\d{6}$').hasMatch(v.trim())
+                          validator: (v) => v == null || !RegExp(r'^\d{6}$').hasMatch(v.trim())
                               ? 'الكود لازم يكون 6 أرقام' : null,
                         ),
                         Align(
@@ -378,7 +378,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         controller: _email,
                         keyboardType: TextInputType.emailAddress,
                         decoration: const InputDecoration(labelText: 'البريد الإلكتروني', prefixIcon: Icon(Icons.alternate_email)),
-                        validator: (v) => v == null || !RegExp(r'^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$').hasMatch(v.trim())
+                        validator: (v) => v == null || !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim())
                             ? 'اكتب بريد إلكتروني صحيح' : null,
                       ),
                       const SizedBox(height: 13),
