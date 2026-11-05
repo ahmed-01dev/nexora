@@ -26,4 +26,21 @@ void main() {
       expect(normalizeNexoraPhone('01012345678+'), isNull);
     });
   });
+
+  group('normalizeNexoraOtp', () {
+    test('accepts six ASCII digits', () {
+      expect(normalizeNexoraOtp('123456'), '123456');
+    });
+
+    test('normalizes Arabic-Indic and Persian digits', () {
+      expect(normalizeNexoraOtp('١٢٣٤٥٦'), '123456');
+      expect(normalizeNexoraOtp('۱۲۳۴۵۶'), '123456');
+    });
+
+    test('rejects wrong length and non-digits', () {
+      expect(normalizeNexoraOtp('12345'), isNull);
+      expect(normalizeNexoraOtp('1234567'), isNull);
+      expect(normalizeNexoraOtp('12a456'), isNull);
+    });
+  });
 }
