@@ -34,6 +34,9 @@ Future<void> _nexoraFirebaseMessagingBackgroundHandler(RemoteMessage message) as
   await Firebase.initializeApp();
 }
 
+final _nexoraNavigatorKey = GlobalKey<NavigatorState>();
+final _nexoraMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
 final _url = String.fromEnvironment('SUPABASE_URL', defaultValue: 'https://wwdeexgkwpftyavbhiff.supabase.co').trim();
 const _key = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: 'sb_publishable_vJpkaM72QMGLykLFU5m44g_kwuPCi-Y');
 
@@ -76,6 +79,8 @@ class NexoraApp extends StatefulWidget {
 
 class _NexoraAppState extends State<NexoraApp> {
   StreamSubscription<AuthState>? _authSubscription;
+  StreamSubscription<RemoteMessage>? _foregroundMessageSubscription;
+  StreamSubscription<RemoteMessage>? _openedMessageSubscription;
 
   @override
   void initState() {
@@ -86,7 +91,29 @@ class _NexoraAppState extends State<NexoraApp> {
         NexoraPushService.instance.registerIfAllowed();
         _loadAppearance();
       });
+      if (!kIsWeb && Firebase.apps.isNotEmpty) {
+        _foregroundMessageSubscription = FirebaseMessaging.onMessage.listen((message) {
+          final notification = message.notification;
+          final title = notification?.title ?? 'NEXORA';
+          final body = notification?.body ?? 'لديك إشعار جديد';
+          _nexoraMessengerKey.currentState?.showSnackBar(
+            SnackBar(content: Text('$title: $body')),
+          );
+        });
+        _openedMessageSubscription = FirebaseMessaging.onMessageOpenedApp.listen((_) {
+          _openNexoraNotifications();
+        });
+        FirebaseMessaging.instance.getInitialMessage().then((message) {
+          if (message != null) _openNexoraNotifications();
+        });
+      }
     }
+  }
+
+  void _openNexoraNotifications() {
+    _nexoraNavigatorKey.currentState?.push(
+      MaterialPageRoute<void>(builder: (_) => const NotificationsScreen()),
+    );
   }
 
   Future<void> _loadAppearance() async {
@@ -113,6 +140,8 @@ class _NexoraAppState extends State<NexoraApp> {
   @override
   void dispose() {
     _authSubscription?.cancel();
+    _foregroundMessageSubscription?.cancel();
+    _openedMessageSubscription?.cancel();
     NexoraPushService.instance.dispose();
     super.dispose();
   }
@@ -128,6 +157,8 @@ class _NexoraAppState extends State<NexoraApp> {
             _ => NexoraTheme.amoled,
           };
           return MaterialApp(
+            navigatorKey: _nexoraNavigatorKey,
+            scaffoldMessengerKey: _nexoraMessengerKey,
             title: 'NEXORA',
             debugShowCheckedModeBanner: false,
             theme: theme,
