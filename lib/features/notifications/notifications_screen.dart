@@ -14,6 +14,9 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   late Future<List<Map<String, dynamic>>> _future;
+  static const int _pageSize = 50;
+  bool _hasMore = true;
+  bool _loadingMore = false;
 
   @override
   void initState() {
@@ -21,15 +24,40 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     _future = _load();
   }
 
-  Future<List<Map<String, dynamic>>> _load() async {
+  Future<List<Map<String, dynamic>>> _load({int offset = 0}) async {
     final uid = Supabase.instance.client.auth.currentUser!.id;
     final rows = await Supabase.instance.client
         .from('notifications')
         .select('id,actor_id,notification_type,entity_type,entity_id,payload,read_at,created_at,profiles!notifications_actor_id_fkey(display_name,username)')
         .eq('recipient_id', uid)
         .order('created_at', ascending: false)
-        .limit(100);
+        .order('id', ascending: false)
+        .range(offset, offset + _pageSize - 1);
+    if (mounted) setState(() => _hasMore = rows.length == _pageSize);
     return List<Map<String, dynamic>>.from(rows);
+  }
+
+  Future<void> _loadMore(List<Map<String, dynamic>> current) async {
+    if (_loadingMore || !_hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final additions = await _load(offset: current.length);
+      if (!mounted) return;
+      final known = current.map((row) => row['id']).toSet();
+      final unique = additions.where((row) => !known.contains(row['id']));
+      setState(() {
+        _future = Future.value([...current, ...unique]);
+        _loadingMore = false;
+      });
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'load_more_notifications');
+      if (mounted) {
+        setState(() => _loadingMore = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppErrorService.message(error))),
+        );
+      }
+    }
   }
 
   Future<void> _markRead(String id) async {
@@ -47,7 +75,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           .update({'read_at': DateTime.now().toUtc().toIso8601String()})
           .eq('recipient_id', Supabase.instance.client.auth.currentUser!.id)
           .isFilter('read_at', null);
-      if (mounted) setState(() => _future = _load());
+      if (mounted) setState(() { _hasMore = true; _future = _load(); });
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'mark_all_notifications_read');
       if (mounted) {
@@ -103,7 +131,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   };
 
   Future<void> _refresh() async {
-    setState(() => _future = _load());
+    setState(() {
+      _hasMore = true;
+      _loadingMore = false;
+      _future = _load();
+    });
     await _future;
   }
 
@@ -133,9 +165,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           return RefreshIndicator(
             onRefresh: _refresh,
             child: ListView.separated(
-              itemCount: rows.length,
+              itemCount: rows.length + (_hasMore || _loadingMore ? 1 : 0),
               separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
               itemBuilder: (context, index) {
+                if (index == rows.length) {
+                  if (_loadingMore) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  return Center(
+                    child: TextButton.icon(
+                      onPressed: () => _loadMore(rows),
+                      icon: const Icon(Icons.expand_more),
+                      label: const Text('تحميل إشعارات أقدم'),
+                    ),
+                  );
+                }
                 final row = rows[index];
                 final actor = row['profiles'] is Map
                     ? Map<String, dynamic>.from(row['profiles'] as Map)
