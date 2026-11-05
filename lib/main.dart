@@ -13,6 +13,7 @@ import 'features/notifications/notifications_screen.dart';
 import 'features/reels/reels_screen.dart';
 import 'features/settings/privacy_settings_screen.dart';
 import 'features/stories/stories_screen.dart';
+import 'features/search/hashtag_service.dart';
 
 final _url = String.fromEnvironment('SUPABASE_URL').trim();
 const _key = String.fromEnvironment('SUPABASE_ANON_KEY');
@@ -767,6 +768,11 @@ class _CreateScreenState extends State<CreateScreen> {
         'user_id': userId, 'content': value, 'visibility': 'private',
       }).select('id').single();
       postId = row['id'] as String;
+      await HashtagService.indexPost(
+        client: client,
+        postId: postId,
+        content: value,
+      );
       if (_media.isNotEmpty) {
         uploadedPaths = await _mediaService.uploadPostMedia(
           userId: userId, postId: postId, files: List<XFile>.from(_media),
