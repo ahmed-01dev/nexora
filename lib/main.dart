@@ -893,10 +893,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
       final column = imageType == 'avatar' ? 'avatar_url' : 'cover_url';
       final previous = (profile[column] ?? '').toString();
-      await Supabase.instance.client
+      final savedProfile = await Supabase.instance.client
           .from('profiles')
           .update({column: uploadedPath, 'updated_at': DateTime.now().toUtc().toIso8601String()})
-          .eq('id', userId);
+          .eq('id', userId)
+          .select('id')
+          .maybeSingle();
+      if (savedProfile == null) {
+        throw StateError('لم يتم حفظ صورة الملف الشخصي. تحقق من صلاحيات الحساب وحاول مرة أخرى.');
+      }
       if (previous.startsWith('$userId/profile/')) {
         try { await _profileMedia.removeProfileImage(previous); } catch (error, stack) {
           AppErrorService.report(error, stack, source: 'remove_old_profile_image');
