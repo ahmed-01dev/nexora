@@ -113,6 +113,57 @@ class _CommentsScreenState extends State<CommentsScreen> {
     }
   }
 
+  Future<void> _edit(Map<String, dynamic> comment) async {
+    final controller = TextEditingController(
+      text: (comment['content'] ?? '').toString(),
+    );
+    final edited = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('تعديل التعليق'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          minLines: 2,
+          maxLines: 6,
+          maxLength: 2000,
+          decoration: const InputDecoration(hintText: 'اكتب التعليق بعد التعديل'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: const Text('حفظ'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (edited == null) return;
+    final content = edited.trim();
+    if (content.isEmpty || content.length > 2000) {
+      _notice('التعليق لازم يكون من حرف إلى 2000 حرف.');
+      return;
+    }
+    try {
+      await _db
+          .from('comments')
+          .update({
+            'content': content,
+            'edited_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', comment['id'] as String)
+          .eq('user_id', _myId);
+      await _refresh();
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'edit_comment');
+      _notice(AppErrorService.message(error));
+    }
+  }
+
   Future<void> _delete(Map<String, dynamic> comment) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -161,6 +212,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
               _replyTo = comment['id'] as String;
               _replyName = name;
             }),
+            onEdit: () => _edit(comment),
             onDelete: () => _delete(comment),
           ),
           for (final child in children)
@@ -304,12 +356,14 @@ class _CommentTile extends StatefulWidget {
     required this.comment,
     required this.mine,
     required this.onReply,
+    required this.onEdit,
     required this.onDelete,
   });
 
   final Map<String, dynamic> comment;
   final bool mine;
   final VoidCallback onReply;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
@@ -396,13 +450,20 @@ class _CommentTileState extends State<_CommentTile> {
                 const SizedBox(width: 8),
                 Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.w800))),
                 Text(stamp, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                if (widget.mine && !deleted)
+                if (widget.mine && !deleted) ...[
+                  IconButton(
+                    tooltip: 'تعديل التعليق',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: widget.onEdit,
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                  ),
                   IconButton(
                     tooltip: 'حذف التعليق',
                     visualDensity: VisualDensity.compact,
                     onPressed: widget.onDelete,
                     icon: const Icon(Icons.delete_outline, size: 18),
                   ),
+                ],
               ],
             ),
             const SizedBox(height: 5),
