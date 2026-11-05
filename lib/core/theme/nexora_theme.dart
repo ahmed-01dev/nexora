@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 
 /// NEXORA visual system. AMOLED is the default; alternatives are opt-in.
+const supportedNexoraThemes = <String>{'amoled', 'light', 'pink_amoled'};
+
+String normalizeNexoraTheme(String? value) =>
+    supportedNexoraThemes.contains(value) ? value! : 'amoled';
+
 abstract final class NexoraColors {
   static const black = Color(0xFF000000);
   static const deep = Color(0xFF050505);
