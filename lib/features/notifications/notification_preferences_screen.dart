@@ -16,6 +16,7 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
     'group_invite': 'دعوات المجموعات', 'system': 'إشعارات النظام', 'security': 'التنبيهات الأمنية',
   };
   final Map<String, bool> values = {};
+  final Map<String, Map<String, dynamic>> settings = {};
   bool loading = true;
   bool saving = false;
   String? error;
@@ -26,9 +27,14 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
   Future<void> load() async {
     try {
       final uid = Supabase.instance.client.auth.currentUser!.id;
-      final rows = await Supabase.instance.client.from('notification_preferences').select('category,in_app').eq('user_id', uid);
+      final rows = await Supabase.instance.client.from('notification_preferences').select('category,in_app,push,email').eq('user_id', uid);
       values.clear();
-      for (final row in rows) { values[row['category'] as String] = row['in_app'] as bool? ?? true; }
+      settings.clear();
+      for (final row in rows) {
+        final category = row['category'] as String;
+        values[category] = row['in_app'] as bool? ?? true;
+        settings[category] = Map<String, dynamic>.from(row);
+      }
       if (mounted) setState(() { loading = false; error = null; });
     } catch (e) { if (mounted) setState(() { loading = false; error = e.toString(); }); }
   }
@@ -38,10 +44,19 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
     setState(() { saving = true; error = null; });
     try {
       final uid = Supabase.instance.client.auth.currentUser!.id;
-      await Supabase.instance.client.from('notification_preferences').upsert({
+      final previous = settings[category] ?? <String, dynamic>{'push': true, 'email': false};
+      final updated = <String, dynamic>{
         'user_id': uid, 'category': category, 'in_app': enabled,
-      }, onConflict: 'user_id,category');
-      if (mounted) setState(() => values[category] = enabled);
+        'push': previous['push'] as bool? ?? true,
+        'email': previous['email'] as bool? ?? false,
+      };
+      await Supabase.instance.client.from('notification_preferences').upsert(
+        updated, onConflict: 'user_id,category',
+      );
+      if (mounted) setState(() {
+        values[category] = enabled;
+        settings[category] = updated;
+      });
     } catch (e) { if (mounted) setState(() => error = e.toString()); }
     finally { if (mounted) setState(() => saving = false); }
   }
