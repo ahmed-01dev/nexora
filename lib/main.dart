@@ -1431,11 +1431,14 @@ class _PostCardState extends State<PostCard> {
       Row(children: [_ProfileAvatar(url: a is Map ? a['avatar_url']?.toString() : null), const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(fontWeight: FontWeight.w800)), Text('@' + handle + ' • ' + stamp, style: const TextStyle(fontSize: 11, color: Color(0xFF8390A4)))])), PopupMenuButton<String>(
         tooltip: 'خيارات المنشور',
         onSelected: (value) async {
-          if (value == 'report') {
+          if (value == 'report' || value == 'report_user') {
+            final isUserReport = value == 'report_user';
             final submitted = await ReportDialog.show(
               context,
-              targetType: 'post',
-              targetId: widget.post['id'] as String,
+              targetType: isUserReport ? 'user' : 'post',
+              targetId: isUserReport
+                  ? widget.post['user_id'] as String
+                  : widget.post['id'] as String,
             );
             if (submitted && mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -1452,6 +1455,16 @@ class _PostCardState extends State<PostCard> {
                 Icon(Icons.flag_outlined, size: 18),
                 SizedBox(width: 8),
                 Text('إبلاغ عن المنشور'),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: 'report_user',
+            child: Row(
+              children: [
+                Icon(Icons.person_off_outlined, size: 18),
+                SizedBox(width: 8),
+                Text('إبلاغ عن الحساب'),
               ],
             ),
           ),
