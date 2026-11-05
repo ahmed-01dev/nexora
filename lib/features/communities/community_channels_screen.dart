@@ -9,12 +9,12 @@ class CommunityChannelsScreen extends StatefulWidget {
     super.key,
     required this.communityId,
     required this.communityName,
-    required this.isOwner,
+    required this.canManageChannels,
   });
 
   final String communityId;
   final String communityName;
-  final bool isOwner;
+  final bool canManageChannels;
 
   @override
   State<CommunityChannelsScreen> createState() => _CommunityChannelsScreenState();
@@ -175,7 +175,7 @@ class _CommunityChannelsScreenState extends State<CommunityChannelsScreen> {
               onPressed: _loading ? null : _load,
               icon: const Icon(Icons.refresh),
             ),
-            if (widget.isOwner)
+            if (widget.canManageChannels)
               IconButton(
                 tooltip: 'إنشاء قناة',
                 onPressed: _creating ? null : _createChannel,
