@@ -14,6 +14,7 @@ import 'features/reels/reels_screen.dart';
 import 'features/settings/privacy_settings_screen.dart';
 import 'features/settings/appearance_settings_screen.dart';
 import 'features/blocks/blocked_accounts_screen.dart';
+import 'features/blocks/block_account_service.dart';
 import 'features/stories/stories_screen.dart';
 import 'features/search/hashtag_service.dart';
 import 'features/communities/communities_screen.dart';
@@ -1359,6 +1360,33 @@ class _PostCardState extends State<PostCard> {
     _loadSavedState();
   }
 
+  Future<void> _blockPostAuthor() async {
+    try {
+      final profile = widget.post['profiles'];
+      final displayName = profile is Map
+          ? (profile['display_name'] ?? profile['username'] ?? 'صاحب المنشور')
+              .toString()
+          : 'صاحب المنشور';
+      final blocked = await BlockAccountService.confirmAndBlock(
+        context,
+        targetUserId: widget.post['user_id'] as String,
+        displayName: displayName,
+      );
+      if (blocked && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم حظر الحساب')),
+        );
+      }
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'block_post_author');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppErrorService.message(error))),
+        );
+      }
+    }
+  }
+
   Future<void> _loadSavedState() async {
     try {
       final uid = Supabase.instance.client.auth.currentUser!.id;
@@ -1512,6 +1540,10 @@ class _PostCardState extends State<PostCard> {
       Row(children: [_ProfileAvatar(url: a is Map ? a['avatar_url']?.toString() : null), const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(fontWeight: FontWeight.w800)), Text('@' + handle + ' • ' + stamp, style: const TextStyle(fontSize: 11, color: Color(0xFF8390A4)))])), PopupMenuButton<String>(
         tooltip: 'خيارات المنشور',
         onSelected: (value) async {
+          if (value == 'block_user') {
+            await _blockPostAuthor();
+            return;
+          }
           if (value == 'report' || value == 'report_user') {
             final isUserReport = value == 'report_user';
             final submitted = await ReportDialog.show(
@@ -1540,7 +1572,17 @@ class _PostCardState extends State<PostCard> {
             ),
           ),
           if (widget.post['user_id'] !=
-              Supabase.instance.client.auth.currentUser!.id)
+              Supabase.instance.client.auth.currentUser!.id) ...[
+            const PopupMenuItem(
+              value: 'block_user',
+              child: Row(
+                children: [
+                  Icon(Icons.block_outlined, size: 18),
+                  SizedBox(width: 8),
+                  Text('حظر صاحب الحساب'),
+                ],
+              ),
+            ),
             const PopupMenuItem(
               value: 'report_user',
               child: Row(
@@ -1551,6 +1593,7 @@ class _PostCardState extends State<PostCard> {
                 ],
               ),
             ),
+          ],
         ],
       )]),
       if ((widget.post['content'] ?? '').toString().isNotEmpty)
