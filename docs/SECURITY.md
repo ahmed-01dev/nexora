@@ -13,6 +13,7 @@
 - Authenticated grants on `community_channels` are limited to SELECT, INSERT, and DELETE; broad UPDATE/TRUNCATE/REFERENCES/TRIGGER/MAINTAIN privileges were removed.
 - Authenticated users can update only `notifications.read_at`; notification recipient, actor, type, payload, and entity metadata are not client-updatable. The grant was verified directly against PostgreSQL privileges.
 - PUBLIC execute was removed from internal friendship implementation helpers and trigger-only audit functions. Keep private helper grants limited to the invoker RPC wrappers and RLS policies that need them.
+- Follow-up catalog audit found one missed exception (`private.request_friend_impl(uuid)`); PUBLIC execute was revoked while preserving authenticated execution through the public invoker wrapper. Verified: anon cannot execute the private helper, authenticated can execute the helper and `public.request_friend`.
 - Supabase Security Advisor still reports leaked-password protection disabled; this is a dashboard setting and must be enabled before public launch.
 
 ## Database
