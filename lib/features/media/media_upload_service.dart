@@ -11,6 +11,27 @@ class MediaUploadService {
 
   static const int maxProfileImageBytes = 10 * 1024 * 1024;
 
+  /// Checks the actual file signature instead of trusting its extension.
+  static bool hasValidImageSignature(String extension, List<int> bytes) {
+    final ext = extension.toLowerCase();
+    if (ext == 'jpg' || ext == 'jpeg') {
+      return bytes.length >= 3 &&
+          bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF;
+    }
+    if (ext == 'png') {
+      const signature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+      return bytes.length >= signature.length &&
+          List<int>.generate(signature.length, (i) => bytes[i])
+              .every((value) => value == signature[signature.indexOf(value)]);
+    }
+    if (ext == 'webp') {
+      return bytes.length >= 12 &&
+          String.fromCharCodes(bytes.sublist(0, 4)) == 'RIFF' &&
+          String.fromCharCodes(bytes.sublist(8, 12)) == 'WEBP';
+    }
+    return false;
+  }
+
   Future<XFile?> pickProfileImage() => _picker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 88,
@@ -41,6 +62,9 @@ class MediaUploadService {
     final bytes = await file.readAsBytes();
     if (bytes.isEmpty || bytes.length > maxProfileImageBytes) {
       throw const FormatException('حجم صورة الملف الشخصي يجب ألا يتجاوز 10 ميجابايت.');
+    }
+    if (!hasValidImageSignature(extension, bytes)) {
+      throw const FormatException('محتوى الصورة لا يطابق امتداد الملف. اختر صورة JPG أو PNG أو WebP سليمة.');
     }
     final path = '$userId/profile/${imageType}_${DateTime.now().microsecondsSinceEpoch}.$extension';
     await Supabase.instance.client.storage.from('nexora-media').uploadBinary(
