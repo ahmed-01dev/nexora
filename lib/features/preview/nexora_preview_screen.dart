@@ -194,8 +194,8 @@ class _HomePreview extends StatelessWidget {
     SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.fromLTRB(18, 10, 18, 12), child: Row(children: [
       const Text('آخر المنشورات', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
       const Spacer(),
-      TextButton(onPressed: () {}, child: const Text('الأحدث')),
-      TextButton(onPressed: () {}, child: const Text('أتابعهم')),
+      TextButton(onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('عرض الأحدث — بيانات المعاينة'))), child: const Text('الأحدث')),
+      TextButton(onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('عرض من تتابعهم — بيانات المعاينة'))), child: const Text('أتابعهم')),
     ]))),
     SliverList(delegate: SliverChildListDelegate([
       _PostPreview(id: 1, name: 'Nour Hassan', handle: '@nour.h', time: 'منذ 12 دقيقة', text: 'أحيانًا أجمل اللحظات هي اللي بنشاركها من غير ترتيب. ✨', colors: const [Color(0xFF36216C), Color(0xFF176C83)], likes: '2.4K', comments: '184', isLiked: liked.contains(1), isSaved: saved.contains(1), isFollowing: following.contains(1), onLike: () => onLike(1), onSave: () => onSave(1), onFollow: () => onFollow(1), onComment: onComment, onShare: onShare),
@@ -209,12 +209,16 @@ class _StoryAvatar extends StatelessWidget {
   const _StoryAvatar({required this.name, required this.color, this.own = false});
   final String name; final Color color; final bool own;
   @override
-  Widget build(BuildContext context) => SizedBox(width: 76, child: Column(children: [
-    Container(padding: const EdgeInsets.all(2.5), decoration: BoxDecoration(shape: BoxShape.circle,
-      gradient: LinearGradient(colors: own ? [NexoraColors.textFaint, NexoraColors.textFaint] : NexoraColors.brandGradient)),
-      child: CircleAvatar(radius: 27, backgroundColor: const Color(0xFF20202A), child: Icon(own ? Icons.person : Icons.face_rounded, color: color, size: 27))),
-    const SizedBox(height: 5), Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: NexoraColors.textMuted)),
-  ]));
+  Widget build(BuildContext context) => SizedBox(width: 76, child: InkWell(
+    borderRadius: BorderRadius.circular(40),
+    onTap: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(own ? 'إضافة قصتك — معاينة' : 'قصة $name — معاينة'))),
+    child: Column(children: [
+      Container(padding: const EdgeInsets.all(2.5), decoration: BoxDecoration(shape: BoxShape.circle,
+        gradient: LinearGradient(colors: own ? [NexoraColors.textFaint, NexoraColors.textFaint] : NexoraColors.brandGradient)),
+        child: CircleAvatar(radius: 27, backgroundColor: const Color(0xFF20202A), child: Icon(own ? Icons.person : Icons.face_rounded, color: color, size: 27))),
+      const SizedBox(height: 5), Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: NexoraColors.textMuted)),
+    ]),
+  ));
 }
 
 class _PostPreview extends StatelessWidget {
