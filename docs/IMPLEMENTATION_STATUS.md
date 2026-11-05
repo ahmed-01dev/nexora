@@ -26,6 +26,7 @@ Status meanings:
 - [x] Anonymous role has no SELECT privilege on the newly added social tables.
 - [x] Community-channel grants were narrowed to SELECT/INSERT/DELETE for authenticated clients; unnecessary UPDATE/TRUNCATE/REFERENCES/TRIGGER/MAINTAIN privileges were removed and verified.
 - [x] PUBLIC execute was revoked from private friendship implementation helpers and trigger-only audit functions; authenticated execute remains only where the invoker RPC wrappers require it.
+- [x] Notification UPDATE grants are restricted to `read_at`; recipient, actor, type, payload, and entity metadata columns cannot be changed by authenticated clients. Verified with PostgreSQL privilege checks.
 - [x] Unique database index prevents duplicate reposts per user/post; applied and verified after a duplicate preflight returned no existing duplicate pairs.
 
 ## Database foundation added
