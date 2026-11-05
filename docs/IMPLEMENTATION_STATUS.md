@@ -57,7 +57,7 @@ Status meanings:
 | Voice/video calls | Foundation | Call records only; WebRTC, STUN/TURN, push call delivery pending. |
 | Communities | Foundation | Tables and RLS exist; discovery, channels, admin workflows pending. |
 | Notifications | Partial | In-app center lists real notifications newest-first in stable 50-row pages with load-older, marks one/all read, and routes message/friend-request events to relevant screens. Push/email delivery, grouping, and full preferences pending. |
-| Search | Partial | Profile discovery searches username/display name, and Explore now also searches public post text (including typed hashtag terms) with a sanitized debounced query, stable server-side 30-row pagination, refresh, and load-more; dedicated hashtag indexing, ranking, and advanced filters pending. |
+| Search | Partial | Profile discovery searches username/display name; public-post text search and exact normalized hashtag search both use stable server-side 30-row pagination, refresh, and load-more. Publishing indexes unique Arabic/Latin tags into the existing hashtags/post_hashtags tables; trending, ranking, and advanced filters pending. |
 | Nearby | Pending | Must remain disabled until consent, approximate geolocation, and safety protections are implemented. |
 | Moderation | Foundation | User reports table; admin queue, enforcement, appeals, and audit workflow pending. |
 | Admin dashboard | Pending | No trusted RBAC or admin web console yet. |
