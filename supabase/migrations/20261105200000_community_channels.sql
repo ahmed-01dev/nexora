@@ -10,6 +10,9 @@ create table if not exists public.community_channels (
   unique (community_id, slug)
 );
 
+create index if not exists community_channels_created_by_idx
+  on public.community_channels(created_by);
+
 alter table public.community_channels enable row level security;
 revoke all on public.community_channels from anon;
 grant select, insert, delete on public.community_channels to authenticated;
