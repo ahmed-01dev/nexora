@@ -33,6 +33,8 @@
 - Validate file extension, MIME type, actual file signature, size, and ownership.
 - NEXORA uses the private `nexora-media` bucket; upload paths must start with the authenticated user ID.
 - Storage SELECT checks linked post/story/message/community audience through a narrowly scoped private helper. Signed URLs are short-lived.
+- Message attachment metadata SELECT requires a non-deleted message and conversation membership; the older permissive SELECT policy was removed.
+- Message attachment INSERT validation is a RESTRICTIVE policy, so MIME/10 MiB/message-type checks are AND-ed with the permissive uploader/path/ownership/membership policy. This is metadata validation; server-side file-signature scanning remains pending.
 - Use private storage by default; public delivery must be an explicit per-media decision.
 - Use short-lived signed URLs for private media.
 - Add malware scanning and server-side video transcoding before accepting untrusted files at scale.
