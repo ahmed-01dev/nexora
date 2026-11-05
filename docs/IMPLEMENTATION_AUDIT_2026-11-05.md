@@ -140,5 +140,10 @@ Firebase project: nexora-20712
 - Added `normalizeNexoraOtp` to accept six-digit OTPs entered using ASCII, Arabic-Indic, or Persian numerals while rejecting malformed input.
 - Wired both the OTP field validator and Supabase `verifyOTP` call to the normalized value.
 - Added unit cases for ASCII, Arabic-Indic, Persian, wrong-length, and non-digit OTP values.
-- CI is queued/running for these commits; do not mark the OTP change green until a completed run on the final commit passes.
+- Flutter CI run `42092381391` completed successfully on commit `b2c49d445c6a5a08d100ec29d323fc5a9c044a6f`; dependency installation, Analyze, and Test all passed, including the localized OTP tests.
 - Verified the scheduled nearby-location cleanup job actually executed successfully at 2026-11-05 19:15 UTC; PostgreSQL reported `DELETE 0` (no expired rows existed at that execution).
+
+
+## Latest CI confirmation — 2026-11-05
+- Verified GitHub Actions run `42092381391` completed with success on the current source and audit commit `b2c49d445c6a5a08d100ec29d323fc5a9c044a6f`. The job completed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test`.
+- The cron cleanup job `nexora-cleanup-expired-nearby-locations` is active on `*/15 * * * *` and its first observed execution succeeded at 19:15 UTC on 2026-11-05.
