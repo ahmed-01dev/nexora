@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/app_error.dart';
+
 class NotificationPreferencesScreen extends StatefulWidget {
   const NotificationPreferencesScreen({super.key});
   @override
@@ -36,7 +38,10 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
         settings[category] = Map<String, dynamic>.from(row);
       }
       if (mounted) setState(() { loading = false; error = null; });
-    } catch (e) { if (mounted) setState(() { loading = false; error = e.toString(); }); }
+    } catch (e, stack) {
+      AppErrorService.report(e, stack, source: 'notification_preferences_load');
+      if (mounted) setState(() { loading = false; error = AppErrorService.message(e); });
+    }
   }
 
   Future<void> save(String category, bool enabled) async {
@@ -57,7 +62,10 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
         values[category] = enabled;
         settings[category] = updated;
       });
-    } catch (e) { if (mounted) setState(() => error = e.toString()); }
+    } catch (e, stack) {
+      AppErrorService.report(e, stack, source: 'notification_preferences_save');
+      if (mounted) setState(() => error = AppErrorService.message(e));
+    }
     finally { if (mounted) setState(() => saving = false); }
   }
 
