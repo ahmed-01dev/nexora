@@ -14,6 +14,7 @@ import 'features/reels/reels_screen.dart';
 import 'features/settings/privacy_settings_screen.dart';
 import 'features/stories/stories_screen.dart';
 import 'features/search/hashtag_service.dart';
+import 'features/communities/communities_screen.dart';
 
 final _url = String.fromEnvironment('SUPABASE_URL').trim();
 const _key = String.fromEnvironment('SUPABASE_ANON_KEY');
@@ -549,6 +550,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
             style: TextStyle(fontWeight: FontWeight.w800),
           ),
           actions: [
+            IconButton(
+              tooltip: 'المجتمعات',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const CommunitiesScreen(),
+                ),
+              ),
+              icon: const Icon(Icons.groups_outlined),
+            ),
             IconButton(
               tooltip: 'طلبات الصداقة',
               onPressed: () => Navigator.of(context).push(
