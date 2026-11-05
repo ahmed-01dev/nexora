@@ -52,18 +52,18 @@ jobs:
               plugin_line = '    id("com.google.gms.google-services") version "4.5.0" apply false'
               text = settings.read_text(encoding="utf-8")
               if "com.google.gms.google-services" not in text:
-                  match = re.search(r"plugins\\s*\\{", text)
+                  match = re.search(r"plugins\s*\{", text)
                   if not match:
                       raise SystemExit("Missing Gradle plugins block")
-                  text = text[:match.end()] + "\\n" + plugin_line + text[match.end():]
+                  text = text[:match.end()] + "\n" + plugin_line + text[match.end():]
                   settings.write_text(text, encoding="utf-8")
 
               text = app_gradle.read_text(encoding="utf-8")
               if 'id("com.google.gms.google-services")' not in text:
-                  match = re.search(r"plugins\\s*\\{", text)
+                  match = re.search(r"plugins\s*\{", text)
                   if not match:
                       raise SystemExit("Missing app Gradle plugins block")
-                  text = text[:match.end()] + '\\n    id("com.google.gms.google-services")' + text[match.end():]
+                  text = text[:match.end()] + '\n    id("com.google.gms.google-services")' + text[match.end():]
                   app_gradle.write_text(text, encoding="utf-8")
 
           manifest = Path("android/app/src/main/AndroidManifest.xml")
@@ -78,7 +78,7 @@ jobs:
               if permission not in text:
                   text = text.replace(
                       "<application",
-                      f'<uses-permission android:name="{permission}" />\\n    <application',
+                      f'<uses-permission android:name="{permission}" />\n    <application',
                       1,
                   )
           manifest.write_text(text, encoding="utf-8")
