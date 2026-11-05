@@ -220,7 +220,6 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _visible = false;
   bool _phoneOtpSent = false;
   String _method = 'phone';
-  OtpChannel _phoneChannel = OtpChannel.whatsapp;
   String? _error;
   String? _notice;
   String? _normalizedPhone;
@@ -254,7 +253,7 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       await Supabase.instance.client.auth.signInWithOtp(
         phone: normalized,
-        channel: _phoneChannel,
+        channel: OtpChannel.sms,
         shouldCreateUser: _register,
         data: _register ? {'display_name': _name.text.trim()} : null,
       );
@@ -262,9 +261,7 @@ class _AuthScreenState extends State<AuthScreen> {
       setState(() {
         _normalizedPhone = normalized;
         _phoneOtpSent = true;
-        _notice = _phoneChannel == OtpChannel.whatsapp
-            ? 'بعتنالك كود التحقق على واتساب الرقم $normalized'
-            : 'بعتنالك كود التحقق برسالة SMS على الرقم $normalized';
+        _notice = 'بعتنالك كود التحقق برسالة SMS على الرقم $normalized';
       });
     } on AuthException catch (e) {
       if (mounted) setState(() => _error = e.message);
@@ -399,27 +396,6 @@ class _AuthScreenState extends State<AuthScreen> {
                       const SizedBox(height: 13),
                     ],
                     if (phoneMode) ...[
-                      SegmentedButton<OtpChannel>(
-                        segments: const [
-                          ButtonSegment(
-                            value: OtpChannel.whatsapp,
-                            icon: Icon(Icons.chat),
-                            label: Text('واتساب'),
-                          ),
-                          ButtonSegment(
-                            value: OtpChannel.sms,
-                            icon: Icon(Icons.sms_outlined),
-                            label: Text('SMS'),
-                          ),
-                        ],
-                        selected: {_phoneChannel},
-                        onSelectionChanged: _busy || _phoneOtpSent
-                            ? null
-                            : (selection) => setState(() {
-                                  _phoneChannel = selection.first;
-                                  _clearFeedback();
-                                }),
-                      ),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: _phone,
@@ -491,7 +467,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       child: _busy
                         ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
                         : Text(phoneMode
-                            ? (_phoneOtpSent ? 'تأكيد الكود' : (_phoneChannel == OtpChannel.whatsapp ? 'إرسال كود واتساب' : 'إرسال كود SMS'))
+                            ? (_phoneOtpSent ? 'تأكيد الكود' : 'إرسال كود SMS')
                             : (_register ? 'إنشاء حساب بالبريد' : 'تسجيل الدخول بالبريد')),
                     ),
                     if (phoneMode && _phoneOtpSent)
