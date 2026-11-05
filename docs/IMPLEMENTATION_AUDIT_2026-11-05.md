@@ -40,13 +40,18 @@ Firebase project: nexora-20712
 - The Flutter client uses Firebase Installation IDs (FIDs), and the Edge Function sends using the FCM HTTP v1 `fid` target. This is supported by current Firebase documentation; no token/FID migration is required.
 - The Firebase service-account Edge Function secret was not inspected by the available tools. Do not assume it is configured. Real-device delivery remains unverified; the device table had no registered devices at the time of the earlier inventory.
 
+## Follow-up performance hardening
+- Consolidated the two permissive SELECT policies on `moderation_actions`, `moderation_appeals`, and `reports` into one policy per table, preserving the exact prior owner/reporter OR authorized-staff access paths.
+- Verified the resulting SELECT policy expressions directly in Postgres.
+- Re-ran Supabase Performance Advisor: the three `multiple_permissive_policies` warnings are gone. Fifty `unused_index` informational notices remain; these indexes are not removed because this project has not accumulated representative production workload.
+
 ## Advisor findings
 ### Security
 - One remaining Auth warning: leaked-password protection disabled (see provider configuration above).
 - No other Security Advisor findings were returned after the latest database hardening.
 
 ### Performance
-- Three multiple-permissive-SELECT-policy notices affect `moderation_actions`, `moderation_appeals`, and `reports`. The policies intentionally allow either the record owner/reporter or authorized staff; this OR behavior is part of the access model and should not be changed without preserving both access paths.
+- Resolved: the duplicate permissive SELECT policies on `moderation_actions`, `moderation_appeals`, and `reports` were consolidated while preserving owner/reporter and staff access.
 - Fifty indexes were reported unused. The database is newly active and workload history is insufficient to justify removing them.
 
 ## Remaining release blockers
