@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
 import '../moderation/report_dialog.dart';
+import 'message_attachment_service.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -233,8 +234,11 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
+  final _attachmentService = MessageAttachmentService();
+  final Map<String, Future<String?>> _attachmentUrls = {};
   late final Stream<List<Map<String, dynamic>>> _messages;
   bool _sending = false;
+  bool _sendingAttachment = false;
   bool _nearBottom = true;
   int _lastMessageCount = -1;
   String? _sendError;
@@ -367,6 +371,8 @@ class _ChatScreenState extends State<ChatScreen> {
           .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
           .eq('id', message['id'] as String)
           .eq('sender_id', Supabase.instance.client.auth.currentUser!.id);
+      await _attachmentService.deleteOwnAttachment(message['id'] as String);
+      _attachmentUrls.remove(message['id']);
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'delete_message');
       if (mounted) {
@@ -405,6 +411,26 @@ class _ChatScreenState extends State<ChatScreen> {
       if (mounted) setState(() => _sending = false);
     }
   }
+
+  Future<void> _sendImage() async {
+    if (_sending || _sendingAttachment) return;
+    setState(() { _sendingAttachment = true; _sendError = null; });
+    try {
+      final file = await _attachmentService.pickImage();
+      if (file == null) return;
+      final messageId = await _attachmentService.sendImage(widget.conversationId, file);
+      _attachmentUrls.remove(messageId);
+      await _markRead();
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'send_message_image');
+      if (mounted) setState(() => _sendError = AppErrorService.message(error));
+    } finally {
+      if (mounted) setState(() => _sendingAttachment = false);
+    }
+  }
+
+  Future<String?> _imageUrl(String messageId) =>
+      _attachmentUrls.putIfAbsent(messageId, () => _attachmentService.signedImageUrl(messageId));
 
   @override
   void dispose() {
@@ -518,10 +544,11 @@ class _ChatScreenState extends State<ChatScreen> {
                                 },
                                 itemBuilder: (_) => [
                                   if (mine) ...[
-                                    const PopupMenuItem(
-                                      value: 'edit',
-                                      child: Text('تعديل الرسالة'),
-                                    ),
+                                    if (message['message_type'] == 'text')
+                                      const PopupMenuItem(
+                                        value: 'edit',
+                                        child: Text('تعديل الرسالة'),
+                                      ),
                                     const PopupMenuItem(
                                       value: 'delete',
                                       child: Text('حذف الرسالة'),
@@ -539,15 +566,46 @@ class _ChatScreenState extends State<ChatScreen> {
                                     ),
                                 ],
                               ),
-                            Text(
-                              deleted ? 'تم حذف الرسالة' : (message['body'] ?? '').toString(),
-                              style: TextStyle(
-                                color: mine
-                                    ? Theme.of(context).colorScheme.onPrimary
-                                    : Theme.of(context).colorScheme.onSurface,
-                                fontStyle: deleted ? FontStyle.italic : FontStyle.normal,
+                            if (deleted)
+                              const Text('تم حذف الرسالة')
+                            else if (message['message_type'] == 'image')
+                              FutureBuilder<String?>(
+                                future: _imageUrl(message['id'] as String),
+                                builder: (context, imageSnapshot) {
+                                  final url = imageSnapshot.data;
+                                  if (url == null) {
+                                    return Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Text('الصورة غير جاهزة'),
+                                        IconButton(
+                                          tooltip: 'إعادة تحميل الصورة',
+                                          onPressed: () => setState(() => _attachmentUrls.remove(message['id'])),
+                                          icon: const Icon(Icons.refresh),
+                                        ),
+                                      ],
+                                    );
+                                  }
+                                  return ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.network(
+                                      url,
+                                      width: MediaQuery.sizeOf(context).width * .62,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => const Text('تعذر عرض الصورة'),
+                                    ),
+                                  );
+                                },
+                              )
+                            else
+                              Text(
+                                (message['body'] ?? '').toString(),
+                                style: TextStyle(
+                                  color: mine
+                                      ? Theme.of(context).colorScheme.onPrimary
+                                      : Theme.of(context).colorScheme.onSurface,
+                                ),
                               ),
-                            ),
                             if (message['edited_at'] != null && !deleted)
                               const Padding(
                                 padding: EdgeInsets.only(top: 4),
@@ -573,6 +631,13 @@ class _ChatScreenState extends State<ChatScreen> {
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
               child: Row(
                 children: [
+                  IconButton(
+                    tooltip: 'إرسال صورة',
+                    onPressed: _sending || _sendingAttachment ? null : _sendImage,
+                    icon: _sendingAttachment
+                        ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.image_outlined),
+                  ),
                   Expanded(
                     child: TextField(
                       controller: _controller,
