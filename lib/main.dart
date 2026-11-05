@@ -24,8 +24,8 @@ import 'features/moderation/report_dialog.dart';
 import 'features/moderation/moderation_queue_screen.dart';
 import 'features/moderation/my_moderation_screen.dart';
 
-final _url = String.fromEnvironment('SUPABASE_URL').trim();
-const _key = String.fromEnvironment('SUPABASE_ANON_KEY');
+final _url = String.fromEnvironment('SUPABASE_URL', defaultValue: 'https://wwdeexgkwpftyavbhiff.supabase.co').trim();
+const _key = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: 'sb_publishable_vJpkaM72QMGLykLFU5m44g_kwuPCi-Y');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
