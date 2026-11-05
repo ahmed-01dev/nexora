@@ -822,6 +822,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late Future<List<Map<String, dynamic>>> _postsFuture;
   bool _postsHasMore = true;
   bool _postsLoadingMore = false;
+  bool _profileImageBusy = false;
+  final _profileMedia = MediaUploadService();
   static const int _profilePostPageSize = 50;
   @override
   void initState() {
@@ -876,6 +878,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _postsFuture = _loadOwnPosts();
     });
   }
+  Future<void> _uploadProfileImage(Map<String, dynamic> profile, String imageType) async {
+    if (_profileImageBusy) return;
+    setState(() => _profileImageBusy = true);
+    String? uploadedPath;
+    try {
+      final file = await _profileMedia.pickProfileImage();
+      if (file == null || !mounted) return;
+      final userId = Supabase.instance.client.auth.currentUser!.id;
+      uploadedPath = await _profileMedia.uploadProfileImage(
+        userId: userId,
+        file: file,
+        imageType: imageType,
+      );
+      final column = imageType == 'avatar' ? 'avatar_url' : 'cover_url';
+      final previous = (profile[column] ?? '').toString();
+      await Supabase.instance.client
+          .from('profiles')
+          .update({column: uploadedPath, 'updated_at': DateTime.now().toUtc().toIso8601String()})
+          .eq('id', userId);
+      if (previous.startsWith('$userId/profile/')) {
+        try { await _profileMedia.removeProfileImage(previous); } catch (error, stack) {
+          AppErrorService.report(error, stack, source: 'remove_old_profile_image');
+        }
+      }
+      if (mounted) {
+        setState(() => _future = _load());
+        _toast(imageType == 'avatar' ? 'تم تحديث الصورة الشخصية' : 'تم تحديث صورة الغلاف');
+      }
+    } catch (error, stack) {
+      if (uploadedPath != null) {
+        try { await _profileMedia.removeProfileImage(uploadedPath); } catch (_) {}
+      }
+      AppErrorService.report(error, stack, source: 'profile_image_upload');
+      _toast(AppErrorService.message(error));
+    } finally {
+      if (mounted) setState(() => _profileImageBusy = false);
+    }
+  }
+
   void _toast(String v) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(v))); }
   Future<void> _edit(Map<String, dynamic> p) async {
     final name = TextEditingController(text: p['display_name'] as String? ?? '');
@@ -907,8 +948,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (p == null) return const _Empty(icon: Icons.person_off, title: 'الملف الشخصي غير موجود', subtitle: 'راجع إعداد إنشاء صف profiles عند تسجيل الحساب.');
     final u = Supabase.instance.client.auth.currentUser!;
     return ListView(padding: const EdgeInsets.all(18), children: [
-      Container(padding: const EdgeInsets.all(22), decoration: BoxDecoration(borderRadius: BorderRadius.circular(26), gradient: const LinearGradient(colors: [Color(0xFF171717), Color(0xFF050505)]), border: Border.all(color: const Color(0xFF292929))), child: Column(children: [
-        _ProfileAvatar(url: p['avatar_url']?.toString(), size: 88), const SizedBox(height: 14),
+      Container(padding: const EdgeInsets.fromLTRB(16, 12, 16, 22), decoration: BoxDecoration(borderRadius: BorderRadius.circular(26), gradient: const LinearGradient(colors: [Color(0xFF171717), Color(0xFF050505)]), border: Border.all(color: const Color(0xFF292929))), child: Column(children: [
+        Stack(children: [
+          _ProfileCover(path: p['cover_url']?.toString()),
+          Positioned(left: 8, top: 8, child: IconButton.filledTonal(
+            tooltip: 'تغيير صورة الغلاف',
+            onPressed: _profileImageBusy ? null : () => _uploadProfileImage(p, 'cover'),
+            icon: const Icon(Icons.photo_camera_outlined),
+          )),
+        ]),
+        const SizedBox(height: 8),
+        Stack(alignment: Alignment.bottomRight, children: [
+          _ProfileAvatar(url: p['avatar_url']?.toString(), size: 88),
+          IconButton.filledTonal(
+            tooltip: 'تغيير الصورة الشخصية',
+            onPressed: _profileImageBusy ? null : () => _uploadProfileImage(p, 'avatar'),
+            icon: const Icon(Icons.camera_alt, size: 17),
+          ),
+        ]),
+        if (_profileImageBusy) const Padding(padding: EdgeInsets.only(top: 8), child: LinearProgressIndicator()),
+        const SizedBox(height: 14),
         Text((p['display_name'] ?? 'مستخدم NEXORA').toString(), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
         Text('@' + (p['username'] ?? 'user').toString(), style: const TextStyle(color: Color(0xFFFFFFFF))),
         if ((p['bio'] ?? '').toString().isNotEmpty) Padding(padding: const EdgeInsets.only(top: 12), child: Text(p['bio'].toString(), textAlign: TextAlign.center)),
@@ -1369,42 +1428,82 @@ class _Brand extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(width: size, height: size, decoration: BoxDecoration(borderRadius: BorderRadius.circular(size * .3), gradient: const LinearGradient(colors: [Color(0xFFFFFFFF), Color(0xFFC0C0C0)]), boxShadow: const [BoxShadow(color: Color(0x33FFFFFF), blurRadius: 20, offset: Offset(0, 7))]), child: Icon(Icons.bolt, color: const Color(0xFF000000), size: size * .58));
 }
-class _ProfileAvatar extends StatelessWidget {
-  const _ProfileAvatar({this.url, this.size = 44});
+Future<String?> _resolvePrivateMediaUrl(String? value) async {
+  final raw = (value ?? '').trim();
+  if (raw.isEmpty) return null;
+  final parsed = Uri.tryParse(raw);
+  if (parsed != null && (parsed.scheme == 'https' || parsed.scheme == 'http') && parsed.host.isNotEmpty) {
+    return raw;
+  }
+  try {
+    return await Supabase.instance.client.storage.from('nexora-media').createSignedUrl(raw, 3600);
+  } catch (error, stack) {
+    AppErrorService.report(error, stack, source: 'resolve_profile_media');
+    return null;
+  }
+}
 
+class _ProfileAvatar extends StatefulWidget {
+  const _ProfileAvatar({this.url, this.size = 44});
   final String? url;
   final double size;
-
   @override
-  Widget build(BuildContext context) {
-    final parsed = Uri.tryParse((url ?? '').trim());
-    final validUrl = parsed != null &&
-        (parsed.scheme == 'https' || parsed.scheme == 'http') &&
-        parsed.host.isNotEmpty;
-    return Container(
-      width: size,
-      height: size,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: const Color(0xFF243448),
-        border: Border.all(color: const Color(0xFF40536A)),
-      ),
-      child: validUrl
-          ? Image.network(
-              parsed.toString(),
-              width: size,
-              height: size,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Icon(
-                Icons.person,
-                size: size * .58,
-                color: Colors.white,
-              ),
-            )
-          : Icon(Icons.person, size: size * .58, color: Colors.white),
-    );
+  State<_ProfileAvatar> createState() => _ProfileAvatarState();
+}
+
+class _ProfileAvatarState extends State<_ProfileAvatar> {
+  late Future<String?> _urlFuture;
+  @override
+  void initState() { super.initState(); _urlFuture = _resolvePrivateMediaUrl(widget.url); }
+  @override
+  void didUpdateWidget(covariant _ProfileAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) _urlFuture = _resolvePrivateMediaUrl(widget.url);
   }
+  @override
+  Widget build(BuildContext context) => Container(
+    width: widget.size, height: widget.size, clipBehavior: Clip.antiAlias,
+    decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF243448), border: Border.all(color: const Color(0xFF40536A))),
+    child: FutureBuilder<String?>(
+      future: _urlFuture,
+      builder: (context, snapshot) => snapshot.data == null
+        ? Icon(Icons.person, size: widget.size * .58, color: Colors.white)
+        : Image.network(snapshot.data!, width: widget.size, height: widget.size, fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Icon(Icons.person, size: widget.size * .58, color: Colors.white)),
+    ),
+  );
+}
+
+class _ProfileCover extends StatefulWidget {
+  const _ProfileCover({this.path});
+  final String? path;
+  @override
+  State<_ProfileCover> createState() => _ProfileCoverState();
+}
+
+class _ProfileCoverState extends State<_ProfileCover> {
+  late Future<String?> _urlFuture;
+  @override
+  void initState() { super.initState(); _urlFuture = _resolvePrivateMediaUrl(widget.path); }
+  @override
+  void didUpdateWidget(covariant _ProfileCover oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.path != widget.path) _urlFuture = _resolvePrivateMediaUrl(widget.path);
+  }
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+    borderRadius: BorderRadius.circular(18),
+    child: SizedBox(
+      height: 124, width: double.infinity,
+      child: FutureBuilder<String?>(
+        future: _urlFuture,
+        builder: (context, snapshot) => snapshot.data == null
+          ? Container(color: const Color(0xFF202A36), child: const Center(child: Icon(Icons.landscape_outlined, size: 38, color: Color(0xFF8492A6))))
+          : Image.network(snapshot.data!, fit: BoxFit.cover, width: double.infinity,
+              errorBuilder: (_, __, ___) => Container(color: const Color(0xFF202A36), child: const Icon(Icons.broken_image_outlined))),
+      ),
+    ),
+  );
 }
 
 class _Avatar extends StatelessWidget {
