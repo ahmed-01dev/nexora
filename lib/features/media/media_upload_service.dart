@@ -168,6 +168,18 @@ class MediaUploadService {
       }
       return uploaded;
     } catch (_) {
+      // Remove any metadata rows created before a later file failed. The
+      // caller also removes the parent post, but the service remains safe
+      // when reused independently.
+      try {
+        await client
+            .from('media')
+            .delete()
+            .eq('post_id', postId)
+            .eq('user_id', userId);
+      } catch (_) {
+        // Preserve the original upload error; parent-post cleanup can retry.
+      }
       if (uploaded.isNotEmpty) {
         try {
           await client.storage.from('nexora-media').remove(uploaded);
