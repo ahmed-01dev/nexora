@@ -131,17 +131,23 @@ class _NexoraAppState extends State<NexoraApp> {
     final uid = client.auth.currentUser?.id;
     if (uid == null) {
       nexoraThemeNotifier.value = 'amoled';
+      nexoraAccentNotifier.value = NexoraColors.violet;
       return;
     }
     try {
       final row = await client
           .from('user_preferences')
-          .select('theme')
+          .select('theme,accent_color')
           .eq('user_id', uid)
           .maybeSingle();
       if (client.auth.currentUser?.id != uid) return;
       nexoraThemeNotifier.value =
           normalizeNexoraTheme(row?['theme']?.toString());
+      nexoraAccentNotifier.value =
+          parseNexoraAccent(row?['accent_color']?.toString()) ??
+          (nexoraThemeNotifier.value == 'pink_amoled'
+              ? NexoraColors.pink
+              : NexoraColors.violet);
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'load_appearance');
     }
@@ -164,6 +170,7 @@ class _NexoraAppState extends State<NexoraApp> {
           final theme = switch (selected) {
             'light' => NexoraTheme.light,
             'pink_amoled' => NexoraTheme.pinkAmoled,
+            'custom' => NexoraTheme.custom(nexoraAccentNotifier.value),
             _ => NexoraTheme.amoled,
           };
           return MaterialApp(
