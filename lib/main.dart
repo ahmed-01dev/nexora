@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_error.dart';
 import 'core/theme/nexora_theme.dart';
+import 'features/auth/phone_number.dart';
 import 'features/media/media_upload_service.dart';
 import 'features/media/post_media_gallery.dart';
 import 'features/friends/friend_requests_screen.dart';
@@ -145,30 +146,147 @@ class AuthScreen extends StatefulWidget {
   @override
   State<AuthScreen> createState() => _AuthScreenState();
 }
+
 class _AuthScreenState extends State<AuthScreen> {
   final _form = GlobalKey<FormState>();
-  final _name = TextEditingController(), _email = TextEditingController(), _password = TextEditingController();
-  bool _register = true, _busy = false, _visible = false;
-  String? _error, _notice;
+  final _name = TextEditingController();
+  final _phone = TextEditingController();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  final _otp = TextEditingController();
+
+  bool _register = true;
+  bool _busy = false;
+  bool _visible = false;
+  bool _phoneOtpSent = false;
+  String _method = 'phone';
+  String? _error;
+  String? _notice;
+  String? _normalizedPhone;
+
   @override
-  void dispose() { _name.dispose(); _email.dispose(); _password.dispose(); super.dispose(); }
-  Future<void> _submit() async {
+  void dispose() {
+    _name.dispose();
+    _phone.dispose();
+    _email.dispose();
+    _password.dispose();
+    _otp.dispose();
+    super.dispose();
+  }
+
+  void _clearFeedback() {
+    _error = null;
+    _notice = null;
+  }
+
+  Future<void> _sendPhoneCode() async {
+    final normalized = normalizeNexoraPhone(_phone.text);
+    if (normalized == null) {
+      setState(() => _error = 'اكتب رقم موبايل صحيح. في مصر اكتب 01xxxxxxxxx أو +201xxxxxxxxx');
+      return;
+    }
+    if (_register && _name.text.trim().length < 2) {
+      setState(() => _error = 'اكتب اسمك الظاهر الأول');
+      return;
+    }
+    setState(() { _busy = true; _clearFeedback(); });
+    try {
+      await Supabase.instance.client.auth.signInWithOtp(
+        phone: normalized,
+        shouldCreateUser: _register,
+        data: _register ? {'display_name': _name.text.trim()} : null,
+      );
+      if (!mounted) return;
+      setState(() {
+        _normalizedPhone = normalized;
+        _phoneOtpSent = true;
+        _notice = 'بعتنالك كود تحقق على الرقم $normalized';
+      });
+    } on AuthException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (e, s) {
+      AppErrorService.report(e, s, source: 'phone_auth_send_otp');
+      if (mounted) setState(() => _error = AppErrorService.message(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _verifyPhoneCode() async {
+    final phone = _normalizedPhone;
+    final token = _otp.text.trim();
+    if (phone == null || !RegExp(r'^\\d{6}$').hasMatch(token)) {
+      setState(() => _error = 'اكتب كود التحقق المكوّن من 6 أرقام');
+      return;
+    }
+    setState(() { _busy = true; _clearFeedback(); });
+    try {
+      await Supabase.instance.client.auth.verifyOTP(
+        phone: phone,
+        token: token,
+        type: OtpType.sms,
+      );
+    } on AuthException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (e, s) {
+      AppErrorService.report(e, s, source: 'phone_auth_verify_otp');
+      if (mounted) setState(() => _error = AppErrorService.message(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _submitEmail() async {
     if (!_form.currentState!.validate()) return;
-    setState(() { _busy = true; _error = null; _notice = null; });
+    setState(() { _busy = true; _clearFeedback(); });
     try {
       final auth = Supabase.instance.client.auth;
       if (_register) {
-        final r = await auth.signUp(email: _email.text.trim(), password: _password.text, data: {'display_name': _name.text.trim()});
-        if (r.session == null && mounted) setState(() => _notice = 'الحساب اتعمل. راجع بريدك لتأكيده وبعدها سجّل الدخول.');
+        final result = await auth.signUp(
+          email: _email.text.trim(),
+          password: _password.text,
+          data: {'display_name': _name.text.trim()},
+        );
+        if (result.session == null && mounted) {
+          setState(() => _notice = 'الحساب اتعمل. راجع بريدك لتأكيده وبعدها سجّل الدخول.');
+        }
       } else {
-        await auth.signInWithPassword(email: _email.text.trim(), password: _password.text);
+        await auth.signInWithPassword(
+          email: _email.text.trim(),
+          password: _password.text,
+        );
       }
-    } on AuthException catch (e) { if (mounted) setState(() => _error = e.message); }
-    catch (e, s) { AppErrorService.report(e, s, source: 'auth'); if (mounted) setState(() => _error = AppErrorService.message(e)); }
-    finally { if (mounted) setState(() => _busy = false); }
+    } on AuthException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (e, s) {
+      AppErrorService.report(e, s, source: 'email_auth');
+      if (mounted) setState(() => _error = AppErrorService.message(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
+
+  Future<void> _submit() async {
+    if (_method == 'phone') {
+      if (_phoneOtpSent) {
+        await _verifyPhoneCode();
+      } else {
+        if (_register) {
+          if (_name.text.trim().length < 2) {
+            setState(() => _error = 'اكتب اسمك الظاهر الأول');
+            return;
+          }
+        }
+        await _sendPhoneCode();
+      }
+      return;
+    }
+    await _submitEmail();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final phoneMode = _method == 'phone';
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -189,35 +307,95 @@ class _AuthScreenState extends State<AuthScreen> {
                     Text(_register ? 'مساحتك. صوتك. عالمك.' : 'رجعت تنوّر عالمك',
                       textAlign: TextAlign.center,
                       style: const TextStyle(color: Color(0xFFA1A1AA))),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 24),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'phone', icon: Icon(Icons.phone_android), label: Text('رقم الهاتف')),
+                        ButtonSegment(value: 'email', icon: Icon(Icons.alternate_email), label: Text('البريد الإلكتروني')),
+                      ],
+                      selected: {_method},
+                      onSelectionChanged: _busy ? null : (selection) {
+                        setState(() {
+                          _method = selection.first;
+                          _phoneOtpSent = false;
+                          _normalizedPhone = null;
+                          _otp.clear();
+                          _clearFeedback();
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 20),
                     if (_register) ...[
                       TextFormField(
                         controller: _name,
+                        textInputAction: TextInputAction.next,
                         decoration: const InputDecoration(labelText: 'اسمك الظاهر', prefixIcon: Icon(Icons.person_outline)),
                         validator: (v) => v == null || v.trim().length < 2 ? 'اكتب اسم من حرفين على الأقل' : null,
                       ),
                       const SizedBox(height: 13),
                     ],
-                    TextFormField(
-                      controller: _email,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(labelText: 'البريد الإلكتروني', prefixIcon: Icon(Icons.alternate_email)),
-                      validator: (v) => v == null || !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim()) ? 'اكتب بريد إلكتروني صحيح' : null,
-                    ),
-                    const SizedBox(height: 13),
-                    TextFormField(
-                      controller: _password,
-                      obscureText: !_visible,
-                      decoration: InputDecoration(
-                        labelText: 'كلمة المرور',
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        suffixIcon: IconButton(
-                          onPressed: () => setState(() => _visible = !_visible),
-                          icon: Icon(_visible ? Icons.visibility_off : Icons.visibility),
+                    if (phoneMode) ...[
+                      TextFormField(
+                        controller: _phone,
+                        enabled: !_phoneOtpSent && !_busy,
+                        keyboardType: TextInputType.phone,
+                        textDirection: TextDirection.ltr,
+                        decoration: const InputDecoration(
+                          labelText: 'رقم الهاتف',
+                          hintText: '01xxxxxxxxx',
+                          helperText: 'مصر: 01xxxxxxxxx أو الرقم الدولي +20',
+                          prefixIcon: Icon(Icons.phone_android),
                         ),
+                        validator: (v) => normalizeNexoraPhone(v ?? '') == null ? 'اكتب رقم هاتف صحيح' : null,
                       ),
-                      validator: (v) => v == null || v.length < 8 ? '8 أحرف على الأقل' : null,
-                    ),
+                      if (_phoneOtpSent) ...[
+                        const SizedBox(height: 13),
+                        TextFormField(
+                          controller: _otp,
+                          keyboardType: TextInputType.number,
+                          textDirection: TextDirection.ltr,
+                          maxLength: 6,
+                          decoration: const InputDecoration(
+                            labelText: 'كود التحقق',
+                            prefixIcon: Icon(Icons.password),
+                            counterText: '',
+                          ),
+                          validator: (v) => v == null || !RegExp(r'^\\d{6}$').hasMatch(v.trim())
+                              ? 'الكود لازم يكون 6 أرقام' : null,
+                        ),
+                        Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: TextButton(
+                            onPressed: _busy ? null : () {
+                              setState(() { _phoneOtpSent = false; _otp.clear(); _clearFeedback(); });
+                            },
+                            child: const Text('تغيير رقم الهاتف'),
+                          ),
+                        ),
+                      ],
+                    ] else ...[
+                      TextFormField(
+                        controller: _email,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(labelText: 'البريد الإلكتروني', prefixIcon: Icon(Icons.alternate_email)),
+                        validator: (v) => v == null || !RegExp(r'^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$').hasMatch(v.trim())
+                            ? 'اكتب بريد إلكتروني صحيح' : null,
+                      ),
+                      const SizedBox(height: 13),
+                      TextFormField(
+                        controller: _password,
+                        obscureText: !_visible,
+                        decoration: InputDecoration(
+                          labelText: 'كلمة المرور',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            onPressed: () => setState(() => _visible = !_visible),
+                            icon: Icon(_visible ? Icons.visibility_off : Icons.visibility),
+                          ),
+                        ),
+                        validator: (v) => v == null || v.length < 8 ? '8 أحرف على الأقل' : null,
+                      ),
+                    ],
                     if (_error != null) _Notice(text: _error!, error: true),
                     if (_notice != null) _Notice(text: _notice!, error: false),
                     const SizedBox(height: 20),
@@ -226,10 +404,23 @@ class _AuthScreenState extends State<AuthScreen> {
                       style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(54)),
                       child: _busy
                         ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : Text(_register ? 'إنشاء حساب' : 'تسجيل الدخول'),
+                        : Text(phoneMode
+                            ? (_phoneOtpSent ? 'تأكيد الكود' : 'إرسال كود التحقق')
+                            : (_register ? 'إنشاء حساب بالبريد' : 'تسجيل الدخول بالبريد')),
                     ),
+                    if (phoneMode && _phoneOtpSent)
+                      TextButton(
+                        onPressed: _busy ? null : _sendPhoneCode,
+                        child: const Text('إعادة إرسال الكود'),
+                      ),
                     TextButton(
-                      onPressed: _busy ? null : () => setState(() { _register = !_register; _error = null; _notice = null; }),
+                      onPressed: _busy ? null : () => setState(() {
+                        _register = !_register;
+                        _phoneOtpSent = false;
+                        _normalizedPhone = null;
+                        _otp.clear();
+                        _clearFeedback();
+                      }),
                       child: Text(_register ? 'عندك حساب؟ سجّل الدخول' : 'مستخدم جديد؟ أنشئ حساب'),
                     ),
                   ],
