@@ -113,6 +113,7 @@ class _NexoraAppState extends State<NexoraApp> {
   @override
   void dispose() {
     _authSubscription?.cancel();
+    NexoraPushService.instance.dispose();
     super.dispose();
   }
 
