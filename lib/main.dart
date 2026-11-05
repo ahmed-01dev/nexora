@@ -570,7 +570,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   }
                 },
                 decoration: InputDecoration(
-                  hintText: 'ابحث بالاسم أو اسم المستخدم',
+                  hintText: _searchPosts ? 'ابحث في المنشورات أو اكتب #هاشتاج' : 'ابحث بالاسم أو اسم المستخدم',
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: _search.text.isEmpty
                       ? null
@@ -612,7 +612,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   }
                   if (snapshot.hasError) {
                     return AppErrorView(
-                      title: 'تعذر تحميل الأشخاص',
+                      title: _searchPosts ? 'تعذر تحميل المنشورات' : 'تعذر تحميل الأشخاص',
                       error: snapshot.error,
                       onRetry: _refresh,
                     );
@@ -628,7 +628,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                           _Empty(
                             icon: Icons.travel_explore,
                             title: 'مفيش نتائج',
-                            subtitle: 'جرّب اسمًا أو username مختلفًا.',
+                            subtitle: _searchPosts ? 'جرّب كلمة أو هاشتاج مختلف.' : 'جرّب اسمًا أو username مختلفًا.',
                           ),
                         ],
                       ),
@@ -657,7 +657,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             child: TextButton.icon(
                               onPressed: () => _loadMore(people),
                               icon: const Icon(Icons.expand_more),
-                              label: const Text('تحميل أشخاص أكثر'),
+                              label: Text(_searchPosts ? 'تحميل منشورات أكثر' : 'تحميل أشخاص أكثر'),
                             ),
                           );
                         }
