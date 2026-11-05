@@ -603,11 +603,29 @@ class ProfileScreen extends StatefulWidget {
 }
 class _ProfileScreenState extends State<ProfileScreen> {
   late Future<Map<String, dynamic>?> _future;
+  late Future<List<Map<String, dynamic>>> _postsFuture;
   @override
-  void initState() { super.initState(); _future = _load(); }
+  void initState() {
+    super.initState();
+    _future = _load();
+    _postsFuture = _loadOwnPosts();
+  }
   Future<Map<String, dynamic>?> _load() async {
     final u = Supabase.instance.client.auth.currentUser!;
     return Supabase.instance.client.from('profiles').select().eq('id', u.id).maybeSingle();
+  }
+  Future<List<Map<String, dynamic>>> _loadOwnPosts() async {
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser!.id;
+    final rows = await client
+        .from('posts')
+        .select('id,user_id,content,visibility,created_at,profiles!posts_user_id_fkey(id,username,display_name,avatar_url)')
+        .eq('user_id', userId)
+        .isFilter('deleted_at', null)
+        .order('created_at', ascending: false)
+        .order('id', ascending: false)
+        .limit(50);
+    return List<Map<String, dynamic>>.from(rows);
   }
   void _toast(String v) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(v))); }
   Future<void> _edit(Map<String, dynamic> p) async {
@@ -656,6 +674,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
       const SizedBox(height: 14), _Info(icon: Icons.mail_outline, title: 'البريد الإلكتروني', value: u.email ?? 'غير متاح'),
       const SizedBox(height: 10), _Info(icon: Icons.shield_outlined, title: 'الخصوصية', value: (p['is_private'] as bool? ?? false) ? 'حساب خاص' : 'حساب عام'),
       const SizedBox(height: 10), _Info(icon: Icons.verified_outlined, title: 'التوثيق', value: (p['is_verified'] as bool? ?? false) ? 'موثّق' : 'غير موثّق'),
+      const SizedBox(height: 22),
+      Row(
+        children: [
+          const Expanded(child: Text('منشوراتي', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900))),
+          IconButton(
+            tooltip: 'تحديث المنشورات',
+            onPressed: () => setState(() => _postsFuture = _loadOwnPosts()),
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
+      FutureBuilder<List<Map<String, dynamic>>>(
+        future: _postsFuture,
+        builder: (context, postsSnapshot) {
+          if (postsSnapshot.connectionState == ConnectionState.waiting) {
+            return const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (postsSnapshot.hasError) {
+            return AppErrorView(
+              title: 'تعذر تحميل منشوراتك',
+              error: postsSnapshot.error,
+              onRetry: () => setState(() => _postsFuture = _loadOwnPosts()),
+            );
+          }
+          final posts = postsSnapshot.data ?? const <Map<String, dynamic>>[];
+          if (posts.isEmpty) {
+            return const _Empty(
+              icon: Icons.post_add,
+              title: 'لسه ما نشرتش حاجة',
+              subtitle: 'أول منشور ليك هيظهر هنا.',
+            );
+          }
+          return Column(
+            children: [
+              for (final post in posts) ...[
+                PostCard(post: post),
+                const SizedBox(height: 10),
+              ],
+              if (posts.length == 50)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'يعرض آخر 50 منشورًا حاليًا.',
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
       const SizedBox(height: 20), OutlinedButton.icon(onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج')),
     ]);
   }));
