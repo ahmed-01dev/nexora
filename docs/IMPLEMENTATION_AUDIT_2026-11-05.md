@@ -147,3 +147,13 @@ Firebase project: nexora-20712
 ## Latest CI confirmation — 2026-11-05
 - Verified GitHub Actions run `42092381391` completed with success on the current source and audit commit `b2c49d445c6a5a08d100ec29d323fc5a9c044a6f`. The job completed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test`.
 - The cron cleanup job `nexora-cleanup-expired-nearby-locations` is active on `*/15 * * * *` and its first observed execution succeeded at 19:15 UTC on 2026-11-05.
+
+
+## OTP resend cooldown and call-readiness recheck — 2026-11-05
+- Added a 60-second client resend cooldown after Supabase accepts an SMS OTP request. The timer is cancelled on disposal; changing auth method, switching sign-up/sign-in mode, or choosing to change the phone resets the pending OTP state and timer.
+- Verified GitHub Actions run `42092718684` completed successfully on commit `ecb54a4913ad90bfbbed6c3adac47b81970c88ce`. Its single `analyze-and-test` job passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test`.
+- Re-read the auth widget: the cooldown starts only after `signInWithOtp` returns successfully; resend is disabled while the countdown is positive. The client explicitly uses `OtpChannel.sms`, not WhatsApp.
+- Rechecked the current Flutter tree and dependency manifest: no call screen/service, WebRTC, LiveKit, signaling client, or STUN/TURN integration exists. No call-related triggers or signaling RPCs were found in the live database catalog.
+- Live `call_sessions` and `call_participants` are metadata-only tables. Their constraints cover call type/status and membership keys. Authenticated table grants are SELECT-only; INSERT/UPDATE policies currently exist but are ineffective without corresponding grants. No anonymous grants were returned. Do not add broad client write grants to these tables as a shortcut.
+- Real voice/video calling remains unimplemented. A production implementation still needs a selected media/signaling provider, server-issued short-lived room tokens, participant authorization and block/privacy checks, TURN/relay strategy, lifecycle cleanup, push/incoming-call behavior, and real-device network tests. Provider credentials and deployment are not available in this repository audit, so no fake call UI or incomplete WebRTC client was added.
+- CI success confirms static analysis and automated Flutter tests only. It does not verify Supabase Phone Auth/provider configuration, SMS delivery, Firebase push delivery, real devices, or production calling.
