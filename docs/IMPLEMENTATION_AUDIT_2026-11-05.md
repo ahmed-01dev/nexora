@@ -123,3 +123,8 @@ Firebase project: nexora-20712
 - The `nexora-media` Storage bucket is private, has a 50 MiB per-object limit, and restricts accepted MIME types to the configured image/video/audio/PDF allowlist. Storage SELECT is owner-scoped or mediated by `private.can_read_media_path`; message attachment access additionally requires a non-deleted message and current conversation membership.
 - The `messages` table is present in the `supabase_realtime` publication, matching the client chat stream implementation. No call signaling/WebRTC implementation was found in the Flutter dependency manifest or app source.
 - Verified the new nearby cleanup cron job is active. Its first scheduled execution has not yet appeared in `cron.job_run_details` at the time of this check; successful execution will be verified separately.
+
+
+## Nearby messaging action — 2026-11-05
+- Nearby discovery cards now include a direct-message action. It calls the existing `create_direct_conversation` RPC, which enforces recipient message privacy and bilateral block checks server-side before opening the chat.
+- Verified the final source commit `9a265d48e79d542de0bed46a9eb663b4494e4e1b` with Flutter CI run `42090978306`: dependency installation, Analyze, and Test all completed successfully.
