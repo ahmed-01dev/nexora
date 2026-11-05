@@ -37,8 +37,8 @@ Firebase project: nexora-20712
 - No public or private SQL views were returned by the view inventory query.
 
 ## Migration history synchronization
-- The connected Supabase project currently reports 43 applied migration records; the repository contains 42 SQL migration files.
-- Only twenty-one migration version timestamps match exactly. Twenty-two remote migration versions have no same-version file in GitHub, and twenty-one local files are not marked applied under their current version timestamps. Several names suggest semantic equivalents or squashed migrations, but equivalence has not been established by comparing the actual applied SQL.
+- The connected Supabase project currently reports 42 applied migration records; the repository contains 41 SQL migration files.
+- Only twenty migration version timestamps match exactly. Twenty-two remote migration versions have no same-version file in GitHub, and twenty-one local files are not marked applied under their current version timestamps. Several names suggest semantic equivalents or squashed migrations, but equivalence has not been established by comparing the actual applied SQL.
 - This is a significant migration-history drift risk. Do not run `supabase db push`, reset, or replay migrations until a full schema/data backup is available and every remote migration is mapped to its exact source SQL. Continue using only reviewed, individually applied SQL migrations with matching local version filenames in the interim.
 
 ## Auth and provider configuration
