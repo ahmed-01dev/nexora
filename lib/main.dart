@@ -437,21 +437,40 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }) async {
     final client = Supabase.instance.client;
     final me = client.auth.currentUser!.id;
-    final rows = _searchPosts
-        ? await client
-            .from('posts')
-            .select('id,user_id,content,visibility,created_at,profiles!posts_user_id_fkey(id,username,display_name,avatar_url)')
-            .eq('visibility', 'public')
-            .isFilter('deleted_at', null)
-            .ilike('content', '%${term.replaceAll('#', '')}%')
-            .order('created_at', ascending: false)
-            .order('id', ascending: false)
-            .range(offset, offset + _pageSize - 1)
-        : await _loadPeople(client, me, term, offset);
+    late final List<Map<String, dynamic>> rows;
+    if (_searchPosts && term.startsWith('#') && term.length > 1) {
+      final tag = term.substring(1).toLowerCase();
+      final matches = await client
+          .from('post_hashtags')
+          .select('posts!inner(id,user_id,content,visibility,created_at,profiles!posts_user_id_fkey(id,username,display_name,avatar_url)),hashtags!inner(tag)')
+          .eq('hashtags.tag', tag)
+          .eq('posts.visibility', 'public')
+          .isFilter('posts.deleted_at', null)
+          .order('created_at', referencedTable: 'posts', ascending: false)
+          .order('id', referencedTable: 'posts', ascending: false)
+          .range(offset, offset + _pageSize - 1);
+      rows = matches
+          .where((match) => match['posts'] is Map)
+          .map((match) => Map<String, dynamic>.from(match['posts'] as Map))
+          .toList(growable: false);
+    } else if (_searchPosts) {
+      final matches = await client
+          .from('posts')
+          .select('id,user_id,content,visibility,created_at,profiles!posts_user_id_fkey(id,username,display_name,avatar_url)')
+          .eq('visibility', 'public')
+          .isFilter('deleted_at', null)
+          .ilike('content', '%${term.replaceAll('#', '')}%')
+          .order('created_at', ascending: false)
+          .order('id', ascending: false)
+          .range(offset, offset + _pageSize - 1);
+      rows = List<Map<String, dynamic>>.from(matches);
+    } else {
+      rows = await _loadPeople(client, me, term, offset);
+    }
     if (mounted && offset == 0) {
       setState(() => _hasMore = rows.length == _pageSize);
     }
-    return List<Map<String, dynamic>>.from(rows);
+    return rows;
   }
 
   Future<List<Map<String, dynamic>>> _loadPeople(
