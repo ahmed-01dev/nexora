@@ -16,12 +16,13 @@ Status meanings:
 - [x] Real comment listing, reply-to-comment, posting, and own-comment soft deletion UI connected to Supabase.
 - [x] Feed mode switch (Latest / Following) with server-side 20-row pagination, stable ordering, duplicate filtering, refresh, and RLS-respecting queries.
 - [x] Post like state and toggle backed by the existing `likes` table.
-- [x] Repost and undo-repost actions backed by the existing `reposts` table, restricted in the client to public posts and enforced again by database RLS.
+- [x] Repost and undo-repost actions backed by the existing `reposts` table, restricted in the client to public posts and enforced again by database RLS; duplicate submissions are constrained by a unique database index.
 - [x] Basic follow insertion/deletion.
 - [x] Central Flutter error presentation/logging.
 - [x] Existing CI run passed analysis, tests, Android release APK build, and web build (run 41929549503).
 - [x] Additive PostgreSQL foundation migration applied and verified for RLS on all newly added tables.
 - [x] Anonymous role has no SELECT privilege on the newly added social tables.
+- [x] Unique database index prevents duplicate reposts per user/post; applied and verified after a duplicate preflight returned no existing duplicate pairs.
 
 ## Database foundation added
 - [x] Friendships and blocks.
