@@ -17,6 +17,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
   String? _replyTo;
   String? _replyName;
   bool _sending = false;
+  bool _hasMore = true;
+  bool _loadingMore = false;
+  static const int _pageSize = 100;
 
   SupabaseClient get _db => Supabase.instance.client;
   String get _myId => _db.auth.currentUser!.id;
@@ -39,8 +42,40 @@ class _CommentsScreenState extends State<CommentsScreen> {
         .select('id,post_id,user_id,content,parent_id,created_at,edited_at,deleted_at,profiles!comments_user_id_fkey(id,username,display_name,avatar_url)')
         .eq('post_id', widget.postId)
         .order('created_at', ascending: true)
-        .limit(100);
+        .order('id', ascending: true)
+        .range(0, _pageSize - 1);
+    if (mounted) setState(() => _hasMore = rows.length == _pageSize);
     return List<Map<String, dynamic>>.from(rows);
+  }
+
+  Future<void> _loadMore(List<Map<String, dynamic>> current) async {
+    if (_loadingMore || !_hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final rows = await _db
+          .from('comments')
+          .select('id,post_id,user_id,content,parent_id,created_at,edited_at,deleted_at,profiles!comments_user_id_fkey(id,username,display_name,avatar_url)')
+          .eq('post_id', widget.postId)
+          .order('created_at', ascending: true)
+          .order('id', ascending: true)
+          .range(current.length, current.length + _pageSize - 1);
+      if (!mounted) return;
+      final knownIds = current.map((comment) => comment['id']).toSet();
+      final additions = List<Map<String, dynamic>>.from(rows)
+          .where((comment) => !knownIds.contains(comment['id']))
+          .toList();
+      setState(() {
+        _future = Future.value([...current, ...additions]);
+        _hasMore = rows.length == _pageSize;
+        _loadingMore = false;
+      });
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'load_more_comments');
+      if (mounted) {
+        setState(() => _loadingMore = false);
+        _notice(AppErrorService.message(error));
+      }
+    }
   }
 
   Future<void> _refresh() async {
@@ -177,11 +212,23 @@ class _CommentsScreenState extends State<CommentsScreen> {
                 }
                 return RefreshIndicator(
                   onRefresh: _refresh,
-                  child: ListView.builder(
+                  child: ListView(
                     padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
-                    itemCount: roots.length,
-                    itemBuilder: (context, index) =>
-                        _buildCommentThread(roots[index], replies),
+                    children: [
+                      for (final root in roots) _buildCommentThread(root, replies),
+                      if (_hasMore || _loadingMore)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Center(
+                            child: _loadingMore
+                                ? const CircularProgressIndicator()
+                                : OutlinedButton(
+                                    onPressed: () => _loadMore(comments),
+                                    child: const Text('تحميل تعليقات أقدم'),
+                                  ),
+                          ),
+                        ),
+                    ],
                   ),
                 );
               },
