@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_error.dart';
 import 'core/theme/nexora_theme.dart';
+import 'features/design_gallery/design_gallery_screen.dart';
 import 'features/auth/phone_number.dart';
 import 'features/media/media_upload_service.dart';
 import 'features/media/post_media_gallery.dart';
@@ -172,6 +173,7 @@ class _NexoraAppState extends State<NexoraApp> {
             theme: theme,
             darkTheme: theme,
             themeMode: ThemeMode.light,
+            routes: kDebugMode ? {'/__design_gallery': (_) => const DesignGalleryScreen()} : const {},
             home: Directionality(
               textDirection: TextDirection.rtl,
               child: widget.ready ? const AuthGate() : _Setup(error: widget.startupError),
