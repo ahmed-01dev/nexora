@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
+import '../messaging/messages_screen.dart';
 import 'nearby_distance_band.dart';
 
 class NearbyDiscoveryScreen extends StatefulWidget {
@@ -108,6 +109,28 @@ class _NearbyDiscoveryScreenState extends State<NearbyDiscoveryScreen> {
     return '@${person['username'] ?? 'user'}';
   }
 
+  Future<void> _messagePerson(Map<String, dynamic> person) async {
+    try {
+      final conversationId = await Supabase.instance.client.rpc(
+        'create_direct_conversation',
+        params: {'p_other_user_id': person['id']},
+      );
+      if (!mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => ChatScreen(
+          conversationId: conversationId.toString(),
+          title: _displayName(person),
+        ),
+      ));
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'nearby_start_conversation');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppErrorService.message(error))),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -163,9 +186,17 @@ class _NearbyDiscoveryScreenState extends State<NearbyDiscoveryScreen> {
                     leading: CircleAvatar(child: Text(_displayName(person).characters.first.toUpperCase())),
                     title: Text(_displayName(person)),
                     subtitle: Text('@${person['username'] ?? ''}'),
-                    trailing: Text(
-                      nearbyDistanceLabel(person['distance_band']?.toString() ?? ''),
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                    trailing: IconButton(
+                      tooltip: 'مراسلة',
+                      onPressed: () => _messagePerson(person),
+                      icon: const Icon(Icons.chat_bubble_outline),
+                    ),
+                    isThreeLine: true,
+                    dense: false,
+                    subtitle: Text(
+                      '@${person['username'] ?? ''} • ${nearbyDistanceLabel(person['distance_band']?.toString() ?? '')}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   )),
             ],
