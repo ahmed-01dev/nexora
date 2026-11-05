@@ -15,7 +15,6 @@ class _NexoraPreviewScreenState extends State<NexoraPreviewScreen> {
   final Set<int> _liked = {};
   final Set<int> _saved = {};
   final Set<int> _following = {};
-  final Set<String> _joined = {};
 
   void _toast(String message) {
     ScaffoldMessenger.of(context)
