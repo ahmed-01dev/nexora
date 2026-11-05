@@ -13,7 +13,7 @@ Status meanings:
 - [x] Supabase email/password registration and login.
 - [x] Basic profile display/edit.
 - [x] Text-only post creation and public feed query.
-- [x] Real comment listing, reply-to-comment, posting, and own-comment soft deletion UI connected to Supabase.
+- [x] Real comment listing, reply-to-comment, posting, own-comment soft deletion, and per-comment like/unlike UI connected to Supabase.
 - [x] Feed mode switch (Latest / Following) with server-side 20-row pagination, stable ordering, duplicate filtering, refresh, and RLS-respecting queries.
 - [x] Post like state and toggle backed by the existing `likes` table.
 - [x] Repost and undo-repost actions backed by the existing `reposts` table, restricted in the client to public posts and enforced again by database RLS; duplicate submissions are constrained by a unique database index.
@@ -47,7 +47,7 @@ Status meanings:
 | Friends | Partial | Server-side request/accept/decline/cancel/remove operations with block and permission checks; incoming/outgoing request inbox and profile action buttons. Group roles and friend activity pending. |
 | Feed | Partial | Latest public feed and Following feed now load in 20-row server pages with stable ordering, duplicate filtering, refresh, and existing RLS privacy/block checks; ranking, cursor pagination, offline cache, and mixed content pending. |
 | Posts | Partial | Text, multi-image and video upload to private storage; feed displays signed image/video URLs; post likes and public-post repost/undo-repost are wired to existing tables. Like/repost counts, quote repost UI, polls, drafts, scheduling, edit/restore, and media processing pending. |
-| Comments | Partial | Real comments screen now supports listing, replies, posting, and soft-deleting own comments; comment reactions, pagination beyond 100, and moderation UX pending. Build verification intentionally paused until feature/code implementation is complete. |
+| Comments | Partial | Real comments screen now supports listing, replies, posting, and soft-deleting own comments; comment like counts, pagination beyond 100, and moderation UX pending. Build verification intentionally paused until feature/code implementation is complete. |
 | Stories | Partial | Text/photo/video stories with 24-hour expiry, viewer, view records, and visibility/block checks. Highlights, close friends, reactions/replies, viewer list, and cleanup worker pending. |
 | Reels/Video | Partial | Vertical swipe feed plays public uploaded videos; no transcoding, adaptive bitrate, captions, creator editing, or long-form channels yet. |
 | Messaging | Partial | Direct text chat UI, realtime message stream, last-read update, server-side block/privacy check, and in-app message notification trigger exist. Attachments, typing, delivery states, group UX, and E2EE pending. |
