@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/app_error.dart';
 import '../friends/friend_requests_screen.dart';
 import '../messaging/messages_screen.dart';
+import 'notification_preferences_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -145,6 +146,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       appBar: AppBar(
         title: const Text('الإشعارات'),
         actions: [
+          IconButton(
+            tooltip: 'تفضيلات الإشعارات',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const NotificationPreferencesScreen()),
+            ),
+            icon: const Icon(Icons.tune),
+          ),
           TextButton(onPressed: _markAllRead, child: const Text('قراءة الكل')),
           IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh)),
         ],
