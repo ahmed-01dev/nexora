@@ -101,10 +101,13 @@ class _ReportDialogState extends State<ReportDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
+              Text(
                 'اختر السبب الأقرب. البلاغ يذهب لفريق المراجعة ولا يظهر للطرف المُبلّغ عنه.',
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.72),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.72),
                   fontSize: 13,
                 ),
               ),
