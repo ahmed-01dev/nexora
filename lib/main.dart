@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -611,15 +612,45 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     final pages = <Widget>[HomeScreen(key: ValueKey(_feedVersion)), const ExploreScreen(), CreateScreen(onPosted: _posted), const ReelsScreen(), const MessagesScreen(), const ProfileScreen()];
     return Scaffold(
-      body: IndexedStack(index: _tab, children: pages),
-      bottomNavigationBar: NavigationBar(selectedIndex: _tab, onDestinationSelected: (v) => setState(() => _tab = v), destinations: const [
-        NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'الرئيسية'),
-        NavigationDestination(icon: Icon(Icons.explore_outlined), selectedIcon: Icon(Icons.explore), label: 'استكشاف'),
-        NavigationDestination(icon: Icon(Icons.add_circle_outline), selectedIcon: Icon(Icons.add_circle), label: 'إنشاء'),
-        NavigationDestination(icon: Icon(Icons.play_circle_outline), selectedIcon: Icon(Icons.play_circle), label: 'ريلز'),
-        NavigationDestination(icon: Icon(Icons.chat_bubble_outline), selectedIcon: Icon(Icons.chat_bubble), label: 'الرسائل'),
-        NavigationDestination(icon: Icon(Icons.account_circle_outlined), selectedIcon: Icon(Icons.account_circle), label: 'حسابي'),
+      extendBody: true,
+      body: Stack(children: [
+        const Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(
+          gradient: RadialGradient(center: Alignment(-.85, -.9), radius: 1.25,
+            colors: [Color(0xFF193A62), Color(0xFF0A1427), Color(0xFF070B16)],
+            stops: [0, .42, 1]),
+        ))),
+        IndexedStack(index: _tab, children: pages),
       ]),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(25),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xD914223A),
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(color: const Color(0x447BD8FF)),
+                boxShadow: const [BoxShadow(color: Color(0x3315BCEB), blurRadius: 28, offset: Offset(0, 8))],
+              ),
+              child: NavigationBar(
+                selectedIndex: _tab,
+                onDestinationSelected: (v) => setState(() => _tab = v),
+                backgroundColor: Colors.transparent,
+                destinations: const [
+                  NavigationDestination(icon: Icon(Icons.home_rounded), label: 'الرئيسية'),
+                  NavigationDestination(icon: Icon(Icons.explore_rounded), label: 'استكشاف'),
+                  NavigationDestination(icon: Icon(Icons.add_circle_rounded), label: 'إنشاء'),
+                  NavigationDestination(icon: Icon(Icons.play_circle_rounded), label: 'ريلز'),
+                  NavigationDestination(icon: Icon(Icons.forum_rounded), label: 'الرسائل'),
+                  NavigationDestination(icon: Icon(Icons.person_rounded), label: 'حسابي'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -745,19 +776,44 @@ class _HomeScreenState extends State<HomeScreen> {
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(24),
-                            gradient: const LinearGradient(colors: [Color(0xFF171717), Color(0xFF050505)]),
-                          ),
-                          child: const Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('مساحتك. صوتك. عالمك.', style: TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.bold)),
-                              SizedBox(height: 7),
-                              Text('أفكارك تستحق مساحة أكبر.', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
-                            ],
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(28),
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(22),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(28),
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topRight, end: Alignment.bottomLeft,
+                                  colors: [Color(0xCC245B86), Color(0xAA172C55), Color(0xAA392B70)],
+                                ),
+                                border: Border.all(color: const Color(0x667EDCFF)),
+                                boxShadow: const [BoxShadow(color: Color(0x3319BFEA), blurRadius: 30, offset: Offset(0, 12))],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(children: [
+                                    Container(width: 42, height: 42, decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(14),
+                                      gradient: const LinearGradient(colors: [Color(0xFF75E2FF), Color(0xFF9383FF)]),
+                                    ), child: const Icon(Icons.bolt_rounded, color: Color(0xFF071321), size: 26)),
+                                    const SizedBox(width: 12),
+                                    const Text('N E X O R A', style: TextStyle(color: Color(0xFFD8F5FF), fontWeight: FontWeight.w900, letterSpacing: 2.2, fontSize: 13)),
+                                    const Spacer(),
+                                    const Icon(Icons.auto_awesome_rounded, color: Color(0xFF9BEAFF)),
+                                  ]),
+                                  const SizedBox(height: 22),
+                                  const Text('مساحتك. صوتك. عالمك.', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
+                                  const SizedBox(height: 7),
+                                  const Text('خلّي حضورك يُحكى.', style: TextStyle(color: Colors.white, fontSize: 27, height: 1.15, fontWeight: FontWeight.w900)),
+                                  const SizedBox(height: 8),
+                                  const Text('شارك لحظاتك واكتشف ناس شبهك.', style: TextStyle(color: Color(0xFFD5E7FA), fontSize: 13)),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -2152,7 +2208,7 @@ class _Brand extends StatelessWidget {
   const _Brand({this.size = 46});
   final double size;
   @override
-  Widget build(BuildContext context) => Container(width: size, height: size, decoration: BoxDecoration(borderRadius: BorderRadius.circular(size * .3), gradient: const LinearGradient(colors: [Color(0xFFFFFFFF), Color(0xFFC0C0C0)]), boxShadow: const [BoxShadow(color: Color(0x33FFFFFF), blurRadius: 20, offset: Offset(0, 7))]), child: Icon(Icons.bolt, color: const Color(0xFF000000), size: size * .58));
+  Widget build(BuildContext context) => Container(width: size, height: size, decoration: BoxDecoration(borderRadius: BorderRadius.circular(size * .3), gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF8CEBFF), Color(0xFF6B83FF), Color(0xFFB17BFF)]), border: Border.all(color: const Color(0x99FFFFFF)), boxShadow: const [BoxShadow(color: Color(0x6654CFFF), blurRadius: 26, offset: Offset(0, 8))]), child: Icon(Icons.bolt_rounded, color: const Color(0xFF071321), size: size * .58));
 }
 Future<String?> _resolvePrivateMediaUrl(String? value) async {
   final raw = (value ?? '').trim();
