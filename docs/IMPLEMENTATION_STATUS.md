@@ -36,6 +36,7 @@ Status meanings:
 - [x] Private avatar/cover Storage reads now use the same accepted-follow, accepted-friendship, shared-conversation, and block rules as profile-row visibility.
 - [x] Private-account status now overrides public story visibility for both story rows and signed media access; only the owner or accepted followers can view private-account stories.
 - [x] Signed media for friends-only posts now follows the same accepted-friend visibility rule as the post row, while preserving block and private-account checks.
+- [x] Signed media for soft-deleted posts is denied to non-owners, matching the post-row visibility policy; owners can still access their own content.
 - [x] Blocking either participant now revokes access to existing direct conversations through the shared membership helper; group/community conversations remain unaffected. Verified function definition and execute grants in Postgres.
 - [x] Friend-request acceptance and pending-follow acceptance now re-check mutual block state at the database boundary, preventing requests created before a block from being accepted afterward.
 - [x] Follow and friendship relationship rows are hidden from both participants while a mutual block exists; records are retained so unblocking can restore the prior relationship.
