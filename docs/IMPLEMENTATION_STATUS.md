@@ -12,6 +12,7 @@ Status meanings:
 - [x] Flutter Android/Web project and GitHub Actions workflows.
 - [x] Supabase email/password registration and login.
 - [x] Basic profile display/edit.
+- [x] Profile avatar and cover image selection/upload UI, private Storage paths, profile path persistence, signed-URL display, and replacement cleanup; authenticated upload/read policy paths are configured. End-to-end upload with a real authenticated device session remains to be validated.
 - [x] Text-only post creation and public feed query.
 - [x] Real comment listing, reply-to-comment, posting, own-comment soft deletion, and per-comment like/unlike UI connected to Supabase.
 - [x] Feed mode switch (Latest / Following) with server-side 20-row pagination, stable ordering, duplicate filtering, refresh, and RLS-respecting queries.
@@ -34,7 +35,7 @@ Status meanings:
 - [x] Reports.
 - [x] Call sessions and participants (signaling records only; not WebRTC).
 - [x] Private account settings and user preferences.
-- [x] Private media bucket with authenticated upload, ownership/audience read checks, delete-own policy, and signed URL delivery.
+- [x] Private media bucket with authenticated upload, ownership/audience read checks, profile avatar/cover path visibility checks, delete-own policy, and signed URL delivery.
 - [ ] Background transcoding, thumbnail generation, malware scanning, resumable uploads, and CDN optimization.
 - [x] Privacy center controls for profile visibility and who can start a new direct message.
 - [ ] RLS integration tests with real authenticated test users.
@@ -43,7 +44,7 @@ Status meanings:
 | Feature | Status | Notes |
 |---|---|---|
 | Authentication | Partial | Email/password only; no OAuth, phone OTP, MFA, passkeys, or device center. |
-| Profiles | Partial | Basic editable text profile, displays stored avatar URLs on profile/person/post cards, paginated own-post timeline (50 per page), and saved-posts library; avatar/cover upload and profile highlights pending. |
+| Profiles | Partial | Editable text profile, avatar and cover image upload to private Storage, signed-URL rendering on profile/person/post cards, old own-image cleanup, paginated own-post timeline (50 per page), and saved-posts library; authenticated end-to-end upload validation and profile highlights pending. |
 | Followers | Partial | Follow state loads from DB; private accounts create pending requests through a server-side function; request inbox/accept UI pending. |
 | Friends | Partial | Server-side request/accept/decline/cancel/remove operations with block and permission checks; incoming/outgoing request inbox and profile action buttons. Group roles and friend activity pending. |
 | Feed | Partial | Latest public feed and Following feed now load in 20-row server pages with stable ordering, duplicate filtering, refresh, and existing RLS privacy/block checks; ranking, cursor pagination, offline cache, and mixed content pending. |
