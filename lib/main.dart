@@ -16,6 +16,7 @@ import 'features/stories/stories_screen.dart';
 import 'features/search/hashtag_service.dart';
 import 'features/communities/communities_screen.dart';
 import 'features/moderation/report_dialog.dart';
+import 'features/moderation/moderation_queue_screen.dart';
 
 final _url = String.fromEnvironment('SUPABASE_URL').trim();
 const _key = String.fromEnvironment('SUPABASE_ANON_KEY');
@@ -891,6 +892,7 @@ class ProfileScreen extends StatefulWidget {
 }
 class _ProfileScreenState extends State<ProfileScreen> {
   late Future<Map<String, dynamic>?> _future;
+  late Future<Map<String, dynamic>?> _staffFuture;
   late Future<List<Map<String, dynamic>>> _postsFuture;
   bool _postsHasMore = true;
   bool _postsLoadingMore = false;
@@ -901,8 +903,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _future = _load();
+    _staffFuture = _loadStaffRole();
     _postsFuture = _loadOwnPosts();
   }
+  Future<Map<String, dynamic>?> _loadStaffRole() async {
+    try {
+      final uid = Supabase.instance.client.auth.currentUser!.id;
+      return await Supabase.instance.client
+          .from('staff_members')
+          .select('role')
+          .eq('user_id', uid)
+          .maybeSingle();
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'profile_staff_role');
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>?> _load() async {
     final u = Supabase.instance.client.auth.currentUser!;
     return Supabase.instance.client.from('profiles').select().eq('id', u.id).maybeSingle();
@@ -1018,7 +1035,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
     name.dispose(); handle.dispose(); bio.dispose();
   }
   @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('ملفي الشخصي', style: TextStyle(fontWeight: FontWeight.w800)), actions: [IconButton(tooltip: 'مركز الخصوصية', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PrivacySettingsScreen())), icon: const Icon(Icons.shield_outlined)), IconButton(tooltip: 'تسجيل الخروج', onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout))]), body: FutureBuilder<Map<String, dynamic>?>(future: _future, builder: (context, snap) {
+  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('ملفي الشخصي', style: TextStyle(fontWeight: FontWeight.w800)), actions: [
+    FutureBuilder<Map<String, dynamic>?>(
+      future: _staffFuture,
+      builder: (context, snapshot) {
+        final role = snapshot.data?['role']?.toString();
+        if (!const {'super_admin', 'admin', 'moderator', 'support'}.contains(role)) {
+          return const SizedBox.shrink();
+        }
+        return IconButton(
+          tooltip: 'مركز مراجعة البلاغات',
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => ModerationQueueScreen(role: role!),
+            ),
+          ),
+          icon: const Icon(Icons.gavel_outlined),
+        );
+      },
+    ),
+    IconButton(tooltip: 'مركز الخصوصية', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PrivacySettingsScreen())), icon: const Icon(Icons.shield_outlined)), IconButton(tooltip: 'تسجيل الخروج', onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout))]), body: FutureBuilder<Map<String, dynamic>?>(future: _future, builder: (context, snap) {
     if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
     if (snap.hasError) return AppErrorView(title: 'تعذر تحميل حسابك', error: snap.error, onRetry: () => setState(() => _future = _load()));
     final p = snap.data;
