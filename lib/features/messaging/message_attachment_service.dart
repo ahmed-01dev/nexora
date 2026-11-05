@@ -35,4 +35,22 @@ class MessageAttachmentService {
     if (path == null) return null;
     return Supabase.instance.client.storage.from('nexora-media').createSignedUrl(path, 3600);
   }
+
+  Future<void> deleteOwnAttachment(String messageId) async {
+    final client = Supabase.instance.client;
+    final uid = client.auth.currentUser?.id;
+    if (uid == null) return;
+    final row = await client.from('message_attachments')
+        .select('storage_path')
+        .eq('message_id', messageId)
+        .eq('uploader_id', uid)
+        .maybeSingle();
+    final path = row?['storage_path'] as String?;
+    if (path == null) return;
+    await client.from('message_attachments')
+        .delete()
+        .eq('message_id', messageId)
+        .eq('uploader_id', uid);
+    await client.storage.from('nexora-media').remove([path]);
+  }
 }
