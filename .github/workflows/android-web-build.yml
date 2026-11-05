@@ -25,8 +25,8 @@ jobs:
 
       - name: Normalize and validate Supabase connection
         env:
-          SUPABASE_URL_INPUT: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY_INPUT: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL_INPUT: ${{ secrets.SUPABASE_URL || 'https://wwdeexgkwpftyavbhiff.supabase.co' }}
+          SUPABASE_ANON_KEY_INPUT: ${{ secrets.SUPABASE_ANON_KEY || 'sb_publishable_vJpkaM72QMGLykLFU5m44g_kwuPCi-Y' }}
         run: |
           SUPABASE_URL_CLEAN="$(printf '%s' "$SUPABASE_URL_INPUT" | tr -d '[:space:]' | sed 's/[/?]*$//')"
           SUPABASE_ANON_KEY_CLEAN="$(printf '%s' "$SUPABASE_ANON_KEY_INPUT" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
