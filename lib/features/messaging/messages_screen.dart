@@ -30,35 +30,53 @@ class _MessagesScreenState extends State<MessagesScreen> {
         .limit(60);
 
     final result = <Map<String, dynamic>>[];
+    final conversationIds = memberships
+        .map((membership) => membership['conversation_id'] as String)
+        .toList();
+    if (conversationIds.isEmpty) return result;
+
+    // Fetch peer profiles and latest messages in two batched queries rather
+    // than issuing two additional requests for every conversation.
+    final allMembers = await client
+        .from('conversation_members')
+        .select('conversation_id,user_id,profiles!conversation_members_user_id_fkey(id,username,display_name,avatar_url)')
+        .inFilter('conversation_id', conversationIds)
+        .neq('user_id', userId);
+
+    final peerByConversation = <String, Map<String, dynamic>>{};
+    for (final member in allMembers) {
+      final conversationId = member['conversation_id'] as String;
+      final profile = member['profiles'];
+      if (profile is Map && !peerByConversation.containsKey(conversationId)) {
+        peerByConversation[conversationId] = Map<String, dynamic>.from(profile);
+      }
+    }
+
+    final latestRows = await client
+        .from('messages')
+        .select('id,conversation_id,body,message_type,created_at,sender_id,deleted_at')
+        .inFilter('conversation_id', conversationIds)
+        .order('created_at', ascending: false)
+        .order('id', ascending: false);
+    final latestByConversation = <String, Map<String, dynamic>>{};
+    for (final message in latestRows) {
+      final conversationId = message['conversation_id'] as String;
+      latestByConversation.putIfAbsent(
+        conversationId,
+        () => Map<String, dynamic>.from(message),
+      );
+    }
+
     for (final membership in memberships) {
       final conversationId = membership['conversation_id'] as String;
       final rawConversation = membership['conversations'];
       if (rawConversation is! Map) continue;
       final conversation = Map<String, dynamic>.from(rawConversation);
-
-      final peerRows = await client
-          .from('conversation_members')
-          .select('user_id,profiles!conversation_members_user_id_fkey(id,username,display_name,avatar_url)')
-          .eq('conversation_id', conversationId)
-          .neq('user_id', userId)
-          .limit(1);
-      final peer = peerRows.isEmpty || peerRows.first['profiles'] is! Map
-          ? <String, dynamic>{}
-          : Map<String, dynamic>.from(peerRows.first['profiles'] as Map);
-
-      final latest = await client
-          .from('messages')
-          .select('body,message_type,created_at,sender_id')
-          .eq('conversation_id', conversationId)
-          .order('created_at', ascending: false)
-          .limit(1)
-          .maybeSingle();
-
       result.add({
         'id': conversationId,
         'conversation': conversation,
-        'peer': peer,
-        'latest': latest,
+        'peer': peerByConversation[conversationId] ?? <String, dynamic>{},
+        'latest': latestByConversation[conversationId],
       });
     }
 
