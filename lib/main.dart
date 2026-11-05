@@ -230,6 +230,8 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _busy = false;
   bool _visible = false;
   bool _phoneOtpSent = false;
+  int _resendSeconds = 0;
+  Timer? _resendTimer;
   String _method = 'phone';
   String? _error;
   String? _notice;
@@ -242,12 +244,40 @@ class _AuthScreenState extends State<AuthScreen> {
     _email.dispose();
     _password.dispose();
     _otp.dispose();
+    _resendTimer?.cancel();
     super.dispose();
   }
 
   void _clearFeedback() {
     _error = null;
     _notice = null;
+  }
+
+  void _startOtpResendCooldown() {
+    _resendTimer?.cancel();
+    setState(() => _resendSeconds = 60);
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        if (_resendSeconds <= 1) {
+          _resendSeconds = 0;
+          timer.cancel();
+        } else {
+          _resendSeconds--;
+        }
+      });
+    });
+  }
+
+  void _resetPhoneOtp() {
+    _resendTimer?.cancel();
+    _resendSeconds = 0;
+    _phoneOtpSent = false;
+    _normalizedPhone = null;
+    _otp.clear();
   }
 
   Future<void> _sendPhoneCode() async {
@@ -274,6 +304,7 @@ class _AuthScreenState extends State<AuthScreen> {
         _phoneOtpSent = true;
         _notice = 'بعتنالك كود التحقق برسالة SMS على الرقم $normalized';
       });
+      _startOtpResendCooldown();
     } on AuthException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (e, s) {
@@ -389,9 +420,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       onSelectionChanged: _busy ? null : (selection) {
                         setState(() {
                           _method = selection.first;
-                          _phoneOtpSent = false;
-                          _normalizedPhone = null;
-                          _otp.clear();
+                          _resetPhoneOtp();
                           _clearFeedback();
                         });
                       },
@@ -440,7 +469,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           alignment: AlignmentDirectional.centerEnd,
                           child: TextButton(
                             onPressed: _busy ? null : () {
-                              setState(() { _phoneOtpSent = false; _otp.clear(); _clearFeedback(); });
+                              setState(() { _resetPhoneOtp(); _clearFeedback(); });
                             },
                             child: const Text('تغيير رقم الهاتف'),
                           ),
@@ -495,8 +524,10 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                     if (phoneMode && _phoneOtpSent)
                       TextButton(
-                        onPressed: _busy ? null : _sendPhoneCode,
-                        child: const Text('إعادة إرسال الكود'),
+                        onPressed: _busy || _resendSeconds > 0 ? null : _sendPhoneCode,
+                        child: Text(_resendSeconds > 0
+                            ? 'إعادة إرسال الكود بعد $_resendSeconds ثانية'
+                            : 'إعادة إرسال الكود'),
                       ),
                     TextButton(
                       onPressed: _busy ? null : () => setState(() {
