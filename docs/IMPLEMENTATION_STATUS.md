@@ -21,11 +21,12 @@ Status meanings:
 - [x] Save/unsave bookmarks backed by the existing `saves` table, plus a saved-posts library in the profile that reads the user's own saved posts under RLS.
 - [x] Basic follow insertion/deletion.
 - [x] Central Flutter error presentation/logging.
-- [x] Latest source-only CI run passed Flutter analysis and unit/widget tests (run 42078738486). This run did not build an APK/AAB or Web release; the release workflow remains manual-only.
+- [x] Latest source-only CI run passed Flutter analysis and unit/widget tests (run 42081293244). This run did not build an APK/AAB or Web release; the release workflow remains manual-only.
 - [x] Additive PostgreSQL foundation migration applied and verified for RLS on all newly added tables.
 - [x] Anonymous role has no SELECT privilege on the newly added social tables.
 - [x] Community-channel grants were narrowed to SELECT/INSERT/DELETE for authenticated clients; unnecessary UPDATE/TRUNCATE/REFERENCES/TRIGGER/MAINTAIN privileges were removed and verified.
 - [x] PUBLIC execute was revoked from private friendship implementation helpers and trigger-only audit functions; authenticated execute remains only where the invoker RPC wrappers require it.
+- [x] Follow-up privilege audit found and fixed a missed PUBLIC execute grant on `private.request_friend_impl(uuid)`; anon execution is now false while authenticated execution and the public RPC wrapper remain available.
 - [x] Profile handles have a verified unique index on `lower(username)`, preventing case-only duplicate handles. Notification UPDATE grants are restricted to `read_at`; recipient, actor, type, payload, and entity metadata columns cannot be changed by authenticated clients. Verified with PostgreSQL privilege checks.
 - [x] Removed the permissive message-attachment SELECT policy that bypassed deleted-message filtering; the remaining restrictive SELECT policy requires a non-deleted message and conversation membership.
 - [x] Made image attachment MIME/10 MiB/message-type validation restrictive, so it is combined with uploader ownership, user-folder path, existing Storage object, and conversation-membership checks rather than OR-ed with them.
