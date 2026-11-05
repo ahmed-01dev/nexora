@@ -11,7 +11,7 @@ Status meanings:
 ## Verified baseline
 - [x] Flutter Android/Web project and GitHub Actions workflows.
 - [x] Phone-first authentication UI: phone OTP signup/login with Egyptian mobile normalization and OTP verification over SMS only; email/password remains an explicit alternative. Supabase SMS provider configuration, delivery costs/limits, and real-device OTP delivery remain external setup and end-to-end verification items.
-- [x] Basic profile display/edit.
+- [x] Basic profile display/edit, with database-enforced case-insensitive username uniqueness to prevent handles differing only by letter case.
 - [x] Profile avatar and cover image selection/upload UI, private Storage paths, profile path persistence, signed-URL display, and replacement cleanup; authenticated upload/read policy paths are configured. End-to-end upload with a real authenticated device session remains to be validated.
 - [x] Text-only post creation and public feed query.
 - [x] Real comment listing, reply-to-comment, posting, own-comment soft deletion, and per-comment like/unlike UI connected to Supabase.
@@ -26,7 +26,7 @@ Status meanings:
 - [x] Anonymous role has no SELECT privilege on the newly added social tables.
 - [x] Community-channel grants were narrowed to SELECT/INSERT/DELETE for authenticated clients; unnecessary UPDATE/TRUNCATE/REFERENCES/TRIGGER/MAINTAIN privileges were removed and verified.
 - [x] PUBLIC execute was revoked from private friendship implementation helpers and trigger-only audit functions; authenticated execute remains only where the invoker RPC wrappers require it.
-- [x] Notification UPDATE grants are restricted to `read_at`; recipient, actor, type, payload, and entity metadata columns cannot be changed by authenticated clients. Verified with PostgreSQL privilege checks.
+- [x] Profile handles have a verified unique index on `lower(username)`, preventing case-only duplicate handles. Notification UPDATE grants are restricted to `read_at`; recipient, actor, type, payload, and entity metadata columns cannot be changed by authenticated clients. Verified with PostgreSQL privilege checks.
 - [x] Removed the permissive message-attachment SELECT policy that bypassed deleted-message filtering; the remaining restrictive SELECT policy requires a non-deleted message and conversation membership.
 - [x] Made image attachment MIME/10 MiB/message-type validation restrictive, so it is combined with uploader ownership, user-folder path, existing Storage object, and conversation-membership checks rather than OR-ed with them.
 - [x] Unique database index prevents duplicate reposts per user/post; applied and verified after a duplicate preflight returned no existing duplicate pairs.
