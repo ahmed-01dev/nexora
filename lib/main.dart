@@ -406,6 +406,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Timer? _debounce;
   late Future<List<Map<String, dynamic>>> _future;
   bool _hasMore = true;
+  bool _searchPosts = false;
   bool _loadingMore = false;
   String _activeTerm = '';
 
@@ -424,7 +425,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   String _cleanTerm(String value) {
     return value
-        .replaceAll(RegExp(r'[^a-zA-Z0-9_ .\-\u0600-\u06FF]'), ' ')
+        .replaceAll(RegExp(r'[^#a-zA-Z0-9_ .\-\u0600-\u06FF]'), ' ')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
   }
@@ -435,22 +436,40 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }) async {
     final client = Supabase.instance.client;
     final me = client.auth.currentUser!.id;
+    final rows = _searchPosts
+        ? await client
+            .from('posts')
+            .select('id,user_id,content,visibility,created_at,profiles!posts_user_id_fkey(id,username,display_name,avatar_url)')
+            .eq('visibility', 'public')
+            .isFilter('deleted_at', null)
+            .ilike('content', '%${term.replaceAll('#', '')}%')
+            .order('created_at', ascending: false)
+            .order('id', ascending: false)
+            .range(offset, offset + _pageSize - 1)
+        : await _loadPeople(client, me, term, offset);
+    if (mounted && offset == 0) {
+      setState(() => _hasMore = rows.length == _pageSize);
+    }
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  Future<List<Map<String, dynamic>>> _loadPeople(
+    SupabaseClient client,
+    String me,
+    String term,
+    int offset,
+  ) async {
     var query = client
         .from('profiles')
         .select('id,username,display_name,bio,avatar_url,is_verified')
         .neq('id', me);
     if (term.isNotEmpty) {
-      query = query.or(
-        'username.ilike.%$term%,display_name.ilike.%$term%',
-      );
+      query = query.or('username.ilike.%$term%,display_name.ilike.%$term%');
     }
     final rows = await query
         .order('created_at', ascending: false)
         .order('id', ascending: false)
         .range(offset, offset + _pageSize - 1);
-    if (mounted && offset == 0) {
-      setState(() => _hasMore = rows.length == _pageSize);
-    }
     return List<Map<String, dynamic>>.from(rows);
   }
 
@@ -505,8 +524,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-          title: const Text(
-            'اكتشف الناس',
+          title: Text(
+            _searchPosts ? 'اكتشف المنشورات' : 'اكتشف الناس',
             style: TextStyle(fontWeight: FontWeight.w800),
           ),
           actions: [
@@ -564,6 +583,24 @@ class _ExploreScreenState extends State<ExploreScreen> {
                           icon: const Icon(Icons.close),
                         ),
                 ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(value: false, label: Text('الأشخاص'), icon: Icon(Icons.people_outline)),
+                  ButtonSegment(value: true, label: Text('المنشورات'), icon: Icon(Icons.article_outlined)),
+                ],
+                selected: {_searchPosts},
+                onSelectionChanged: (selection) {
+                  setState(() {
+                    _searchPosts = selection.first;
+                    _hasMore = true;
+                    _loadingMore = false;
+                    _future = _load(_activeTerm);
+                  });
+                },
               ),
             ),
             Expanded(
@@ -624,10 +661,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             ),
                           );
                         }
-                        return PersonTile(
-                          profile: people[index],
-                          follow: true,
-                        );
+                        return _searchPosts
+                            ? PostCard(post: people[index])
+                            : PersonTile(profile: people[index], follow: true);
                       },
                     ),
                   );
