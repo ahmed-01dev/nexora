@@ -51,7 +51,7 @@ Status meanings:
 | Comments | Partial | Real comments screen loads newest comments first in ordered 100-row server pages with load-older, keeps replies visible when their parent is on an older page, supports nested replies, posting, editing and soft-deleting own comments, and per-comment like/unlike; visible like counts and moderation UX pending. Build verification intentionally paused until feature/code implementation is complete. |
 | Stories | Partial | Text/photo/video stories with 24-hour expiry, viewer, view records, and visibility/block checks. Highlights, close friends, reactions/replies, viewer list, and cleanup worker pending. |
 | Reels/Video | Partial | Vertical swipe feed plays public uploaded videos; no transcoding, adaptive bitrate, captions, creator editing, or long-form channels yet. |
-| Messaging | Partial | Direct text chat UI, realtime message stream, last-read update, server-side block/privacy check, in-app message notification trigger, and own-message edit/soft-delete actions exist. Attachments, typing, delivery states, group UX, and E2EE pending. |
+| Messaging | Partial | Direct text chat UI, realtime message stream, latest-message auto-scroll that respects manual scroll position, last-read update, server-side block/privacy check, in-app message notification trigger, and own-message edit/soft-delete actions exist. Attachments, typing, delivery states, group UX, and E2EE pending. |
 | E2EE | Pending | No cryptographic protocol or key lifecycle implemented. |
 | Voice/video calls | Foundation | Call records only; WebRTC, STUN/TURN, push call delivery pending. |
 | Communities | Foundation | Tables and RLS exist; discovery, channels, admin workflows pending. |
