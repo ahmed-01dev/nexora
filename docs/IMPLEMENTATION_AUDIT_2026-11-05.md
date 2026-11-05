@@ -13,6 +13,8 @@ Firebase project: nexora-20712
 - Android Firebase configuration currently identifies package `com.example.nexora`. This is a placeholder-style application ID and must be replaced with the final unique NEXORA application ID before public release; the Firebase Android app registration must match it.
 
 ## Verified database security
+- Profile SELECT visibility now checks for a block before allowing any non-owner access path (public, accepted follow, friendship, or shared conversation). The profile owner can still read their own profile.
+- Direct-conversation membership now becomes false for both participants when either side blocks the other. Because the existing RLS policies use this helper, the block prevents further direct-message access, message reads, attachment reads, and conversation previews while leaving group/community conversations unaffected.
 - All inspected public application tables have RLS enabled.
 - Previous grant checks found no anonymous table privileges on the current public application tables.
 - Community-channel authenticated grants are limited to SELECT/INSERT/DELETE.
@@ -24,9 +26,9 @@ Firebase project: nexora-20712
 - No public or private SQL views were returned by the view inventory query.
 
 ## Migration history synchronization
-- The connected Supabase project currently reports 24 applied migration records; the repository contains 23 SQL migration files.
-- The version/name lists are not a one-to-one match: eight remote migration names have no exact same-named file, while seven local migration filenames have no exact same-named remote record. Some appear to be consolidated or renamed equivalents, but this has not been proven by content comparison.
-- This is a migration-history drift risk. Do not run `supabase db push`, reset, or replay migrations until the repository and remote history are reconciled against the actual applied SQL and a recoverable database backup is available.
+- The connected Supabase project currently reports 27 applied migration records; the repository contains 26 SQL migration files.
+- Only five migration version timestamps match exactly. Twenty-two remote migration versions have no same-version file in GitHub, and twenty-one local files are not marked applied under their current version timestamps. Several names suggest semantic equivalents or squashed migrations, but equivalence has not been established by comparing the actual applied SQL.
+- This is a significant migration-history drift risk. Do not run `supabase db push`, reset, or replay migrations until a full schema/data backup is available and every remote migration is mapped to its exact source SQL. Continue using only reviewed, individually applied SQL migrations with matching local version filenames in the interim.
 
 ## Auth and provider configuration
 - The Supabase dashboard currently shows Email enabled and Phone disabled. Phone OTP cannot work end-to-end until Phone is enabled and a supported SMS provider is configured and tested.
