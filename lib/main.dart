@@ -455,7 +455,19 @@ class _AuthScreenState extends State<AuthScreen> {
                             icon: Icon(_visible ? Icons.visibility_off : Icons.visibility),
                           ),
                         ),
-                        validator: (v) => v == null || v.length < 8 ? '8 أحرف على الأقل' : null,
+                        validator: (v) {
+                          if (v == null || v.isEmpty) return 'اكتب كلمة المرور';
+                          if (_register) {
+                            if (v.length < 12) return 'استخدم 12 حرفًا على الأقل عند إنشاء الحساب';
+                            if (!RegExp(r'[A-Za-z]').hasMatch(v) ||
+                                !RegExp(r'\d').hasMatch(v)) {
+                              return 'أضف حرفًا ورقمًا على الأقل';
+                            }
+                          } else if (v.length < 8) {
+                            return 'كلمة المرور غير صحيحة';
+                          }
+                          return null;
+                        },
                       ),
                     ],
                     if (_error != null) _Notice(text: _error!, error: true),
