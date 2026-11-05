@@ -49,10 +49,10 @@ Firebase project: nexora-20712
 - The project owner should not paste service-role keys, Firebase private keys, database passwords, or webhook secrets into chat or source control.
 
 ## Push notification state
-- Edge Function `send-push-notification` is deployed and ACTIVE (version 4), with platform JWT verification disabled and explicit application-level authentication: either the database webhook secret or a validated user bearer token tied to the notification actor.
+- Edge Function `send-push-notification` is deployed and ACTIVE (version 6 as of the latest push-delivery correction), with platform JWT verification disabled and explicit application-level authentication: either the database webhook secret or a validated user bearer token tied to the notification actor.
 - The database trigger reads `nexora_push_webhook_secret` from Supabase Vault and calls the Edge Function using the shared-secret header.
 - Verified: the Vault webhook secret exists, `pg_net` is enabled, `user_devices` exists, and its RLS policies restrict device rows to their owner.
-- The Flutter client uses Firebase Installation IDs (FIDs), and the Edge Function sends using the FCM HTTP v1 `fid` target. This is supported by current Firebase documentation; no token/FID migration is required.
+- The Flutter client uses Firebase Installation IDs (FIDs) via `onRegistered` / `register()`, and the Edge Function sends using the FCM HTTP v1 `fid` target. This is the current Firebase-recommended path for this project because `firebase_messaging` is pinned to 17.0.1 and the Android manifest opts into FID registration. Do not replace it with legacy `getToken()` / `token` handling.
 - The Firebase service-account Edge Function secret was not inspected by the available tools. Do not assume it is configured. Real-device delivery remains unverified; the device table had no registered devices at the time of the earlier inventory.
 
 ## Follow-up performance hardening
@@ -82,3 +82,11 @@ Firebase project: nexora-20712
 - No existing user records or tables were deleted during this audit.
 - No service-role key, Firebase service-account private key, or webhook secret was added to the repository.
 - NEXORA is not yet production-ready for public launch.
+
+
+## Follow-up work on 2026-11-05
+- Corrected startup diagnostics in `lib/main.dart`: missing/invalid public connection settings and Supabase initialization exceptions are surfaced on the setup screen instead of a generic message.
+- Aligned `test/widget_test.dart` with the updated setup screen and added coverage for a supplied startup error.
+- Revalidated Firebase Messaging 17.0.1 FID behavior against current Firebase documentation. The client uses `onRegistered`, `onUnregistered`, and `register()`; the deployed Edge Function uses the FCM HTTP v1 `fid` target. Edge Function version 6 is ACTIVE.
+- Rechecked the live database catalog: every public table has RLS enabled; the `user_devices` upsert conflict index exists; the notifications table has its push trigger; and the Security Advisor still reports the leaked-password-protection warning.
+- The source CI workflow is configured for pushes to `main`, but no completed CI run has yet been verified for these newest commits. Do not mark the new commits green until that workflow completes.
