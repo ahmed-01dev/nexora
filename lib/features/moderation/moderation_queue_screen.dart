@@ -116,6 +116,147 @@ class _ModerationQueueScreenState extends State<ModerationQueueScreen> {
     );
   }
 
+  Future<void> _viewTarget(Map<String, dynamic> report) async {
+    final type = (report['target_type'] ?? '').toString();
+    final id = (report['target_id'] ?? '').toString();
+    if (id.isEmpty) return;
+
+    String table;
+    String columns;
+    switch (type) {
+      case 'user':
+        table = 'profiles';
+        columns = 'id,username,display_name,bio,is_verified,is_private';
+        break;
+      case 'post':
+        table = 'posts';
+        columns = 'id,user_id,content,visibility,created_at,deleted_at';
+        break;
+      case 'comment':
+        table = 'comments';
+        columns = 'id,user_id,content,created_at,deleted_at,post_id';
+        break;
+      case 'story':
+        table = 'stories';
+        columns = 'id,user_id,text_content,story_type,visibility,created_at,expires_at,archived_at';
+        break;
+      case 'message':
+        table = 'messages';
+        columns = 'id,sender_id,body,message_type,encryption_mode,created_at,deleted_at';
+        break;
+      case 'community':
+        table = 'communities';
+        columns = 'id,owner_id,name,description,visibility,created_at';
+        break;
+      default:
+        return;
+    }
+
+    try {
+      final row = await Supabase.instance.client
+          .from(table)
+          .select(columns)
+          .eq('id', id)
+          .maybeSingle();
+      if (!mounted) return;
+      if (row == null) {
+        await showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('المحتوى غير متاح'),
+            content: const Text(
+              'لا يمكن عرض هذا الهدف من حساب المراجع الحالي. لم يتم تجاوز إعدادات الخصوصية أو صلاحيات قاعدة البيانات.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('إغلاق'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      final data = Map<String, dynamic>.from(row);
+      String title;
+      String body;
+      switch (type) {
+        case 'user':
+          title = 'الحساب المُبلّغ عنه';
+          body = [
+            'الاسم: ${data['display_name'] ?? '—'}',
+            'المعرّف: @${data['username'] ?? '—'}',
+            'نبذة: ${data['bio'] ?? '—'}',
+            'الحساب: ${data['is_private'] == true ? 'خاص' : 'عام'}',
+            'التوثيق: ${data['is_verified'] == true ? 'موثق' : 'غير موثق'}',
+          ].join('\n');
+          break;
+        case 'post':
+          title = 'المنشور المُبلّغ عنه';
+          body = [
+            'المحتوى: ${data['content'] ?? '—'}',
+            'الظهور: ${data['visibility'] ?? '—'}',
+            'الحالة: ${data['deleted_at'] == null ? 'متاح' : 'محذوف'}',
+          ].join('\n');
+          break;
+        case 'comment':
+          title = 'التعليق المُبلّغ عنه';
+          body = [
+            'المحتوى: ${data['content'] ?? '—'}',
+            'الحالة: ${data['deleted_at'] == null ? 'متاح' : 'محذوف'}',
+            'المنشور: ${data['post_id']}',
+          ].join('\n');
+          break;
+        case 'story':
+          title = 'القصة المُبلّغ عنها';
+          body = [
+            'النص: ${data['text_content'] ?? 'قصة وسائط'}',
+            'النوع: ${data['story_type'] ?? '—'}',
+            'الظهور: ${data['visibility'] ?? '—'}',
+            'تنتهي: ${data['expires_at'] ?? '—'}',
+          ].join('\n');
+          break;
+        case 'message':
+          title = 'الرسالة المُبلّغ عنها';
+          final encrypted = data['encryption_mode']?.toString() != 'none' &&
+              data['encryption_mode']?.toString() != 'plaintext';
+          body = encrypted
+              ? 'هذه الرسالة مشفرة أو لا يمكن عرض نصها في مركز الإشراف.'
+              : 'المحتوى: ${data['body'] ?? '—'}';
+          break;
+        case 'community':
+          title = 'المجتمع المُبلّغ عنه';
+          body = [
+            'الاسم: ${data['name'] ?? '—'}',
+            'الوصف: ${data['description'] ?? '—'}',
+            'الظهور: ${data['visibility'] ?? '—'}',
+          ].join('\n');
+          break;
+        default:
+          title = 'تفاصيل الهدف';
+          body = 'لا توجد تفاصيل قابلة للعرض.';
+      }
+
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(title),
+          content: SingleChildScrollView(child: SelectableText(body)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('إغلاق'),
+            ),
+          ],
+        ),
+      );
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'moderation_target_preview');
+      _showError(error);
+    }
+  }
+
   Future<void> _assignToMe(Map<String, dynamic> report) async {
     final id = report['id'] as String;
     if (!_canReview || _busyIds.contains(id)) return;
@@ -342,11 +483,12 @@ class _ModerationQueueScreenState extends State<ModerationQueueScreen> {
                                               ),
                                             ),
                                             const SizedBox(height: 6),
-                                            Text(
-                                              'معرّف المحتوى: ${report['target_id']}',
-                                              style: const TextStyle(
-                                                fontSize: 11,
-                                                color: Colors.white54,
+                                            Align(
+                                              alignment: AlignmentDirectional.centerStart,
+                                              child: TextButton.icon(
+                                                onPressed: () => _viewTarget(report),
+                                                icon: const Icon(Icons.visibility_outlined, size: 18),
+                                                label: const Text('عرض الهدف المُبلّغ عنه'),
                                               ),
                                             ),
                                             if ((report['details'] ?? '')
