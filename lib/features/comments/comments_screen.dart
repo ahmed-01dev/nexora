@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
+import '../moderation/report_dialog.dart';
 
 class CommentsScreen extends StatefulWidget {
   const CommentsScreen({super.key, required this.postId});
@@ -164,6 +165,15 @@ class _CommentsScreenState extends State<CommentsScreen> {
     }
   }
 
+  Future<void> _report(Map<String, dynamic> comment) async {
+    final submitted = await ReportDialog.show(
+      context,
+      targetType: 'comment',
+      targetId: comment['id'] as String,
+    );
+    if (submitted && mounted) _notice('تم إرسال البلاغ للمراجعة');
+  }
+
   Future<void> _delete(Map<String, dynamic> comment) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -214,6 +224,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
             }),
             onEdit: () => _edit(comment),
             onDelete: () => _delete(comment),
+            onReport: () => _report(comment),
           ),
           for (final child in children)
             _buildCommentThread(child, replies, depth: depth + 1),
@@ -358,6 +369,7 @@ class _CommentTile extends StatefulWidget {
     required this.onReply,
     required this.onEdit,
     required this.onDelete,
+    required this.onReport,
   });
 
   final Map<String, dynamic> comment;
@@ -365,6 +377,7 @@ class _CommentTile extends StatefulWidget {
   final VoidCallback onReply;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback onReport;
 
   @override
   State<_CommentTile> createState() => _CommentTileState();
@@ -452,6 +465,13 @@ class _CommentTileState extends State<_CommentTile> {
                 const SizedBox(width: 8),
                 Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.w800))),
                 Text(stamp, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                if (!widget.mine && !deleted)
+                  IconButton(
+                    tooltip: 'الإبلاغ عن التعليق',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: widget.onReport,
+                    icon: const Icon(Icons.flag_outlined, size: 18),
+                  ),
                 if (widget.mine && !deleted) ...[
                   IconButton(
                     tooltip: 'تعديل التعليق',
