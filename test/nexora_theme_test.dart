@@ -3,32 +3,35 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nexora/core/theme/nexora_theme.dart';
 
 void main() {
-  test('AMOLED is true black with white primary accent', () {
+  test('AMOLED uses true black and Aurora violet accent', () {
     final theme = NexoraTheme.amoled;
     expect(theme.brightness, Brightness.dark);
-    expect(theme.scaffoldBackgroundColor, const Color(0xFF000000));
-    expect(theme.colorScheme.primary, const Color(0xFFFFFFFF));
+    expect(theme.scaffoldBackgroundColor, NexoraColors.bg);
+    expect(theme.colorScheme.primary, NexoraColors.violet);
+    expect(theme.colorScheme.surface, NexoraColors.surface);
   });
 
-  test('light and optional pink themes are available', () {
+  test('light and pink AMOLED themes use the design tokens', () {
     expect(NexoraTheme.light.brightness, Brightness.light);
+    expect(NexoraTheme.light.scaffoldBackgroundColor, const Color(0xFFF4F4F8));
     expect(NexoraTheme.pinkAmoled.colorScheme.primary, NexoraColors.pink);
+    expect(NexoraTheme.pinkAmoled.scaffoldBackgroundColor, NexoraColors.bg);
   });
 
-  test('AMOLED surfaces remain true black and elevated surfaces stay distinct', () {
-    final theme = NexoraTheme.amoled;
-    expect(theme.scaffoldBackgroundColor, const Color(0xFF000000));
-    expect(theme.colorScheme.surface, const Color(0xFF101010));
-    expect(NexoraColors.border, const Color(0xFF292929));
+  test('surface hierarchy and spacing tokens stay distinct', () {
+    expect(NexoraColors.surface, const Color(0xFF0B0B10));
+    expect(NexoraColors.surfaceRaised, const Color(0xFF14141C));
+    expect(NexoraColors.hairline, const Color(0x1AFFFFFF));
+    expect(NexoraSpacing.screen, 16);
+    expect(NexoraRadius.sheet, 28);
   });
 
   group('normalizeNexoraTheme', () {
-    test('keeps supported theme values', () {
-      expect(normalizeNexoraTheme('amoled'), 'amoled');
-      expect(normalizeNexoraTheme('light'), 'light');
-      expect(normalizeNexoraTheme('pink_amoled'), 'pink_amoled');
+    test('keeps all supported theme values', () {
+      for (final value in ['amoled', 'light', 'pink_amoled', 'custom']) {
+        expect(normalizeNexoraTheme(value), value);
+      }
     });
-
     test('falls back safely for null or unknown values', () {
       expect(normalizeNexoraTheme(null), 'amoled');
       expect(normalizeNexoraTheme('neon'), 'amoled');
