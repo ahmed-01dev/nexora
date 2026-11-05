@@ -908,7 +908,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final u = Supabase.instance.client.auth.currentUser!;
     return ListView(padding: const EdgeInsets.all(18), children: [
       Container(padding: const EdgeInsets.all(22), decoration: BoxDecoration(borderRadius: BorderRadius.circular(26), gradient: const LinearGradient(colors: [Color(0xFF171717), Color(0xFF050505)]), border: Border.all(color: const Color(0xFF292929))), child: Column(children: [
-        const _Brand(size: 72), const SizedBox(height: 14),
+        _ProfileAvatar(url: p['avatar_url']?.toString(), size: 88), const SizedBox(height: 14),
         Text((p['display_name'] ?? 'مستخدم NEXORA').toString(), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
         Text('@' + (p['username'] ?? 'user').toString(), style: const TextStyle(color: Color(0xFFFFFFFF))),
         if ((p['bio'] ?? '').toString().isNotEmpty) Padding(padding: const EdgeInsets.only(top: 12), child: Text(p['bio'].toString(), textAlign: TextAlign.center)),
@@ -1351,7 +1351,7 @@ class _PersonTileState extends State<PersonTile> {
   Widget build(BuildContext context) {
     final p = widget.profile;
     return Card(child: Padding(padding: const EdgeInsets.all(13), child: Row(children: [
-      const _Avatar(size: 48), const SizedBox(width: 12),
+      _ProfileAvatar(url: p['avatar_url']?.toString(), size: 48), const SizedBox(width: 12),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [Flexible(child: Text((p['display_name'] ?? 'مستخدم').toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800))), if (p['is_verified'] == true) const Icon(Icons.verified, size: 16, color: Colors.lightBlueAccent)]),
         Text('@' + (p['username'] ?? 'user').toString(), style: const TextStyle(color: Color(0xFF9AA7BA), fontSize: 12)),
@@ -1369,6 +1369,44 @@ class _Brand extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(width: size, height: size, decoration: BoxDecoration(borderRadius: BorderRadius.circular(size * .3), gradient: const LinearGradient(colors: [Color(0xFFFFFFFF), Color(0xFFC0C0C0)]), boxShadow: const [BoxShadow(color: Color(0x33FFFFFF), blurRadius: 20, offset: Offset(0, 7))]), child: Icon(Icons.bolt, color: const Color(0xFF000000), size: size * .58));
 }
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({this.url, this.size = 44});
+
+  final String? url;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final parsed = Uri.tryParse((url ?? '').trim());
+    final validUrl = parsed != null &&
+        (parsed.scheme == 'https' || parsed.scheme == 'http') &&
+        parsed.host.isNotEmpty;
+    return Container(
+      width: size,
+      height: size,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: const Color(0xFF243448),
+        border: Border.all(color: const Color(0xFF40536A)),
+      ),
+      child: validUrl
+          ? Image.network(
+              parsed.toString(),
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Icon(
+                Icons.person,
+                size: size * .58,
+                color: Colors.white,
+              ),
+            )
+          : Icon(Icons.person, size: size * .58, color: Colors.white),
+    );
+  }
+}
+
 class _Avatar extends StatelessWidget {
   const _Avatar({this.size = 44});
   final double size;
