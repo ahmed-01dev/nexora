@@ -203,13 +203,28 @@ class _Setup extends StatelessWidget {
       child: SingleChildScrollView(
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: MediaQuery.sizeOf(context).height),
-          child: _Empty(
-            icon: Icons.cloud_off_outlined,
-            title: 'تعذر الاتصال بخدمات NEXORA',
-            subtitle: error == null || error!.isEmpty
-                ? 'تحقق من اتصال الإنترنت وإعدادات Supabase، ثم أعد تشغيل التطبيق.'
-                : 'تفاصيل الخطأ: $error',
-          ),
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            _Empty(
+              icon: Icons.cloud_off_outlined,
+              title: 'تعذر الاتصال بخدمات NEXORA',
+              subtitle: error == null || error!.isEmpty
+                  ? 'تحقق من اتصال الإنترنت وإعدادات Supabase، ثم أعد تشغيل التطبيق.'
+                  : 'تفاصيل الخطأ: $error',
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(builder: (_) => const NexoraPreviewScreen()),
+                  ),
+                  icon: const Icon(Icons.visibility_outlined),
+                  label: const Text('استكشف NEXORA بدون اتصال · معاينة'),
+                ),
+              ),
+            ),
+          ]),
         ),
       ),
     ),
