@@ -62,3 +62,16 @@
 - No WebRTC/TURN implementation.
 - No admin RBAC/dashboard.
 - No production crash monitoring or backup/restore drill.
+
+## Follow-up hardening — 2026-11-05
+
+- Mutual blocks now override non-owner profile visibility, follow/friend relationship visibility, pending follow/friend acceptance, direct-conversation membership, and associated message/attachment access. Group/community conversations remain available after a block.
+- A pending or declined friendship cannot grant access to a private profile; only accepted friendships do. Direct client writes to `profiles.is_private` and `user_private_settings` are revoked in favor of the privacy RPC that synchronizes both representations.
+- Private-account privacy overrides a story's per-story public setting for both story-row reads and Storage signed URLs. Friends-only post media uses the same accepted-friend rule as the post row; soft-deleted post media is hidden from non-owners.
+- Direct-conversation creators cannot remove the other participant from a 1:1 conversation; group/community creators retain member-management permissions.
+- Moderation appeal INSERT is restricted to `user_id`, `action_id`, and `message`; appeal status, reviewer, and resolution metadata remain staff-controlled.
+- Device registration upserts have owner-scoped UPDATE privileges for the device identity fields, with the existing RLS ownership policy still enforced.
+- Client-side media signature checks and a 100 MiB aggregate post upload limit are implemented. These do not replace server-side media signature verification, malware scanning, or server-side storage quotas.
+- The following-feed query now uses a SECURITY INVOKER paged RPC that includes accepted follows and accepted friendships while preserving table RLS.
+- Supabase Security Advisor's only remaining finding is leaked-password protection disabled. The project currently cannot enable this feature on its Free plan; the email signup UI's 12-character rule is client-side only and is not a substitute.
+- Migration history remains unsynchronized: do not run `supabase db push`, reset, or replay local migrations until every remote migration is mapped to exact source SQL and a recoverable backup exists.
