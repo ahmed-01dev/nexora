@@ -6,6 +6,7 @@ import 'core/theme/nexora_theme.dart';
 import 'features/media/media_upload_service.dart';
 import 'features/media/post_media_gallery.dart';
 import 'features/friends/friend_requests_screen.dart';
+import 'features/comments/comments_screen.dart';
 import 'features/messaging/messages_screen.dart';
 import 'features/notifications/notifications_screen.dart';
 import 'features/reels/reels_screen.dart';
@@ -545,7 +546,7 @@ class _PostCardState extends State<PostCard> {
         Text((widget.post['content'] ?? '').toString(), style: const TextStyle(fontSize: 15, height: 1.65)),
       PostMediaGallery(postId: widget.post['id'] as String),
       const Divider(height: 24, color: Color(0xFF292929)),
-      Row(children: [TextButton.icon(onPressed: _busy || _liked == null ? null : _like, icon: Icon(_liked == true ? Icons.favorite : Icons.favorite_border), label: Text(_busy && _liked == null ? '...' : (_liked == true ? 'أعجبك' : 'إعجاب'))), const Spacer(), const Icon(Icons.chat_bubble_outline, size: 18), const SizedBox(width: 6), const Text('تعليق')]),
+      Row(children: [TextButton.icon(onPressed: _busy || _liked == null ? null : _like, icon: Icon(_liked == true ? Icons.favorite : Icons.favorite_border), label: Text(_busy && _liked == null ? '...' : (_liked == true ? 'أعجبك' : 'إعجاب'))), const Spacer(), TextButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => CommentsScreen(postId: widget.post['id'] as String))), icon: const Icon(Icons.chat_bubble_outline, size: 18), label: const Text('تعليق'))]),
     ])));
   }
 }
