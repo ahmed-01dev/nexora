@@ -13,6 +13,7 @@ Status meanings:
 - [x] Supabase email/password registration and login.
 - [x] Basic profile display/edit.
 - [x] Text-only post creation and public feed query.
+- [x] Real comment listing, reply-to-comment, posting, and own-comment soft deletion UI connected to Supabase.
 - [x] Basic follow insertion/deletion.
 - [x] Central Flutter error presentation/logging.
 - [x] Existing CI run passed analysis, tests, Android release APK build, and web build (run 41929549503).
@@ -42,7 +43,7 @@ Status meanings:
 | Friends | Partial | Server-side request/accept/decline/cancel/remove operations with block and permission checks; incoming/outgoing request inbox and profile action buttons. Group roles and friend activity pending. |
 | Feed | Partial | Basic public text feed; no ranking, pagination cursor, offline cache, or mixed content. |
 | Posts | Partial | Text, multi-image and video upload to private storage; feed displays signed image/video URLs. Polls, drafts, scheduling, edit/restore, and media processing pending. |
-| Comments | Partial | Existing table; complete nested/reaction/moderation UX pending. |
+| Comments | Partial | Real comments screen now supports listing, replies, posting, and soft-deleting own comments; comment reactions, pagination beyond 100, and moderation UX pending. Build verification for this change pending. |
 | Stories | Partial | Text/photo/video stories with 24-hour expiry, viewer, view records, and visibility/block checks. Highlights, close friends, reactions/replies, viewer list, and cleanup worker pending. |
 | Reels/Video | Partial | Vertical swipe feed plays public uploaded videos; no transcoding, adaptive bitrate, captions, creator editing, or long-form channels yet. |
 | Messaging | Partial | Direct text chat UI, realtime message stream, last-read update, server-side block/privacy check, and in-app message notification trigger exist. Attachments, typing, delivery states, group UX, and E2EE pending. |
