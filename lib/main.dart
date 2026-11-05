@@ -532,9 +532,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     TextButton(
                       onPressed: _busy ? null : () => setState(() {
                         _register = !_register;
-                        _phoneOtpSent = false;
-                        _normalizedPhone = null;
-                        _otp.clear();
+                        _resetPhoneOtp();
                         _clearFeedback();
                       }),
                       child: Text(_register ? 'عندك حساب؟ سجّل الدخول' : 'مستخدم جديد؟ أنشئ حساب'),
