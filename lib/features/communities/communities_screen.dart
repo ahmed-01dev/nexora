@@ -358,7 +358,7 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
                               SizedBox(height: 120),
                               Icon(Icons.groups_outlined, size: 56),
                               SizedBox(height: 12),
-                              Center(child: Text('لسه مفيش مجتمعات عامة')),
+                              Center(child: Text('لا توجد مجتمعات متاحة حاليًا')),
                             ],
                           )
                         : ListView.separated(
