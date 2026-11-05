@@ -141,7 +141,7 @@ class _BlockedAccountsScreenState extends State<BlockedAccountsScreen> {
                     child: ListTile(
                       leading: CircleAvatar(
                         child: Text(
-                          name.isNotEmpty ? name.characters.first : '?',
+                          name.isNotEmpty ? name.substring(0, 1) : '?',
                         ),
                       ),
                       title: Text(
