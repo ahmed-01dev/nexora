@@ -60,9 +60,14 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
           builder: (context, selected, _) => ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              const Text(
+              Text(
                 'اختر شكل NEXORA. سيتم حفظ اختيارك على حسابك ومزامنته عند تسجيل الدخول.',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.72)),
+                style: TextStyle(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.72),
+                ),
               ),
               const SizedBox(height: 16),
               for (final entry in _labels.entries)
