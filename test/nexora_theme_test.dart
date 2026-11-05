@@ -21,7 +21,6 @@ void main() {
     expect(theme.colorScheme.surface, const Color(0xFF101010));
     expect(NexoraColors.border, const Color(0xFF292929));
   });
-}
 
   group('normalizeNexoraTheme', () {
     test('keeps supported theme values', () {
@@ -36,3 +35,4 @@ void main() {
       expect(normalizeNexoraTheme(''), 'amoled');
     });
   });
+}
