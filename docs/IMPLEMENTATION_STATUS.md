@@ -65,7 +65,7 @@ Status meanings:
 | Live streaming | Pending | No streaming provider/ingest infrastructure. |
 | AI features | Pending | No model integration or consent controls. |
 | Localization | Partial | Arabic RTL baseline; English and additional locale resources pending. |
-| Themes | Partial | AMOLED-first theme system and light/pink theme definitions exist; persisted in-app theme selector pending. |
+| Themes | Partial | AMOLED, light, and pink AMOLED themes; in-app selector persists the chosen theme in the existing per-user `user_preferences` row and restores it after authentication. Custom accent editor and accessibility contrast checks pending. |
 | PWA | Partial | Web build exists; installability, offline strategy, and deployment still need verification. |
 
 ## Release gate
