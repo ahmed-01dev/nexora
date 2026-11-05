@@ -15,6 +15,7 @@ Status meanings:
 - [x] Profile avatar and cover image selection/upload UI, private Storage paths, profile path persistence, signed-URL display, and replacement cleanup; authenticated upload/read policy paths are configured. End-to-end upload with a real authenticated device session remains to be validated.
 - [x] Client-side media signature checks for profile images, post/story JPG/PNG/WebP/GIF images, and MP4/WebM videos, with unit coverage; server-side file-signature scanning and malware scanning remain required because client validation can be bypassed.
 - [x] Failed multi-file post uploads now attempt to roll back both previously inserted media metadata rows and uploaded Storage objects before returning the original error.
+- [x] The post composer also caps combined media at 100 MiB (in addition to 50 MiB per file and 10 files); server-side per-user quotas remain pending.
 - [x] Text-only post creation and public feed query.
 - [x] Real comment listing, reply-to-comment, posting, own-comment soft deletion, and per-comment like/unlike UI connected to Supabase.
 - [x] Feed mode switch (Latest / Following) with server-side 20-row pagination, stable ordering, duplicate filtering, refresh, and RLS-respecting queries.
