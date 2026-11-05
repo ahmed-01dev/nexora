@@ -552,15 +552,29 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_mode == _FeedMode.latest) {
       query = query.eq('visibility', 'public');
     } else {
-      final followRows = await client
-          .from('follows')
-          .select('following_id')
-          .eq('follower_id', userId)
-          .eq('status', 'accepted');
+      final relationshipRows = await Future.wait<List<Map<String, dynamic>>>([
+        client
+            .from('follows')
+            .select('following_id')
+            .eq('follower_id', userId)
+            .eq('status', 'accepted'),
+        client
+            .from('friendships')
+            .select('addressee_id')
+            .eq('requester_id', userId)
+            .eq('status', 'accepted'),
+        client
+            .from('friendships')
+            .select('requester_id')
+            .eq('addressee_id', userId)
+            .eq('status', 'accepted'),
+      ]);
       final authorIds = <String>{userId};
-      for (final row in followRows) {
-        final id = row['following_id'];
-        if (id is String) authorIds.add(id);
+      for (final rows in relationshipRows) {
+        for (final row in rows) {
+          final id = row['following_id'] ?? row['addressee_id'] ?? row['requester_id'];
+          if (id is String) authorIds.add(id);
+        }
       }
       query = query.inFilter('user_id', authorIds.toList());
     }
