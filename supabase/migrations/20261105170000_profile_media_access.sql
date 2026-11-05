@@ -1,0 +1,1 @@
+-- Extend private.can_read_media_path to authorize profile avatar and cover paths under profile visibility and block rules.
