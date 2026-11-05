@@ -1506,12 +1506,6 @@ class _ProfileCoverState extends State<_ProfileCover> {
   );
 }
 
-class _Avatar extends StatelessWidget {
-  const _Avatar({this.size = 44});
-  final double size;
-  @override
-  Widget build(BuildContext context) => Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF243448), border: Border.all(color: const Color(0xFF40536A))), child: Icon(Icons.person, size: size * .58, color: const Color(0xFFFFFFFF)));
-}
 class _Info extends StatelessWidget {
   const _Info({required this.icon, required this.title, required this.value});
   final IconData icon; final String title, value;
