@@ -247,13 +247,17 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final _controller = TextEditingController();
+  final _scrollController = ScrollController();
   late final Stream<List<Map<String, dynamic>>> _messages;
   bool _sending = false;
+  bool _nearBottom = true;
+  int _lastMessageCount = -1;
   String? _sendError;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_trackScrollPosition);
     final client = Supabase.instance.client;
     _messages = client
         .from('messages')
@@ -261,6 +265,26 @@ class _ChatScreenState extends State<ChatScreen> {
         .eq('conversation_id', widget.conversationId)
         .order('created_at');
     WidgetsBinding.instance.addPostFrameCallback((_) => _markRead());
+  }
+
+  void _trackScrollPosition() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    _nearBottom = position.maxScrollExtent - position.pixels < 160;
+  }
+
+  void _scrollToLatest({bool animate = true}) {
+    if (!_scrollController.hasClients) return;
+    final target = _scrollController.position.maxScrollExtent;
+    if (animate) {
+      _scrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      );
+    } else {
+      _scrollController.jumpTo(target);
+    }
   }
 
   Future<void> _markRead() async {
@@ -399,6 +423,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_trackScrollPosition);
+    _scrollController.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -445,10 +471,20 @@ class _ChatScreenState extends State<ChatScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 final messages = snapshot.data!;
+                if (_lastMessageCount != messages.length) {
+                  final firstLoad = _lastMessageCount == -1;
+                  _lastMessageCount = messages.length;
+                  if (firstLoad || _nearBottom) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) _scrollToLatest(animate: !firstLoad);
+                    });
+                  }
+                }
                 if (messages.isEmpty) {
                   return const Center(child: Text('ابدأ أول رسالة في المحادثة.'));
                 }
                 return ListView.builder(
+                  controller: _scrollController,
                   reverse: false,
                   padding: const EdgeInsets.all(16),
                   itemCount: messages.length,
