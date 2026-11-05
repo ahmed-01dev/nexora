@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
+import '../moderation/report_dialog.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -494,24 +495,48 @@ class _ChatScreenState extends State<ChatScreen> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (mine && !deleted)
+                            if (!deleted)
                               PopupMenuButton<String>(
                                 tooltip: 'خيارات الرسالة',
                                 padding: EdgeInsets.zero,
                                 iconSize: 18,
-                                onSelected: (value) {
+                                onSelected: (value) async {
                                   if (value == 'edit') _editMessage(message);
                                   if (value == 'delete') _deleteMessage(message);
+                                  if (value == 'report') {
+                                    final submitted = await ReportDialog.show(
+                                      context,
+                                      targetType: 'message',
+                                      targetId: message['id'] as String,
+                                    );
+                                    if (submitted && context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('تم إرسال البلاغ للمراجعة')),
+                                      );
+                                    }
+                                  }
                                 },
-                                itemBuilder: (_) => const [
-                                  PopupMenuItem(
-                                    value: 'edit',
-                                    child: Text('تعديل الرسالة'),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'delete',
-                                    child: Text('حذف الرسالة'),
-                                  ),
+                                itemBuilder: (_) => [
+                                  if (mine) ...[
+                                    const PopupMenuItem(
+                                      value: 'edit',
+                                      child: Text('تعديل الرسالة'),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'delete',
+                                      child: Text('حذف الرسالة'),
+                                    ),
+                                  ] else
+                                    const PopupMenuItem(
+                                      value: 'report',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.flag_outlined, size: 18),
+                                          SizedBox(width: 8),
+                                          Text('الإبلاغ عن الرسالة'),
+                                        ],
+                                      ),
+                                    ),
                                 ],
                               ),
                             Text(
