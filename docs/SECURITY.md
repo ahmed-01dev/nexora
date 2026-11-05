@@ -20,6 +20,7 @@
 - Grants and RLS are separate controls. Revoke anon access and grant authenticated only the operations required.
 - Authorization must be based on auth.uid() and server-controlled app metadata, never user-editable user_metadata.
 - Restrict column-level UPDATE grants for ownership, role, recipient, and identity columns.
+- Enforce case-insensitive uniqueness for profile usernames because discovery compares handles without regard to case.
 - Private date of birth and privacy preferences belong in user_private_settings, not publicly readable profiles.
 - SECURITY DEFINER helpers must use an empty/fixed search_path, fully qualified objects, minimal execute grants, and an explicit auth.uid() check.
 
