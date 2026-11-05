@@ -10,7 +10,7 @@ Status meanings:
 
 ## Verified baseline
 - [x] Flutter Android/Web project and GitHub Actions workflows.
-- [x] Supabase email/password registration and login.
+- [x] Phone-first authentication UI: phone OTP signup/login with Egyptian mobile normalization and OTP verification; email/password remains an explicit alternative. Live SMS delivery still depends on enabling the Supabase Phone provider and configuring an SMS vendor; existing email accounts remain supported.
 - [x] Basic profile display/edit.
 - [x] Profile avatar and cover image selection/upload UI, private Storage paths, profile path persistence, signed-URL display, and replacement cleanup; authenticated upload/read policy paths are configured. End-to-end upload with a real authenticated device session remains to be validated.
 - [x] Text-only post creation and public feed query.
@@ -43,7 +43,7 @@ Status meanings:
 ## Product feature status
 | Feature | Status | Notes |
 |---|---|---|
-| Authentication | Partial | Email/password only; no OAuth, phone OTP, MFA, passkeys, or device center. |
+| Authentication | Partial | Phone OTP is the default signup/login path with E.164 normalization and six-digit verification; email/password remains an alternative. Supabase SMS-provider delivery/configuration, phone linking for existing email accounts, MFA, passkeys, OAuth, and device center remain pending. |
 | Profiles | Partial | Editable text profile, avatar and cover image upload to private Storage, signed-URL rendering on profile/person/post cards, old own-image cleanup, paginated own-post timeline (50 per page), and saved-posts library; authenticated end-to-end upload validation and profile highlights pending. |
 | Followers | Partial | Follow state loads from DB; private accounts create pending requests through a server-side function; request inbox/accept UI pending. |
 | Friends | Partial | Server-side request/accept/decline/cancel/remove operations with block and permission checks; incoming/outgoing request inbox and profile action buttons. Group roles and friend activity pending. |
@@ -58,7 +58,7 @@ Status meanings:
 | Communities | Partial | Public/private/invite-only communities, owner-issued UUID invite codes (7-day expiry, 10-use limit), authenticated invite acceptance, revoke-all-active-invites control, channel chat with automatic membership sync, owner member management, and moderator channel creation. Per-invite management, moderator moderation actions, and admin tools pending. |
 | Notifications | Partial | In-app center lists real notifications newest-first in stable 50-row pages with load-older, marks one/all read, and routes message/friend-request events to relevant screens. Push/email delivery, grouping, and full preferences pending. |
 | Search | Partial | Profile discovery searches username/display name; public-post text search and exact normalized hashtag search both use stable server-side 30-row pagination, refresh, and load-more. Publishing indexes unique Arabic/Latin tags into the existing hashtags/post_hashtags tables; trending, ranking, and advanced filters pending. |
-| Nearby | Pending | Must remain disabled until consent, approximate geolocation, and safety protections are implemented. |
+| Nearby | Pending | Product requirement confirmed: people-nearby discovery must be opt-in, use approximate location only, show distance bands rather than coordinates, exclude blocked/private accounts, and expire stale location data. No location collection or nearby results are enabled until the consent flow, geolocation permissions, secure server-side filtering, and privacy tests are implemented. |
 | Moderation | Partial | Account reporting from people search and post menus; account blocking from people search, post menus, and story viewer through a shared confirmation service, plus a blocked-accounts manager with unblock; post, comment, story, community, and received-message reporting; target-specific report dialog labels; staff-only active/all report queue, 30-row pagination, privacy-respecting target previews (when RLS permits), self-assignment, dismiss-with-resolution-note, user moderation history, appeals submission/status display, and staff appeal decisions (upheld/overturned). Target previews use normal RLS and never bypass privacy. Existing audit triggers record report updates. Automated enforcement actions and complete case workflow pending. |
 | Admin dashboard | Pending | No trusted RBAC or admin web console yet. |
 | Monetization | Pending | No payment provider, tax, payouts, or legal readiness. |
