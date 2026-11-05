@@ -177,7 +177,7 @@ Deno.serve(async (request) => {
         },
         body: JSON.stringify({
           message: {
-            fid: device.push_token,
+            token: device.push_token,
             notification: { title, body: messageBody },
             data: {
               notification_id: notification.id,
