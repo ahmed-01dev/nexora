@@ -62,7 +62,7 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
             children: [
               const Text(
                 'اختر شكل NEXORA. سيتم حفظ اختيارك على حسابك ومزامنته عند تسجيل الدخول.',
-                style: TextStyle(color: Colors.white70),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.72)),
               ),
               const SizedBox(height: 16),
               for (final entry in _labels.entries)
@@ -70,8 +70,11 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
                   child: RadioListTile<String>(
                     value: entry.key,
                     groupValue: selected,
-                    onChanged:
-                        _saving ? null : (value) { if (value != null) _select(value); },
+                    onChanged: _saving
+                        ? null
+                        : (value) {
+                            if (value != null) _select(value);
+                          },
                     title: Text(entry.value),
                     subtitle: Text(
                       entry.key == 'amoled'
