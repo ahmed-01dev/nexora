@@ -30,6 +30,7 @@ Status meanings:
 - [x] Follow-up privilege audit found and fixed a missed PUBLIC execute grant on `private.request_friend_impl(uuid)`; anon execution is now false while authenticated execution and the public RPC wrapper remain available.
 - [x] Consolidated moderation SELECT policies on reports, appeals, and moderation actions while preserving the same owner/reporter and staff visibility rules; the three Supabase multiple-permissive-policy performance warnings are resolved.
 - [x] Profile visibility now denies non-owner access when either side has blocked the other, including indirect access through friendships or shared conversations.
+- [x] Private-profile visibility requires an accepted follow or accepted friendship (or an allowed shared conversation); pending/declined friend requests no longer grant access.
 - [x] Blocking either participant now revokes access to existing direct conversations through the shared membership helper; group/community conversations remain unaffected. Verified function definition and execute grants in Postgres.
 - [x] Friend-request acceptance and pending-follow acceptance now re-check mutual block state at the database boundary, preventing requests created before a block from being accepted afterward.
 - [x] Follow and friendship relationship rows are hidden from both participants while a mutual block exists; records are retained so unblocking can restore the prior relationship.
