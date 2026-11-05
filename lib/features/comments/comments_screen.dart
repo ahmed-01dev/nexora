@@ -105,6 +105,36 @@ class _CommentsScreenState extends State<CommentsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Widget _buildCommentThread(
+    Map<String, dynamic> comment,
+    Map<String, List<Map<String, dynamic>>> replies, {
+    int depth = 0,
+  }) {
+    final profile = comment['profiles'];
+    final name = profile is Map
+        ? (profile['display_name'] ?? profile['username'] ?? 'مستخدم').toString()
+        : 'مستخدم';
+    final children = replies[comment['id']] ?? const <Map<String, dynamic>>[];
+    return Padding(
+      padding: EdgeInsetsDirectional.only(start: depth.clamp(0, 4) * 18.0),
+      child: Column(
+        children: [
+          _CommentTile(
+            comment: comment,
+            mine: comment['user_id'] == _myId,
+            onReply: () => setState(() {
+              _replyTo = comment['id'] as String;
+              _replyName = name;
+            }),
+            onDelete: () => _delete(comment),
+          ),
+          for (final child in children)
+            _buildCommentThread(child, replies, depth: depth + 1),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -150,42 +180,8 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   child: ListView.builder(
                     padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
                     itemCount: roots.length,
-                    itemBuilder: (context, index) {
-                      final root = roots[index];
-                      final children = replies[root['id']] ?? const <Map<String, dynamic>>[];
-                      return Column(
-                        children: [
-                          _CommentTile(
-                            comment: root,
-                            mine: root['user_id'] == _myId,
-                            onReply: () => setState(() {
-                              _replyTo = root['id'] as String;
-                              final profile = root['profiles'];
-                              _replyName = profile is Map
-                                  ? (profile['display_name'] ?? profile['username'] ?? 'مستخدم').toString()
-                                  : 'مستخدم';
-                            }),
-                            onDelete: () => _delete(root),
-                          ),
-                          for (final reply in children)
-                            Padding(
-                              padding: const EdgeInsetsDirectional.only(start: 34),
-                              child: _CommentTile(
-                                comment: reply,
-                                mine: reply['user_id'] == _myId,
-                                onReply: () => setState(() {
-                                  _replyTo = root['id'] as String;
-                                  final profile = root['profiles'];
-                                  _replyName = profile is Map
-                                      ? (profile['display_name'] ?? profile['username'] ?? 'مستخدم').toString()
-                                      : 'مستخدم';
-                                }),
-                                onDelete: () => _delete(reply),
-                              ),
-                            ),
-                        ],
-                      );
-                    },
+                    itemBuilder: (context, index) =>
+                        _buildCommentThread(roots[index], replies),
                   ),
                 );
               },
