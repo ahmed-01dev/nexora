@@ -170,7 +170,7 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
                 subtitle: const Text('داخل التطبيق'),
               ),
               SwitchListTile(
-                value: settings[item.key]?['push'] as bool? ?? false,
+                value: settings[item.key]?['push'] as bool? ?? true,
                 onChanged: saving ? null : (value) => savePush(item.key, value),
                 title: const Text('إشعار الهاتف'),
                 subtitle: const Text('Push notification'),
