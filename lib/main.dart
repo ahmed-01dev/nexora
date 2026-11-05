@@ -18,6 +18,7 @@ import 'features/blocks/blocked_accounts_screen.dart';
 import 'features/blocks/block_account_service.dart';
 import 'features/stories/stories_screen.dart';
 import 'features/search/hashtag_service.dart';
+import 'features/nearby/nearby_discovery_screen.dart';
 import 'features/communities/communities_screen.dart';
 import 'features/moderation/report_dialog.dart';
 import 'features/moderation/moderation_queue_screen.dart';
@@ -834,6 +835,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
             style: TextStyle(fontWeight: FontWeight.w800),
           ),
           actions: [
+            IconButton(
+              tooltip: 'الأشخاص القريبون',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const NearbyDiscoveryScreen(),
+                ),
+              ),
+              icon: const Icon(Icons.near_me_outlined),
+            ),
             IconButton(
               tooltip: 'المجتمعات',
               onPressed: () => Navigator.of(context).push(
