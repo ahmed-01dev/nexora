@@ -72,11 +72,8 @@ class _NexoraAppState extends State<NexoraApp> {
           .eq('user_id', uid)
           .maybeSingle();
       if (client.auth.currentUser?.id != uid) return;
-      final value = row?['theme']?.toString() ?? 'amoled';
       nexoraThemeNotifier.value =
-          const {'amoled', 'light', 'pink_amoled'}.contains(value)
-              ? value
-              : 'amoled';
+          normalizeNexoraTheme(row?['theme']?.toString());
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'load_appearance');
     }
