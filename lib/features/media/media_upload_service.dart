@@ -31,6 +31,32 @@ class MediaUploadService {
           String.fromCharCodes(bytes.sublist(0, 4)) == 'RIFF' &&
           String.fromCharCodes(bytes.sublist(8, 12)) == 'WEBP';
     }
+    if (ext == 'gif') {
+      if (bytes.length < 6) return false;
+      final signature = String.fromCharCodes(bytes.sublist(0, 6));
+      return signature == 'GIF87a' || signature == 'GIF89a';
+    }
+    return false;
+  }
+
+  /// Lightweight client-side media signature check; server-side scanning is
+  /// still required because a modified client can bypass this validation.
+  static bool hasValidMediaSignature(String extension, List<int> bytes) {
+    final ext = extension.toLowerCase();
+    if (const {'jpg', 'jpeg', 'png', 'webp', 'gif'}.contains(ext)) {
+      return hasValidImageSignature(ext, bytes);
+    }
+    if (ext == 'mp4') {
+      return bytes.length >= 12 &&
+          String.fromCharCodes(bytes.sublist(4, 8)) == 'ftyp';
+    }
+    if (ext == 'webm') {
+      return bytes.length >= 4 &&
+          bytes[0] == 0x1A &&
+          bytes[1] == 0x45 &&
+          bytes[2] == 0xDF &&
+          bytes[3] == 0xA3;
+    }
     return false;
   }
 
@@ -122,6 +148,9 @@ class MediaUploadService {
         if (bytes.isEmpty || bytes.length > maxBytes) {
           throw FormatException('حجم الملف غير صالح أو أكبر من 50 ميجابايت: ${file.name}');
         }
+        if (!hasValidMediaSignature(extension, bytes)) {
+          throw FormatException('محتوى الملف لا يطابق نوعه: ${file.name}');
+        }
         final path = '$userId/$postId/${DateTime.now().microsecondsSinceEpoch}_$i.$extension';
         await client.storage.from('nexora-media').uploadBinary(
           path,
@@ -164,6 +193,9 @@ class MediaUploadService {
     final bytes = await file.readAsBytes();
     if (bytes.isEmpty || bytes.length > maxBytes) {
       throw FormatException('حجم الملف غير صالح أو أكبر من 50 ميجابايت: ${file.name}');
+    }
+    if (!hasValidMediaSignature(extension, bytes)) {
+      throw FormatException('محتوى الملف لا يطابق نوعه: ${file.name}');
     }
     final path = '$userId/stories/${DateTime.now().microsecondsSinceEpoch}.$extension';
     await Supabase.instance.client.storage.from('nexora-media').uploadBinary(
