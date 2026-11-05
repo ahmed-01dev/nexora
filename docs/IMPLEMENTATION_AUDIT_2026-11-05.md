@@ -15,6 +15,7 @@ Firebase project: nexora-20712
 ## Verified database security
 - Profile SELECT visibility now checks for a block before allowing any non-owner access path (public, accepted follow, friendship, or shared conversation). The profile owner can still read their own profile.
 - Direct-conversation membership now becomes false for both participants when either side blocks the other. Because the existing RLS policies use this helper, the block prevents further direct-message access, message reads, attachment reads, and conversation previews while leaving group/community conversations unaffected.
+- Pending friend requests and pending follow requests cannot be accepted after a mutual block. Follow and friendship relationship rows are hidden from both participants while the block exists; relationship rows are retained so unblocking can restore them.
 - All inspected public application tables have RLS enabled.
 - Previous grant checks found no anonymous table privileges on the current public application tables.
 - Community-channel authenticated grants are limited to SELECT/INSERT/DELETE.
@@ -26,8 +27,8 @@ Firebase project: nexora-20712
 - No public or private SQL views were returned by the view inventory query.
 
 ## Migration history synchronization
-- The connected Supabase project currently reports 27 applied migration records; the repository contains 26 SQL migration files.
-- Only five migration version timestamps match exactly. Twenty-two remote migration versions have no same-version file in GitHub, and twenty-one local files are not marked applied under their current version timestamps. Several names suggest semantic equivalents or squashed migrations, but equivalence has not been established by comparing the actual applied SQL.
+- The connected Supabase project currently reports 30 applied migration records; the repository contains 29 SQL migration files.
+- Only eight migration version timestamps match exactly. Twenty-two remote migration versions have no same-version file in GitHub, and twenty-one local files are not marked applied under their current version timestamps. Several names suggest semantic equivalents or squashed migrations, but equivalence has not been established by comparing the actual applied SQL.
 - This is a significant migration-history drift risk. Do not run `supabase db push`, reset, or replay migrations until a full schema/data backup is available and every remote migration is mapped to its exact source SQL. Continue using only reviewed, individually applied SQL migrations with matching local version filenames in the interim.
 
 ## Auth and provider configuration
