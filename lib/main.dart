@@ -647,12 +647,104 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if ((p['bio'] ?? '').toString().isNotEmpty) Padding(padding: const EdgeInsets.only(top: 12), child: Text(p['bio'].toString(), textAlign: TextAlign.center)),
         const SizedBox(height: 14), OutlinedButton.icon(onPressed: () => _edit(p), icon: const Icon(Icons.edit), label: const Text('تعديل الملف الشخصي')),
       ])),
+      const SizedBox(height: 14),
+      OutlinedButton.icon(
+        onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SavedPostsScreen())),
+        icon: const Icon(Icons.bookmarks_outlined),
+        label: const Text('المنشورات المحفوظة'),
+      ),
       const SizedBox(height: 14), _Info(icon: Icons.mail_outline, title: 'البريد الإلكتروني', value: u.email ?? 'غير متاح'),
       const SizedBox(height: 10), _Info(icon: Icons.shield_outlined, title: 'الخصوصية', value: (p['is_private'] as bool? ?? false) ? 'حساب خاص' : 'حساب عام'),
       const SizedBox(height: 10), _Info(icon: Icons.verified_outlined, title: 'التوثيق', value: (p['is_verified'] as bool? ?? false) ? 'موثّق' : 'غير موثّق'),
       const SizedBox(height: 20), OutlinedButton.icon(onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج')),
     ]);
   }));
+}
+
+class SavedPostsScreen extends StatefulWidget {
+  const SavedPostsScreen({super.key});
+
+  @override
+  State<SavedPostsScreen> createState() => _SavedPostsScreenState();
+}
+
+class _SavedPostsScreenState extends State<SavedPostsScreen> {
+  late Future<List<Map<String, dynamic>>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<List<Map<String, dynamic>>> _load() async {
+    final client = Supabase.instance.client;
+    final rows = await client
+        .from('saves')
+        .select(
+          'created_at,posts!saves_post_id_fkey(id,user_id,content,visibility,created_at,profiles!posts_user_id_fkey(id,username,display_name,avatar_url))',
+        )
+        .eq('user_id', client.auth.currentUser!.id)
+        .order('created_at', ascending: false);
+    final posts = <Map<String, dynamic>>[];
+    for (final row in rows) {
+      final post = row['posts'];
+      if (post is Map) posts.add(Map<String, dynamic>.from(post));
+    }
+    return posts;
+  }
+
+  Future<void> _refresh() async {
+    setState(() => _future = _load());
+    await _future;
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('المنشورات المحفوظة')),
+        body: FutureBuilder<List<Map<String, dynamic>>>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return AppErrorView(
+                title: 'تعذر تحميل المحفوظات',
+                error: snapshot.error,
+                onRetry: _refresh,
+              );
+            }
+            final posts = snapshot.data ?? const <Map<String, dynamic>>[];
+            if (posts.isEmpty) {
+              return RefreshIndicator(
+                onRefresh: _refresh,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: const [
+                    SizedBox(height: 120),
+                    _Empty(
+                      icon: Icons.bookmark_border,
+                      title: 'مفيش منشورات محفوظة',
+                      subtitle: 'احفظ أي منشور من علامة الحفظ عشان ترجع له هنا.',
+                    ),
+                  ],
+                ),
+              );
+            }
+            return RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(14),
+                itemCount: posts.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) => PostCard(post: posts[index]),
+              ),
+            );
+          },
+        ),
+      );
 }
 
 class PostCard extends StatefulWidget {
