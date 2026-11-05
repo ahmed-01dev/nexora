@@ -544,45 +544,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<List<Map<String, dynamic>>> _fetchPage(int offset) async {
     final client = Supabase.instance.client;
-    final userId = client.auth.currentUser!.id;
-    var query = client.from('posts').select(
-      'id,user_id,content,visibility,created_at,profiles!posts_user_id_fkey(id,username,display_name,avatar_url)',
-    ).isFilter('deleted_at', null);
-
-    if (_mode == _FeedMode.latest) {
-      query = query.eq('visibility', 'public');
-    } else {
-      final relationshipRows = await Future.wait<List<Map<String, dynamic>>>([
-        client
-            .from('follows')
-            .select('following_id')
-            .eq('follower_id', userId)
-            .eq('status', 'accepted'),
-        client
-            .from('friendships')
-            .select('addressee_id')
-            .eq('requester_id', userId)
-            .eq('status', 'accepted'),
-        client
-            .from('friendships')
-            .select('requester_id')
-            .eq('addressee_id', userId)
-            .eq('status', 'accepted'),
-      ]);
-      final authorIds = <String>{userId};
-      for (final rows in relationshipRows) {
-        for (final row in rows) {
-          final id = row['following_id'] ?? row['addressee_id'] ?? row['requester_id'];
-          if (id is String) authorIds.add(id);
-        }
-      }
-      query = query.inFilter('user_id', authorIds.toList());
-    }
-
-    final rows = await query
-        .order('created_at', ascending: false)
-        .order('id', ascending: false)
-        .range(offset, offset + _pageSize - 1);
+    final rows = await client.rpc(
+      'get_feed_page',
+      params: {
+        'p_mode': _mode == _FeedMode.latest ? 'latest' : 'following',
+        'p_limit': _pageSize,
+        'p_offset': offset,
+      },
+    );
     return List<Map<String, dynamic>>.from(rows);
   }
 
