@@ -89,7 +89,7 @@ Firebase project: nexora-20712
 - Aligned `test/widget_test.dart` with the updated setup screen and added coverage for a supplied startup error.
 - Revalidated Firebase Messaging 17.0.1 FID behavior against current Firebase documentation. The client uses `onRegistered`, `onUnregistered`, and `register()`; the deployed Edge Function uses the FCM HTTP v1 `fid` target. Edge Function version 6 is ACTIVE.
 - Rechecked the live database catalog: every public table has RLS enabled; the `user_devices` upsert conflict index exists; the notifications table has its push trigger; and the Security Advisor still reports the leaked-password-protection warning.
-- The source CI workflow was verified after the latest source/documentation commits: run `42089290905` completed successfully on commit `9a270b9bde3469d04421dd9de4f4063e6d476db7`; Analyze and Test both passed.
+- Latest verified application-code CI: run `42090978306` passed on commit `9a265d48e79d542de0bed46a9eb663b4494e4e1b`. Latest audit-document CI: run `42091193200` passed on commit `8ce363d876c05bf8282c73b4c591b9b8f1171cfd`. Both completed dependency installation, Analyze, and Test successfully.
 
 
 ## Additional verification — 2026-11-05 (continued)
@@ -128,3 +128,9 @@ Firebase project: nexora-20712
 ## Nearby messaging action — 2026-11-05
 - Nearby discovery cards now include a direct-message action. It calls the existing `create_direct_conversation` RPC, which enforces recipient message privacy and bilateral block checks server-side before opening the chat.
 - Verified the final source commit `9a265d48e79d542de0bed46a9eb663b4494e4e1b` with Flutter CI run `42090978306`: dependency installation, Analyze, and Test all completed successfully.
+
+
+## Live RLS and grant recheck — 2026-11-05
+- Recounted the current public schema: all 38 public tables have RLS enabled.
+- Rechecked table grants: the `anon` role has no table privileges on public application tables.
+- Rechecked SECURITY DEFINER routines in public/private schemas: no inspected function has PUBLIC EXECUTE.
