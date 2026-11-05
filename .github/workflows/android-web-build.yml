@@ -91,16 +91,16 @@ jobs:
           if permission not in text:
               text = text.replace(
                   "<application",
-                  '<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\\n    <application',
+                  '<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <application',
                   1,
               )
 
           marker = 'firebase_messaging_installation_id_enabled'
           if marker not in text:
-              match = re.search(r"<application\\b[^>]*>", text)
+              match = re.search(r"<application\b[^>]*>", text)
               if not match:
                   raise SystemExit("Could not locate Android application element")
-              metadata = '\\n        <meta-data android:name="firebase_messaging_installation_id_enabled" android:value="true" />'
+              metadata = '\n        <meta-data android:name="firebase_messaging_installation_id_enabled" android:value="true" />'
               text = text[:match.end()] + metadata + text[match.end():]
           manifest.write_text(text, encoding="utf-8")
 
