@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -394,33 +395,248 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
+
   @override
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
+
 class _ExploreScreenState extends State<ExploreScreen> {
+  static const int _pageSize = 30;
   final _search = TextEditingController();
+  Timer? _debounce;
   late Future<List<Map<String, dynamic>>> _future;
+  bool _hasMore = true;
+  bool _loadingMore = false;
+  String _activeTerm = '';
+
   @override
-  void initState() { super.initState(); _future = _load(''); }
-  @override
-  void dispose() { _search.dispose(); super.dispose(); }
-  Future<List<Map<String, dynamic>>> _load(String term) async {
-    final me = Supabase.instance.client.auth.currentUser!.id;
-    var q = Supabase.instance.client.from('profiles').select('id,username,display_name,bio,avatar_url,is_verified').neq('id', me);
-    if (term.trim().isNotEmpty) { final s = term.trim().replaceAll(',', ' '); q = q.or('username.ilike.%' + s + '%,display_name.ilike.%' + s + '%'); }
-    return List<Map<String, dynamic>>.from(await q.order('created_at', ascending: false).limit(50));
+  void initState() {
+    super.initState();
+    _future = _load('');
   }
+
   @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('اكتشف الناس', style: TextStyle(fontWeight: FontWeight.w800)), actions: [IconButton(tooltip: 'طلبات الصداقة', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const FriendRequestsScreen())), icon: const Icon(Icons.person_add_alt_1)), IconButton(tooltip: 'الأصدقاء والمتابَعون', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const FriendsScreen())), icon: const Icon(Icons.people_outline))]), body: Column(children: [
-    Padding(padding: const EdgeInsets.all(16), child: TextField(controller: _search, onSubmitted: (v) => setState(() => _future = _load(v)), decoration: InputDecoration(hintText: 'اسم أو username', prefixIcon: const Icon(Icons.search), suffixIcon: IconButton(onPressed: () => setState(() => _future = _load(_search.text)), icon: const Icon(Icons.arrow_forward))))),
-    Expanded(child: FutureBuilder<List<Map<String, dynamic>>>(future: _future, builder: (context, snap) {
-      if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-      if (snap.hasError) return AppErrorView(title: 'تعذر تحميل الأشخاص', error: snap.error, onRetry: () => setState(() => _future = _load(_search.text)));
-      final people = snap.data ?? [];
-      if (people.isEmpty) return const _Empty(icon: Icons.travel_explore, title: 'مفيش نتائج', subtitle: 'جرّب كلمة بحث مختلفة.');
-      return ListView.separated(padding: const EdgeInsets.all(16), itemCount: people.length, separatorBuilder: (_, __) => const SizedBox(height: 10), itemBuilder: (_, i) => PersonTile(profile: people[i], follow: true));
-    })),
-  ]));
+  void dispose() {
+    _debounce?.cancel();
+    _search.dispose();
+    super.dispose();
+  }
+
+  String _cleanTerm(String value) {
+    return value
+        .replaceAll(RegExp(r'[^a-zA-Z0-9_ .\-\u0600-\u06FF]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  Future<List<Map<String, dynamic>>> _load(
+    String term, {
+    int offset = 0,
+  }) async {
+    final client = Supabase.instance.client;
+    final me = client.auth.currentUser!.id;
+    var query = client
+        .from('profiles')
+        .select('id,username,display_name,bio,avatar_url,is_verified')
+        .neq('id', me);
+    if (term.isNotEmpty) {
+      query = query.or(
+        'username.ilike.%$term%,display_name.ilike.%$term%',
+      );
+    }
+    final rows = await query
+        .order('created_at', ascending: false)
+        .order('id', ascending: false)
+        .range(offset, offset + _pageSize - 1);
+    if (mounted && offset == 0) {
+      setState(() => _hasMore = rows.length == _pageSize);
+    }
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  void _searchNow(String value) {
+    _debounce?.cancel();
+    final term = _cleanTerm(value);
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted || term == _activeTerm) return;
+      setState(() {
+        _activeTerm = term;
+        _hasMore = true;
+        _loadingMore = false;
+        _future = _load(term);
+      });
+    });
+  }
+
+  Future<void> _refresh() async {
+    _debounce?.cancel();
+    setState(() {
+      _hasMore = true;
+      _loadingMore = false;
+      _future = _load(_activeTerm);
+    });
+    await _future;
+  }
+
+  Future<void> _loadMore(List<Map<String, dynamic>> current) async {
+    if (_loadingMore || !_hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final additions = await _load(_activeTerm, offset: current.length);
+      if (!mounted) return;
+      final known = current.map((person) => person['id']).toSet();
+      final unique = additions.where((person) => !known.contains(person['id']));
+      setState(() {
+        _future = Future.value([...current, ...unique]);
+        _hasMore = additions.length == _pageSize;
+        _loadingMore = false;
+      });
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'explore_load_more');
+      if (mounted) {
+        setState(() => _loadingMore = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppErrorService.message(error))),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            'اكتشف الناس',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+          actions: [
+            IconButton(
+              tooltip: 'طلبات الصداقة',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const FriendRequestsScreen(),
+                ),
+              ),
+              icon: const Icon(Icons.person_add_alt_1),
+            ),
+            IconButton(
+              tooltip: 'الأصدقاء والمتابَعون',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const FriendsScreen(),
+                ),
+              ),
+              icon: const Icon(Icons.people_outline),
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextField(
+                controller: _search,
+                textInputAction: TextInputAction.search,
+                onChanged: _searchNow,
+                onSubmitted: (value) {
+                  _debounce?.cancel();
+                  final term = _cleanTerm(value);
+                  if (term != _activeTerm) {
+                    setState(() {
+                      _activeTerm = term;
+                      _hasMore = true;
+                      _loadingMore = false;
+                      _future = _load(term);
+                    });
+                  }
+                },
+                decoration: InputDecoration(
+                  hintText: 'ابحث بالاسم أو اسم المستخدم',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _search.text.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'مسح البحث',
+                          onPressed: () {
+                            _search.clear();
+                            _searchNow('');
+                          },
+                          icon: const Icon(Icons.close),
+                        ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: _future,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return AppErrorView(
+                      title: 'تعذر تحميل الأشخاص',
+                      error: snapshot.error,
+                      onRetry: _refresh,
+                    );
+                  }
+                  final people = snapshot.data ?? [];
+                  if (people.isEmpty) {
+                    return RefreshIndicator(
+                      onRefresh: _refresh,
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: const [
+                          SizedBox(height: 100),
+                          _Empty(
+                            icon: Icons.travel_explore,
+                            title: 'مفيش نتائج',
+                            subtitle: 'جرّب اسمًا أو username مختلفًا.',
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return RefreshIndicator(
+                    onRefresh: _refresh,
+                    child: ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16),
+                      itemCount: people.length +
+                          (_hasMore || _loadingMore ? 1 : 0),
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(height: 10),
+                      itemBuilder: (_, index) {
+                        if (index == people.length) {
+                          if (_loadingMore) {
+                            return const Padding(
+                              padding: EdgeInsets.all(16),
+                              child: Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            );
+                          }
+                          return Center(
+                            child: TextButton.icon(
+                              onPressed: () => _loadMore(people),
+                              icon: const Icon(Icons.expand_more),
+                              label: const Text('تحميل أشخاص أكثر'),
+                            ),
+                          );
+                        }
+                        return PersonTile(
+                          profile: people[index],
+                          follow: true,
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 class FriendsScreen extends StatefulWidget {
