@@ -288,7 +288,25 @@ class _ExplorePreviewState extends State<_ExplorePreview> {
   Widget build(BuildContext context) => CustomScrollView(slivers: [
     SliverToBoxAdapter(child: _PageHeader(title: 'استكشف', subtitle: 'اكتشف أشخاصًا وأفكارًا جديدة')),
     SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: TextField(controller: _search, onSubmitted: (v) => widget.onOpen('نتائج البحث عن: $v'), decoration: InputDecoration(hintText: 'ابحث عن أشخاص أو منشورات أو هاشتاجات', prefixIcon: const Icon(Icons.search), suffixIcon: IconButton(onPressed: () => widget.onOpen('البحث الصوتي — معاينة'), icon: const Icon(Icons.mic_none)), filled: true, fillColor: NexoraColors.surfaceRaised, border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none))))),
-    SliverToBoxAdapter(child: SizedBox(height: 62, child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), children: ['لك','الأشخاص','فيديو','مجتمعات','قريب منك'].map((v) => Padding(padding: const EdgeInsets.only(left: 8), child: ChoiceChip(label: Text(v), selected: _category == v, onSelected: (_) => setState(() => _category = v))).toList()))),
+    SliverToBoxAdapter(
+      child: SizedBox(
+        height: 62,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          children: ['لك', 'الأشخاص', 'فيديو', 'مجتمعات', 'قريب منك']
+              .map((v) => Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: ChoiceChip(
+                      label: Text(v),
+                      selected: _category == v,
+                      onSelected: (_) => setState(() => _category = v),
+                    ),
+                  ))
+              .toList(),
+        ),
+      ),
+    ),
     SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.fromLTRB(18, 4, 18, 12), child: Row(children: [const Text('رائج الآن', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)), const Spacer(), TextButton(onPressed: () => widget.onOpen('كل الترندات'), child: const Text('عرض الكل'))]))),
     SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Wrap(spacing: 8, runSpacing: 8, children: ['#NEXORA','#تصوير','#تقنية','#يوميات','#موسيقى'].map((tag) => ActionChip(avatar: const Icon(Icons.trending_up, size: 15, color: NexoraColors.cyan), label: Text(tag), onPressed: () => widget.onOpen('الهاشتاج $tag'))).toList()))),
     SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.fromLTRB(18, 22, 18, 12), child: const Text('اكتشف المحتوى', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)))),
