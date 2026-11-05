@@ -194,6 +194,7 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       await Supabase.instance.client.auth.signInWithOtp(
         phone: normalized,
+        channel: _phoneChannel,
         shouldCreateUser: _register,
         data: _register ? {'display_name': _name.text.trim()} : null,
       );
