@@ -37,7 +37,7 @@ Firebase project: nexora-20712
 - No public or private SQL views were returned by the view inventory query.
 
 ## Migration history synchronization
-- The connected Supabase project currently reports 42 applied migration records; the repository contains 41 SQL migration files.
+- The connected Supabase project currently reports 43 applied migration records; the repository contains 42 SQL migration files after adding the matching nearby-location cleanup migration.
 - Only twenty migration version timestamps match exactly. Twenty-two remote migration versions have no same-version file in GitHub, and twenty-one local files are not marked applied under their current version timestamps. Several names suggest semantic equivalents or squashed migrations, but equivalence has not been established by comparing the actual applied SQL.
 - This is a significant migration-history drift risk. Do not run `supabase db push`, reset, or replay migrations until a full schema/data backup is available and every remote migration is mapped to its exact source SQL. Continue using only reviewed, individually applied SQL migrations with matching local version filenames in the interim.
 
@@ -109,3 +109,11 @@ Firebase project: nexora-20712
 - Added unit coverage for Egyptian local numbers, international E.164 input, Arabic-Indic/Persian digits, and malformed strings.
 - Latest Flutter CI run `42090053690` completed successfully on commit `7c1e62ff0c908d7b63f30b37f653d659693cd483`; dependency installation, Analyze, and Test all passed.
 - This does not enable the Supabase Phone provider. SMS delivery remains blocked until the project owner enables Phone Auth and configures a provider; the client currently requests SMS, not WhatsApp.
+
+
+## Nearby location retention follow-up — 2026-11-05
+- Installed Supabase Cron (`pg_cron`) and applied migration `20261105190457_schedule_nearby_location_expiry_cleanup`.
+- Verified active job `nexora-cleanup-expired-nearby-locations` runs every 15 minutes and deletes `private.profile_discovery_locations` rows at least 24 hours old.
+- Added the exact matching migration file at `supabase/migrations/20261105190457_schedule_nearby_location_expiry_cleanup.sql` in GitHub. This closes the gap where stale coordinates were excluded from search but could remain stored until a later location update.
+- Re-ran Supabase Security, Performance, and Health Advisors after enabling Cron: Security still reports only leaked-password protection disabled; Health returned no findings; Performance still reports 50 informational unused-index notices.
+- The latest repository commit containing this migration is `db18305af2323c1684f7af449a32ed690e5b5c91`; its Flutter CI run is pending/queued at the time of this documentation update.
