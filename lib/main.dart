@@ -623,8 +623,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       onRefresh: _refresh,
                       child: ListView(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        children: const [
-                          SizedBox(height: 100),
+                        children: [
+                          const SizedBox(height: 100),
                           _Empty(
                             icon: Icons.travel_explore,
                             title: 'مفيش نتائج',
