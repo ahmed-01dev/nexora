@@ -171,7 +171,7 @@ class _CommunityMembersScreenState extends State<CommunityMembersScreen> {
                                 .toString();
                             return ListTile(
                               leading: CircleAvatar(
-                                child: Text(label.isNotEmpty ? label.characters.first : '?'),
+                                child: Text(label.isNotEmpty ? label.substring(0, 1) : '?'),
                               ),
                               title: Text(label),
                               subtitle: Text('@${profile['username'] ?? 'user'} · ${role == 'owner' ? 'مالك' : role == 'moderator' ? 'مشرف' : 'عضو'}'),
