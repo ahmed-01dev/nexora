@@ -10,7 +10,7 @@ Status meanings:
 
 ## Verified baseline
 - [x] Flutter Android/Web project and GitHub Actions workflows.
-- [x] Phone-first authentication UI: phone OTP signup/login with Egyptian mobile normalization and OTP verification; WhatsApp is the selected default delivery channel and SMS remains selectable; email/password remains an explicit alternative. Actual WhatsApp delivery requires Supabase Phone Auth plus a configured Twilio Verify WhatsApp sender/template; delivery is not yet end-to-end verified.
+- [x] Phone-first authentication UI: phone OTP signup/login with Egyptian mobile normalization and OTP verification over SMS only; email/password remains an explicit alternative. Supabase SMS provider configuration, delivery costs/limits, and real-device OTP delivery remain external setup and end-to-end verification items.
 - [x] Basic profile display/edit.
 - [x] Profile avatar and cover image selection/upload UI, private Storage paths, profile path persistence, signed-URL display, and replacement cleanup; authenticated upload/read policy paths are configured. End-to-end upload with a real authenticated device session remains to be validated.
 - [x] Text-only post creation and public feed query.
@@ -21,7 +21,7 @@ Status meanings:
 - [x] Save/unsave bookmarks backed by the existing `saves` table, plus a saved-posts library in the profile that reads the user's own saved posts under RLS.
 - [x] Basic follow insertion/deletion.
 - [x] Central Flutter error presentation/logging.
-- [x] Existing CI run passed analysis, tests, Android release APK build, and web build (run 41929549503).
+- [x] Latest source-only CI run passed Flutter analysis and unit/widget tests (run 42078738486). This run did not build an APK/AAB or Web release; the release workflow remains manual-only.
 - [x] Additive PostgreSQL foundation migration applied and verified for RLS on all newly added tables.
 - [x] Anonymous role has no SELECT privilege on the newly added social tables.
 - [x] Unique database index prevents duplicate reposts per user/post; applied and verified after a duplicate preflight returned no existing duplicate pairs.
@@ -54,9 +54,9 @@ Status meanings:
 | Reels/Video | Partial | Vertical swipe feed plays public uploaded videos; no transcoding, adaptive bitrate, captions, creator editing, or long-form channels yet. |
 | Messaging | Partial | Direct text chat, RLS-safe inbox preview RPC, realtime updates, last-read state, privacy/block enforcement, own-message edit/soft-delete, and image attachments through private Storage with signed URLs and cleanup on sender deletion are implemented. Video/audio/file attachments, typing, delivery/read indicators, richer group UX, and E2EE remain pending. |
 | E2EE | Pending | No cryptographic protocol or key lifecycle implemented. |
-| Voice/video calls | Foundation | Call records only; WebRTC, STUN/TURN, push call delivery pending. |
+| Voice/video calls | Foundation | Call records only; WebRTC, STUN/TURN, call UI/media transport, and reliable incoming-call delivery pending. |
 | Communities | Partial | Public/private/invite-only communities, owner-issued UUID invite codes (7-day expiry, 10-use limit), authenticated invite acceptance, revoke-all-active-invites control, channel chat with automatic membership sync, owner member management, and moderator channel creation. Per-invite management, moderator moderation actions, and admin tools pending. |
-| Notifications | Partial | In-app center uses stable 50-row server pagination, marks one/all read, and routes message/friend-request events. Per-category in-app preferences are editable and enforced by restrictive RLS plus a preference-aware paged RPC. Push/email delivery, grouping, and real-device delivery tests remain pending. |
+| Notifications | Partial | In-app center uses stable 50-row server pagination, marks one/all read, and routes message/friend-request events. Per-category in-app and push preferences are editable. FCM Edge Function and database webhook trigger are deployed; actual delivery still requires valid Edge Function secrets, a signed-in Android device registering its Firebase Installation ID, and a real-device delivery test. Email delivery and grouping remain pending. |
 | Search | Partial | Profile discovery searches username/display name; public-post text search and exact normalized hashtag search both use stable server-side 30-row pagination, refresh, and load-more. Publishing indexes unique Arabic/Latin tags into the existing hashtags/post_hashtags tables; trending, ranking, and advanced filters pending. |
 | Nearby | Partial | Opt-in screen and foreground geolocation permission flow are implemented. Coordinates are rounded to two decimals before storage in a private RLS-protected table; public RPC wrappers call privileged helpers in the non-exposed private schema. Results return only coarse distance bands, exclude private accounts and mutual blocks, and expire after 24 hours. Android permission declarations and a distance-label unit test are included. Real-device/browser permission and multi-user RLS integration tests remain pending. |
 | Moderation | Partial | Account reporting from people search and post menus; account blocking from people search, post menus, and story viewer through a shared confirmation service, plus a blocked-accounts manager with unblock; post, comment, story, community, and received-message reporting; target-specific report dialog labels; staff-only active/all report queue, 30-row pagination, privacy-respecting target previews (when RLS permits), self-assignment, dismiss-with-resolution-note, user moderation history, appeals submission/status display, and staff appeal decisions (upheld/overturned). Target previews use normal RLS and never bypass privacy. Existing audit triggers record report updates. Automated enforcement actions and complete case workflow pending. |
