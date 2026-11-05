@@ -43,7 +43,7 @@ Status meanings:
 | Feature | Status | Notes |
 |---|---|---|
 | Authentication | Partial | Email/password only; no OAuth, phone OTP, MFA, passkeys, or device center. |
-| Profiles | Partial | Basic text profile; no avatar/cover upload or profile highlights. |
+| Profiles | Partial | Basic editable text profile, own latest 50 posts, and saved-posts library; no avatar/cover upload, profile highlights, or profile-post pagination beyond 50. |
 | Followers | Partial | Follow state loads from DB; private accounts create pending requests through a server-side function; request inbox/accept UI pending. |
 | Friends | Partial | Server-side request/accept/decline/cancel/remove operations with block and permission checks; incoming/outgoing request inbox and profile action buttons. Group roles and friend activity pending. |
 | Feed | Partial | Latest public feed and Following feed now load in 20-row server pages with stable ordering, duplicate filtering, refresh, and existing RLS privacy/block checks; ranking, cursor pagination, offline cache, and mixed content pending. |
