@@ -13,6 +13,7 @@ import 'features/notifications/notifications_screen.dart';
 import 'features/reels/reels_screen.dart';
 import 'features/settings/privacy_settings_screen.dart';
 import 'features/settings/appearance_settings_screen.dart';
+import 'features/blocks/blocked_accounts_screen.dart';
 import 'features/stories/stories_screen.dart';
 import 'features/search/hashtag_service.dart';
 import 'features/communities/communities_screen.dart';
@@ -1135,6 +1136,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       icon: const Icon(Icons.palette_outlined),
     ),
+    IconButton(
+      tooltip: 'الحسابات المحظورة',
+      onPressed: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const BlockedAccountsScreen(),
+        ),
+      ),
+      icon: const Icon(Icons.block_outlined),
+    ),
     IconButton(tooltip: 'مركز الخصوصية', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PrivacySettingsScreen())), icon: const Icon(Icons.shield_outlined)), IconButton(tooltip: 'تسجيل الخروج', onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout))]), body: FutureBuilder<Map<String, dynamic>?>(future: _future, builder: (context, snap) {
     if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
     if (snap.hasError) return AppErrorView(title: 'تعذر تحميل حسابك', error: snap.error, onRetry: () => setState(() => _future = _load()));
@@ -1590,6 +1600,7 @@ class PersonTile extends StatefulWidget {
 class _PersonTileState extends State<PersonTile> {
   String? _followStatus;
   bool _busy = true;
+  bool _blocked = false;
 
   @override
   void initState() {
@@ -1611,6 +1622,52 @@ class _PersonTileState extends State<PersonTile> {
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'load_follow_status');
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _blockAccount() async {
+    final other = widget.profile['id'] as String;
+    final name =
+        (widget.profile['display_name'] ?? widget.profile['username'] ?? 'الحساب')
+            .toString();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('حظر الحساب؟'),
+        content: Text(
+          'لن يتمكن $name من بدء محادثة معك أو التفاعل معك في المساحات التي تطبق الحظر. يمكنك إلغاء الحظر من مركز الخصوصية.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('حظر'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      final me = Supabase.instance.client.auth.currentUser!.id;
+      await Supabase.instance.client.from('blocks').insert({
+        'blocker_id': me,
+        'blocked_id': other,
+      });
+      if (!mounted) return;
+      setState(() => _blocked = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم حظر الحساب')),
+      );
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'block_account');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppErrorService.message(error))),
+        );
+      }
     }
   }
 
@@ -1657,20 +1714,36 @@ class _PersonTileState extends State<PersonTile> {
         PopupMenuButton<String>(
           tooltip: 'خيارات الحساب',
           onSelected: (value) async {
-            if (value != 'report') return;
-            final submitted = await ReportDialog.show(
-              context,
-              targetType: 'user',
-              targetId: p['id'] as String,
-            );
-            if (submitted && mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('تم إرسال البلاغ للمراجعة')),
+            if (value == 'block') {
+              await _blockAccount();
+              return;
+            }
+            if (value == 'report') {
+              final submitted = await ReportDialog.show(
+                context,
+                targetType: 'user',
+                targetId: p['id'] as String,
               );
+              if (submitted && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('تم إرسال البلاغ للمراجعة')),
+                );
+              }
             }
           },
-          itemBuilder: (_) => const [
-            PopupMenuItem(
+          itemBuilder: (_) => [
+            if (!_blocked)
+              const PopupMenuItem(
+                value: 'block',
+                child: Row(
+                  children: [
+                    Icon(Icons.block_outlined, size: 18),
+                    SizedBox(width: 8),
+                    Text('حظر الحساب'),
+                  ],
+                ),
+              ),
+            const PopupMenuItem(
               value: 'report',
               child: Row(
                 children: [
@@ -1682,8 +1755,10 @@ class _PersonTileState extends State<PersonTile> {
             ),
           ],
         ),
-      FriendRequestAction(otherUserId: p['id'] as String),
-      if (widget.follow) OutlinedButton(onPressed: _busy ? null : _toggle, child: _busy ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2)) : Text(_followStatus == 'pending' ? 'إلغاء الطلب' : (_followStatus == 'accepted' ? 'إلغاء المتابعة' : 'متابعة'))),
+      if (!_blocked) FriendRequestAction(otherUserId: p['id'] as String),
+      if (_blocked)
+        const Chip(label: Text('محظور')),
+      if (widget.follow && !_blocked) OutlinedButton(onPressed: _busy ? null : _toggle, child: _busy ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2)) : Text(_followStatus == 'pending' ? 'إلغاء الطلب' : (_followStatus == 'accepted' ? 'إلغاء المتابعة' : 'متابعة'))),
     ])));
   }
 }
