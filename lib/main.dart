@@ -59,19 +59,26 @@ Future<void> main() async {
     }
   }
   var ready = false;
-  try {
-    if (_url.startsWith('https://') && _key.isNotEmpty) {
-      await Supabase.initialize(url: _url, anonKey: _key);
+  String? startupError;
+  if (!_url.startsWith('https://') || _key.trim().isEmpty) {
+    startupError = 'إعدادات الاتصال غير مكتملة. تحقق من عنوان Supabase ومفتاح Publishable/Anon.';
+  } else {
+    try {
+      await Supabase.initialize(url: _url, anonKey: _key.trim());
       ready = true;
       await NexoraPushService.instance.initialize();
+    } catch (e, s) {
+      AppErrorService.report(e, s, source: 'startup');
+      startupError = e.toString();
     }
-  } catch (e, s) { AppErrorService.report(e, s, source: 'startup'); }
-  runApp(NexoraApp(ready: ready));
+  }
+  runApp(NexoraApp(ready: ready, startupError: startupError));
 }
 
 class NexoraApp extends StatefulWidget {
-  const NexoraApp({super.key, required this.ready});
+  const NexoraApp({super.key, required this.ready, this.startupError});
   final bool ready;
+  final String? startupError;
 
   @override
   State<NexoraApp> createState() => _NexoraAppState();
@@ -166,7 +173,7 @@ class _NexoraAppState extends State<NexoraApp> {
             themeMode: ThemeMode.light,
             home: Directionality(
               textDirection: TextDirection.rtl,
-              child: widget.ready ? const AuthGate() : const _Setup(),
+              child: widget.ready ? const AuthGate() : _Setup(error: widget.startupError),
             ),
           );
         },
@@ -183,17 +190,21 @@ class AuthGate extends StatelessWidget {
 }
 
 class _Setup extends StatelessWidget {
-  const _Setup();
+  const _Setup({this.error});
+  final String? error;
+
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(
       child: SingleChildScrollView(
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: MediaQuery.sizeOf(context).height),
-          child: const _Empty(
-            icon: Icons.settings,
-            title: 'NEXORA محتاج إعداد الاتصال',
-            subtitle: 'راجع متغيرات SUPABASE_URL وSUPABASE_ANON_KEY في إعدادات البناء. لا تضع service_role داخل التطبيق.',
+          child: _Empty(
+            icon: Icons.cloud_off_outlined,
+            title: 'تعذر الاتصال بخدمات NEXORA',
+            subtitle: error == null || error!.isEmpty
+                ? 'تحقق من اتصال الإنترنت وإعدادات Supabase، ثم أعد تشغيل التطبيق.'
+                : 'تفاصيل الخطأ: $error',
           ),
         ),
       ),
