@@ -275,6 +275,99 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> _editMessage(Map<String, dynamic> message) async {
+    final controller = TextEditingController(
+      text: (message['body'] ?? '').toString(),
+    );
+    final edited = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('تعديل الرسالة'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          minLines: 1,
+          maxLines: 5,
+          maxLength: 5000,
+          decoration: const InputDecoration(hintText: 'اكتب الرسالة بعد التعديل'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: const Text('حفظ'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (edited == null) return;
+    final body = edited.trim();
+    if (body.isEmpty || body.length > 5000) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('الرسالة لازم تكون من حرف إلى 5000 حرف.')),
+        );
+      }
+      return;
+    }
+    try {
+      await Supabase.instance.client
+          .from('messages')
+          .update({
+            'body': body,
+            'edited_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', message['id'] as String)
+          .eq('sender_id', Supabase.instance.client.auth.currentUser!.id);
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'edit_message');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppErrorService.message(error))),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteMessage(Map<String, dynamic> message) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('حذف الرسالة؟'),
+        content: const Text('سيظهر مكانها إشعار بأن الرسالة حُذفت.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await Supabase.instance.client
+          .from('messages')
+          .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+          .eq('id', message['id'] as String)
+          .eq('sender_id', Supabase.instance.client.auth.currentUser!.id);
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'delete_message');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppErrorService.message(error))),
+        );
+      }
+    }
+  }
+
   Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty || _sending) return;
@@ -377,13 +470,46 @@ class _ChatScreenState extends State<ChatScreen> {
                               : Theme.of(context).colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(18),
                         ),
-                        child: Text(
-                          deleted ? 'تم حذف الرسالة' : (message['body'] ?? '').toString(),
-                          style: TextStyle(
-                            color: mine
-                                ? Theme.of(context).colorScheme.onPrimary
-                                : Theme.of(context).colorScheme.onSurface,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (mine && !deleted)
+                              PopupMenuButton<String>(
+                                tooltip: 'خيارات الرسالة',
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                iconSize: 18,
+                                onSelected: (value) {
+                                  if (value == 'edit') _editMessage(message);
+                                  if (value == 'delete') _deleteMessage(message);
+                                },
+                                itemBuilder: (_) => const [
+                                  PopupMenuItem(
+                                    value: 'edit',
+                                    child: Text('تعديل الرسالة'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'delete',
+                                    child: Text('حذف الرسالة'),
+                                  ),
+                                ],
+                              ),
+                            Text(
+                              deleted ? 'تم حذف الرسالة' : (message['body'] ?? '').toString(),
+                              style: TextStyle(
+                                color: mine
+                                    ? Theme.of(context).colorScheme.onPrimary
+                                    : Theme.of(context).colorScheme.onSurface,
+                                fontStyle: deleted ? FontStyle.italic : FontStyle.normal,
+                              ),
+                            ),
+                            if (message['edited_at'] != null && !deleted)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 4),
+                                child: Text('معدّلة', style: TextStyle(fontSize: 10)),
+                              ),
+                          ],
                         ),
                       ),
                     );
