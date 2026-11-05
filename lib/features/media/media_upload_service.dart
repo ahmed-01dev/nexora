@@ -8,6 +8,55 @@ class MediaUploadService {
   static const int maxBytes = 50 * 1024 * 1024;
   static const int maxFiles = 10;
 
+
+  static const int maxProfileImageBytes = 10 * 1024 * 1024;
+
+  Future<XFile?> pickProfileImage() => _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 88,
+        maxWidth: 2048,
+        maxHeight: 2048,
+      );
+
+  Future<String> uploadProfileImage({
+    required String userId,
+    required XFile file,
+    required String imageType,
+  }) async {
+    if (imageType != 'avatar' && imageType != 'cover') {
+      throw const FormatException('نوع صورة الملف الشخصي غير صالح.');
+    }
+    final extension = file.name.contains('.')
+        ? file.name.split('.').last.toLowerCase()
+        : '';
+    final contentType = switch (extension) {
+      'jpg' || 'jpeg' => 'image/jpeg',
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      _ => null,
+    };
+    if (contentType == null) {
+      throw FormatException('استخدم صورة JPG أو PNG أو WebP: ${file.name}');
+    }
+    final bytes = await file.readAsBytes();
+    if (bytes.isEmpty || bytes.length > maxProfileImageBytes) {
+      throw const FormatException('حجم صورة الملف الشخصي يجب ألا يتجاوز 10 ميجابايت.');
+    }
+    final path = '$userId/profile/${imageType}_${DateTime.now().microsecondsSinceEpoch}.$extension';
+    await Supabase.instance.client.storage.from('nexora-media').uploadBinary(
+      path,
+      bytes,
+      fileOptions: FileOptions(contentType: contentType, upsert: false),
+    );
+    return path;
+  }
+
+  Future<void> removeProfileImage(String path) async {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null || !path.startsWith('$userId/profile/')) return;
+    await Supabase.instance.client.storage.from('nexora-media').remove([path]);
+  }
+
   Future<List<XFile>> pickImages() async {
     return _picker.pickMultiImage(
       imageQuality: 88,
