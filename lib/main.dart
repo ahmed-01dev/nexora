@@ -1605,22 +1605,37 @@ class _PersonTileState extends State<PersonTile> {
   @override
   void initState() {
     super.initState();
-    if (widget.follow) _loadFollowStatus();
-    else _busy = false;
+    _loadRelationshipState();
   }
 
-  Future<void> _loadFollowStatus() async {
+  Future<void> _loadRelationshipState() async {
     try {
-      final me = Supabase.instance.client.auth.currentUser!.id;
-      final row = await Supabase.instance.client
-          .from('follows')
-          .select('status')
-          .eq('follower_id', me)
-          .eq('following_id', widget.profile['id'] as String)
+      final client = Supabase.instance.client;
+      final me = client.auth.currentUser!.id;
+      final other = widget.profile['id'] as String;
+      final block = await client
+          .from('blocks')
+          .select('blocked_id')
+          .eq('blocker_id', me)
+          .eq('blocked_id', other)
           .maybeSingle();
-      if (mounted) setState(() { _followStatus = row?['status'] as String?; _busy = false; });
+      Map<String, dynamic>? follow;
+      if (widget.follow && block == null) {
+        follow = await client
+            .from('follows')
+            .select('status')
+            .eq('follower_id', me)
+            .eq('following_id', other)
+            .maybeSingle();
+      }
+      if (!mounted) return;
+      setState(() {
+        _blocked = block != null;
+        _followStatus = follow?['status'] as String?;
+        _busy = false;
+      });
     } catch (error, stack) {
-      AppErrorService.report(error, stack, source: 'load_follow_status');
+      AppErrorService.report(error, stack, source: 'load_person_relationship');
       if (mounted) setState(() => _busy = false);
     }
   }
