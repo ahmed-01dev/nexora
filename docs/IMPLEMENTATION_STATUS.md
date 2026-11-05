@@ -65,7 +65,7 @@ Status meanings:
 ## Product feature status
 | Feature | Status | Notes |
 |---|---|---|
-| Authentication | Partial | Phone OTP is the default signup/login path with E.164 normalization and six-digit verification; email/password remains an alternative. Supabase SMS-provider delivery/configuration, phone linking for existing email accounts, MFA, passkeys, OAuth, and device center remain pending. |
+| Authentication | Partial | Phone OTP is the default signup/login path with E.164 normalization and six-digit verification; email/password remains an alternative. New email signups enforce 12+ characters with at least one letter and digit in the client only; server-side password policy and leaked-password checks remain unconfigured. Supabase SMS-provider delivery/configuration, phone linking for existing email accounts, MFA, passkeys, OAuth, and device center remain pending. |
 | Profiles | Partial | Editable text profile, avatar and cover image upload to private Storage, signed-URL rendering on profile/person/post cards, old own-image cleanup, paginated own-post timeline (50 per page), and saved-posts library; authenticated end-to-end upload validation and profile highlights pending. |
 | Followers | Partial | Follow state loads from DB; private accounts create pending requests through a server-side function; request inbox/accept UI pending. |
 | Friends | Partial | Server-side request/accept/decline/cancel/remove operations with block and permission checks; incoming/outgoing request inbox and profile action buttons. Group roles and friend activity pending. |
