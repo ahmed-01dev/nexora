@@ -230,6 +230,7 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _busy = false;
   bool _visible = false;
   bool _phoneOtpSent = false;
+  bool _emailConfirmationPending = false;
   int _resendSeconds = 0;
   Timer? _resendTimer;
   String _method = 'phone';
@@ -339,6 +340,34 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  Future<void> _resendEmailConfirmation() async {
+    final email = _email.text.trim();
+    if (email.isEmpty) {
+      setState(() => _error = 'اكتب البريد الإلكتروني الأول');
+      return;
+    }
+    setState(() { _busy = true; _clearFeedback(); });
+    try {
+      await Supabase.instance.client.auth.resend(
+        type: OtpType.signup,
+        email: email,
+      );
+      if (mounted) {
+        setState(() {
+          _emailConfirmationPending = true;
+          _notice = 'طلبنا إعادة إرسال رسالة التأكيد إلى $email. الرسالة فيها رابط تأكيد، مش كود رقمي. راجع Spam كمان.';
+        });
+      }
+    } on AuthException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (e, s) {
+      AppErrorService.report(e, s, source: 'email_auth_resend');
+      if (mounted) setState(() => _error = AppErrorService.message(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _submitEmail() async {
     if (!_form.currentState!.validate()) return;
     setState(() { _busy = true; _clearFeedback(); });
@@ -351,7 +380,10 @@ class _AuthScreenState extends State<AuthScreen> {
           data: {'display_name': _name.text.trim()},
         );
         if (result.session == null && mounted) {
-          setState(() => _notice = 'الحساب اتعمل. راجع بريدك لتأكيده وبعدها سجّل الدخول.');
+          setState(() {
+            _emailConfirmationPending = true;
+            _notice = 'الحساب اتعمل. بعتنالك رسالة تأكيد فيها رابط، مش كود. افتح الرسالة واضغط رابط التأكيد، ولو مش لاقيها راجع Spam أو اضغط إعادة الإرسال.';
+          });
         }
       } else {
         await auth.signInWithPassword(
@@ -360,7 +392,17 @@ class _AuthScreenState extends State<AuthScreen> {
         );
       }
     } on AuthException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) {
+        if (e.message.toLowerCase().contains('email not confirmed')) {
+          setState(() {
+            _emailConfirmationPending = true;
+            _notice = 'البريد لسه غير مؤكد. افتح رسالة التأكيد واضغط الرابط، أو اطلب إرسالها مرة تانية من الزر بالأسفل.';
+            _error = null;
+          });
+        } else {
+          setState(() => _error = e.message);
+        }
+      }
     } catch (e, s) {
       AppErrorService.report(e, s, source: 'email_auth');
       if (mounted) setState(() => _error = AppErrorService.message(e));
@@ -512,6 +554,15 @@ class _AuthScreenState extends State<AuthScreen> {
                     ],
                     if (_error != null) _Notice(text: _error!, error: true),
                     if (_notice != null) _Notice(text: _notice!, error: false),
+                    if (!phoneMode && _emailConfirmationPending)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: OutlinedButton.icon(
+                          onPressed: _busy ? null : _resendEmailConfirmation,
+                          icon: const Icon(Icons.mark_email_unread_outlined),
+                          label: const Text('إعادة إرسال رسالة التأكيد'),
+                        ),
+                      ),
                     const SizedBox(height: 20),
                     FilledButton(
                       onPressed: _busy ? null : _submit,
