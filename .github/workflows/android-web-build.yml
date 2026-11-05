@@ -2,8 +2,6 @@ name: NEXORA Android and Web Build
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
 
 permissions:
   contents: write
