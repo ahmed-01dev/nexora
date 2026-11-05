@@ -370,7 +370,7 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
                                           if (isOwner)
                                             const Chip(label: Text('المالك'))
                                           else if (joined)
-                                            const Chip(label: Text('عضو')),
+                                            Chip(label: Text(role == 'moderator' ? 'مشرف' : 'عضو')),
                                         ],
                                       ),
                                       if ((community['description'] ?? '').toString().isNotEmpty) ...[
