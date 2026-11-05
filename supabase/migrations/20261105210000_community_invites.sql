@@ -140,3 +140,44 @@ revoke all on function public.create_community_invite(uuid, integer, integer) fr
 grant execute on function public.create_community_invite(uuid, integer, integer) to authenticated;
 revoke all on function public.accept_community_invite(uuid) from public, anon, authenticated;
 grant execute on function public.accept_community_invite(uuid) to authenticated;
+
+create or replace function private.revoke_community_invites_internal(p_community_id uuid)
+returns integer
+language plpgsql
+security definer
+set search_path = pg_catalog, public, private, auth
+as $$
+declare
+  v_count integer := 0;
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required' using errcode = '42501';
+  end if;
+  if not private.is_community_owner(p_community_id) then
+    raise exception 'Only the community owner can revoke invites' using errcode = '42501';
+  end if;
+  update public.community_invites
+  set revoked_at = now()
+  where community_id = p_community_id
+    and revoked_at is null
+    and expires_at > now()
+    and use_count < max_uses;
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+
+revoke all on function private.revoke_community_invites_internal(uuid) from public, anon, authenticated;
+grant execute on function private.revoke_community_invites_internal(uuid) to authenticated;
+
+create or replace function public.revoke_community_invites(p_community_id uuid)
+returns integer
+language sql
+security invoker
+set search_path = pg_catalog, public, private, auth
+as $$
+  select private.revoke_community_invites_internal(p_community_id);
+$$;
+
+revoke all on function public.revoke_community_invites(uuid) from public, anon, authenticated;
+grant execute on function public.revoke_community_invites(uuid) to authenticated;
