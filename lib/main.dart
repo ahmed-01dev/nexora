@@ -166,30 +166,33 @@ class _NexoraAppState extends State<NexoraApp> {
   Widget build(BuildContext context) =>
       ValueListenableBuilder<String>(
         valueListenable: nexoraThemeNotifier,
-        builder: (context, selected, _) {
-          final theme = switch (selected) {
-            'light' => NexoraTheme.light,
-            'pink_amoled' => NexoraTheme.pinkAmoled,
-            'custom' => NexoraTheme.custom(nexoraAccentNotifier.value),
-            _ => NexoraTheme.amoled,
-          };
-          return MaterialApp(
-            navigatorKey: _nexoraNavigatorKey,
-            scaffoldMessengerKey: _nexoraMessengerKey,
-            title: 'NEXORA',
-            debugShowCheckedModeBanner: false,
-            theme: theme,
-            darkTheme: theme,
-            themeMode: ThemeMode.light,
-            routes: kDebugMode ? {'/__design_gallery': (_) => const DesignGalleryScreen()} : const {},
-            home: Directionality(
-              textDirection: TextDirection.rtl,
-              child: widget.ready ? const AuthGate() : _Setup(error: widget.startupError),
-            ),
-          );
-        },
+        builder: (context, selected, _) =>
+            ValueListenableBuilder<Color>(
+          valueListenable: nexoraAccentNotifier,
+          builder: (context, accent, _) {
+            final theme = switch (selected) {
+              'light' => NexoraTheme.light,
+              'pink_amoled' => NexoraTheme.pinkAmoled,
+              'custom' => NexoraTheme.custom(accent),
+              _ => NexoraTheme.amoled,
+            };
+            return MaterialApp(
+              navigatorKey: _nexoraNavigatorKey,
+              scaffoldMessengerKey: _nexoraMessengerKey,
+              title: 'NEXORA',
+              debugShowCheckedModeBanner: false,
+              theme: theme,
+              darkTheme: theme,
+              themeMode: ThemeMode.light,
+              routes: kDebugMode ? {'/__design_gallery': (_) => const DesignGalleryScreen()} : const {},
+              home: Directionality(
+                textDirection: TextDirection.rtl,
+                child: widget.ready ? const AuthGate() : _Setup(error: widget.startupError),
+              ),
+            );
+          },
+        ),
       );
-}
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
