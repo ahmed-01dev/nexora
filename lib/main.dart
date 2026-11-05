@@ -203,28 +203,192 @@ class HomeScreen extends StatefulWidget {
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
+
+enum _FeedMode { latest, following }
+
 class _HomeScreenState extends State<HomeScreen> {
-  late Future<List<Map<String, dynamic>>> _future;
+  static const int _pageSize = 20;
+  final List<Map<String, dynamic>> _posts = [];
+  _FeedMode _mode = _FeedMode.latest;
+  bool _loading = true, _loadingMore = false, _hasMore = true;
+  String? _error;
+
   @override
-  void initState() { super.initState(); _future = _load(); }
-  Future<List<Map<String, dynamic>>> _load() async {
-    final rows = await Supabase.instance.client.from('posts').select('id,user_id,content,visibility,created_at,profiles!posts_user_id_fkey(id,username,display_name,avatar_url)').eq('visibility', 'public').order('created_at', ascending: false).limit(40);
+  void initState() {
+    super.initState();
+    _loadFirstPage();
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchPage(int offset) async {
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser!.id;
+    var query = client.from('posts').select(
+      'id,user_id,content,visibility,created_at,profiles!posts_user_id_fkey(id,username,display_name,avatar_url)',
+    ).isFilter('deleted_at', null);
+
+    if (_mode == _FeedMode.latest) {
+      query = query.eq('visibility', 'public');
+    } else {
+      final followRows = await client
+          .from('follows')
+          .select('following_id')
+          .eq('follower_id', userId)
+          .eq('status', 'accepted');
+      final authorIds = <String>{userId};
+      for (final row in followRows) {
+        final id = row['following_id'];
+        if (id is String) authorIds.add(id);
+      }
+      query = query.inFilter('user_id', authorIds.toList());
+    }
+
+    final rows = await query
+        .order('created_at', ascending: false)
+        .order('id', ascending: false)
+        .range(offset, offset + _pageSize - 1);
     return List<Map<String, dynamic>>.from(rows);
   }
-  Future<void> _refresh() async { setState(() => _future = _load()); await _future; }
+
+  Future<void> _loadFirstPage() async {
+    setState(() {
+      _loading = true;
+      _loadingMore = false;
+      _hasMore = true;
+      _error = null;
+      _posts.clear();
+    });
+    try {
+      final rows = await _fetchPage(0);
+      if (!mounted) return;
+      setState(() {
+        _posts.addAll(rows);
+        _hasMore = rows.length == _pageSize;
+        _loading = false;
+      });
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'feed_initial');
+      if (mounted) setState(() { _error = AppErrorService.message(error); _loading = false; });
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loading || _loadingMore || !_hasMore || _error != null) return;
+    setState(() => _loadingMore = true);
+    try {
+      final rows = await _fetchPage(_posts.length);
+      if (!mounted) return;
+      final knownIds = _posts.map((p) => p['id']).toSet();
+      final uniqueRows = rows.where((p) => !knownIds.contains(p['id']));
+      setState(() {
+        _posts.addAll(uniqueRows);
+        _hasMore = rows.length == _pageSize;
+        _loadingMore = false;
+      });
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'feed_more');
+      if (mounted) setState(() { _error = AppErrorService.message(error); _loadingMore = false; });
+    }
+  }
+
+  Future<void> _refresh() => _loadFirstPage();
+
+  void _changeMode(_FeedMode mode) {
+    if (_mode == mode) return;
+    setState(() => _mode = mode);
+    _loadFirstPage();
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('NEXORA', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2)), actions: [IconButton(tooltip: 'القصص', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const StoriesScreen())), icon: const Icon(Icons.auto_awesome)), IconButton(tooltip: 'الإشعارات', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const NotificationsScreen())), icon: const Icon(Icons.notifications_none)), IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh))]),
-    body: FutureBuilder<List<Map<String, dynamic>>>(future: _future, builder: (context, snap) {
-      if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-      if (snap.hasError) return AppErrorView(title: 'تعذر تحميل المنشورات', error: snap.error, onRetry: () => setState(() => _future = _load()));
-      final posts = snap.data ?? [];
-      if (posts.isEmpty) return RefreshIndicator(onRefresh: _refresh, child: ListView(children: const [SizedBox(height: 80), _Empty(icon: Icons.dynamic_feed, title: 'لسه مفيش منشورات', subtitle: 'ابدأ أول حكاية في NEXORA أو تابع أشخاص جدد.')]));
-      return RefreshIndicator(onRefresh: _refresh, child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 24), children: [
-        Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), gradient: const LinearGradient(colors: [Color(0xFF171717), Color(0xFF050505)])), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('مساحتك. صوتك. عالمك.', style: TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.bold)), SizedBox(height: 7), Text('أفكارك تستحق مساحة أكبر.', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900))])),
-        const SizedBox(height: 16), for (final p in posts) ...[PostCard(post: p), const SizedBox(height: 12)],
-      ]));
-    }),
+    appBar: AppBar(
+      title: const Text('NEXORA', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2)),
+      actions: [
+        IconButton(tooltip: 'القصص', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const StoriesScreen())), icon: const Icon(Icons.auto_awesome)),
+        IconButton(tooltip: 'الإشعارات', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const NotificationsScreen())), icon: const Icon(Icons.notifications_none)),
+        IconButton(tooltip: 'تحديث', onPressed: _refresh, icon: const Icon(Icons.refresh)),
+      ],
+    ),
+    body: Column(children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+        child: Row(children: [
+          ChoiceChip(
+            label: const Text('الأحدث'),
+            selected: _mode == _FeedMode.latest,
+            onSelected: (_) => _changeMode(_FeedMode.latest),
+          ),
+          const SizedBox(width: 8),
+          ChoiceChip(
+            label: const Text('المتابَعون'),
+            selected: _mode == _FeedMode.following,
+            onSelected: (_) => _changeMode(_FeedMode.following),
+          ),
+        ]),
+      ),
+      Expanded(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null && _posts.isEmpty
+                ? AppErrorView(title: 'تعذر تحميل المنشورات', error: _error, onRetry: _loadFirstPage)
+                : RefreshIndicator(
+                    onRefresh: _refresh,
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(24),
+                            gradient: const LinearGradient(colors: [Color(0xFF171717), Color(0xFF050505)]),
+                          ),
+                          child: const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('مساحتك. صوتك. عالمك.', style: TextStyle(color: Color(0xFFFFFFFF), fontWeight: FontWeight.bold)),
+                              SizedBox(height: 7),
+                              Text('أفكارك تستحق مساحة أكبر.', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        if (_posts.isEmpty)
+                          _Empty(
+                            icon: Icons.dynamic_feed,
+                            title: _mode == _FeedMode.latest ? 'لسه مفيش منشورات عامة' : 'لسه مفيش منشورات من المتابَعين',
+                            subtitle: _mode == _FeedMode.latest ? 'ابدأ أول حكاية في NEXORA.' : 'تابع أشخاص جدد عشان منشوراتهم تظهر هنا.',
+                          )
+                        else
+                          for (final post in _posts) ...[
+                            PostCard(post: post),
+                            const SizedBox(height: 12),
+                          ],
+                        if (_error != null)
+                          _Notice(text: _error!, error: true),
+                        if (_loadingMore)
+                          const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Center(child: CircularProgressIndicator()),
+                          )
+                        else if (_hasMore)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: OutlinedButton.icon(
+                              onPressed: _loadMore,
+                              icon: const Icon(Icons.expand_more),
+                              label: const Text('تحميل المزيد'),
+                            ),
+                          )
+                        else if (_posts.isNotEmpty)
+                          const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Center(child: Text('وصلت لآخر المنشورات', style: TextStyle(color: Color(0xFF8A8A8A)))),
+                          ),
+                      ],
+                    ),
+                  ),
+      ),
+    ]),
   );
 }
 
