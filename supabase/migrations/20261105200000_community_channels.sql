@@ -24,7 +24,15 @@ create policy community_channels_create_owner
 on public.community_channels for insert to authenticated
 with check (
   created_by = (select auth.uid())
-  and private.is_community_owner(community_id)
+  and (
+    private.is_community_owner(community_id)
+    or exists (
+      select 1 from public.community_members cm
+      where cm.community_id = community_channels.community_id
+        and cm.user_id = (select auth.uid())
+        and cm.role = 'moderator'
+    )
+  )
   and exists (
     select 1 from public.conversations c
     where c.id = conversation_id
