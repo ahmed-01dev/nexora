@@ -40,7 +40,7 @@ class MessageAttachmentService {
 
   Future<String?> signedImageUrl(String messageId) async {
     await Future<void>.delayed(const Duration(milliseconds: 250));
-    final row = await Supabase.instance.client.from('message_attachments').select('storage_path').eq('message_id', messageId).maybeSingle();
+    final row = await Supabase.instance.client.from('message_attachments').select('storage_path').eq('message_id', messageId).inFilter('mime_type', ['image/jpeg', 'image/png', 'image/webp']).maybeSingle();
     final path = row?['storage_path'] as String?;
     if (path == null) return null;
     return Supabase.instance.client.storage.from('nexora-media').createSignedUrl(path, 3600);
