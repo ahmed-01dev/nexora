@@ -442,12 +442,18 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
                                               icon: const Icon(Icons.forum_outlined),
                                               label: const Text('القنوات'),
                                             ),
-                                          if (isOwner && community['visibility'] != 'public')
+                                          if (isOwner && community['visibility'] != 'public') ...[
                                             OutlinedButton.icon(
                                               onPressed: () => _createInvite(community),
                                               icon: const Icon(Icons.key_outlined),
                                               label: const Text('إنشاء دعوة'),
                                             ),
+                                            OutlinedButton.icon(
+                                              onPressed: () => _revokeInvites(community),
+                                              icon: const Icon(Icons.link_off_outlined),
+                                              label: const Text('إلغاء الدعوات'),
+                                            ),
+                                          ],
                                           if (isOwner)
                                             OutlinedButton.icon(
                                               onPressed: () => Navigator.of(context).push(
@@ -503,6 +509,41 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
       }
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'community_invite_accept');
+      _showError(error);
+    }
+  }
+
+  Future<void> _revokeInvites(Map<String, dynamic> community) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('إلغاء رموز الدعوة'),
+        content: const Text('سيتم إبطال كل رموز الدعوة النشطة لهذا المجتمع. لن يستطيع أي شخص استخدامها بعد الآن.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('رجوع'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('إلغاء الدعوات'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      final count = await Supabase.instance.client.rpc(
+        'revoke_community_invites',
+        params: {'p_community_id': community['id']},
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تم إلغاء ${count ?? 0} رمز دعوة')),
+        );
+      }
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'community_invite_revoke');
       _showError(error);
     }
   }
