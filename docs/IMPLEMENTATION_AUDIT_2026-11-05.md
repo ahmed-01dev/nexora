@@ -22,6 +22,7 @@ Firebase project: nexora-20712
 - Friends-only post media signed URLs now allow accepted friends under the same conditions as the post-row RLS policy; the previous helper omitted that visibility branch.
 - Device registration uses an upsert on `(user_id, push_token)`. The authenticated role now has the necessary owner-scoped column UPDATE grants for `user_id`, `platform`, and `push_token`; the `user_devices_update_own` policy still limits writes to the current user.
 - The Storage media path helper denies non-owner access to media attached to soft-deleted posts, matching the post-row RLS behavior.
+- The home feed now calls a SECURITY INVOKER server-side paging RPC that joins accepted follows and accepted friendships, while preserving underlying RLS; this avoids sending unbounded relationship ID lists from the client.
 - Direct-conversation membership now becomes false for both participants when either side blocks the other. Because the existing RLS policies use this helper, the block prevents further direct-message access, message reads, attachment reads, and conversation previews while leaving group/community conversations unaffected.
 - Pending friend requests and pending follow requests cannot be accepted after a mutual block. Follow and friendship relationship rows are hidden from both participants while the block exists; relationship rows are retained so unblocking can restore them.
 - A direct-message creator cannot remove the other participant from a 1:1 conversation; creators can still manage members in group/community conversations. Appeal INSERT privileges are restricted to author, action, and message fields; status/reviewer/resolution metadata is staff-controlled.
@@ -36,8 +37,8 @@ Firebase project: nexora-20712
 - No public or private SQL views were returned by the view inventory query.
 
 ## Migration history synchronization
-- The connected Supabase project currently reports 42 applied migration records; the repository contains 41 SQL migration files.
-- Only twenty migration version timestamps match exactly. Twenty-two remote migration versions have no same-version file in GitHub, and twenty-one local files are not marked applied under their current version timestamps. Several names suggest semantic equivalents or squashed migrations, but equivalence has not been established by comparing the actual applied SQL.
+- The connected Supabase project currently reports 43 applied migration records; the repository contains 42 SQL migration files.
+- Only twenty-one migration version timestamps match exactly. Twenty-two remote migration versions have no same-version file in GitHub, and twenty-one local files are not marked applied under their current version timestamps. Several names suggest semantic equivalents or squashed migrations, but equivalence has not been established by comparing the actual applied SQL.
 - This is a significant migration-history drift risk. Do not run `supabase db push`, reset, or replay migrations until a full schema/data backup is available and every remote migration is mapped to its exact source SQL. Continue using only reviewed, individually applied SQL migrations with matching local version filenames in the interim.
 
 ## Auth and provider configuration
