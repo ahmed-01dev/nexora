@@ -6,6 +6,14 @@
 - Store server secrets in Supabase Edge Function secrets or a dedicated secret manager.
 - Rotate any secret that has been exposed.
 
+## Verified database hardening (2026-11-05)
+
+- All current `public` tables have RLS enabled.
+- The `anon` role has no table-level privileges on the current `public` application tables.
+- Authenticated grants on `community_channels` are limited to SELECT, INSERT, and DELETE; broad UPDATE/TRUNCATE/REFERENCES/TRIGGER/MAINTAIN privileges were removed.
+- PUBLIC execute was removed from internal friendship implementation helpers and trigger-only audit functions. Keep private helper grants limited to the invoker RPC wrappers and RLS policies that need them.
+- Supabase Security Advisor still reports leaked-password protection disabled; this is a dashboard setting and must be enabled before public launch.
+
 ## Database
 - All client-exposed public tables require RLS.
 - Grants and RLS are separate controls. Revoke anon access and grant authenticated only the operations required.
