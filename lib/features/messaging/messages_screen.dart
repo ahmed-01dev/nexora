@@ -178,22 +178,30 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 final item = items[index];
                 final peer = item['peer'] as Map<String, dynamic>;
                 final latest = item['latest'] as Map<String, dynamic>?;
-                final name = (peer['display_name'] ??
-                        peer['username'] ??
-                        'مستخدم NEXORA')
-                    .toString();
+                final conversation = item['conversation'] as Map<String, dynamic>;
+                final isGroup = conversation['conversation_type'] == 'group' ||
+                    conversation['conversation_type'] == 'community';
+                final name = (isGroup
+                        ? conversation['title']
+                        : (peer['display_name'] ?? peer['username']))
+                    ?.toString();
+                final displayName = (name == null || name.isEmpty)
+                    ? (isGroup ? 'مجموعة NEXORA' : 'مستخدم NEXORA')
+                    : name;
                 final preview = latest == null
                     ? 'ابدأ المحادثة'
-                    : (latest['message_type'] == 'text'
-                        ? (latest['body'] ?? '').toString()
-                        : 'مرفق');
+                    : (latest['deleted_at'] != null
+                        ? 'تم حذف الرسالة'
+                        : (latest['message_type'] == 'text'
+                            ? (latest['body'] ?? '').toString()
+                            : 'مرفق'));
                 return ListTile(
                   onTap: () => _open(item),
                   leading: CircleAvatar(
                     backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                     child: const Icon(Icons.person_outline),
                   ),
-                  title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                  title: Text(displayName, maxLines: 1, overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontWeight: FontWeight.w700)),
                   subtitle: Text(preview, maxLines: 1, overflow: TextOverflow.ellipsis),
                   trailing: const Icon(Icons.chevron_left),
