@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -7,6 +8,7 @@ class NexoraPushService {
   NexoraPushService._();
   static final instance = NexoraPushService._();
   bool _started = false;
+  StreamSubscription<String>? _tokenSubscription;
 
   bool get supported => !kIsWeb &&
       defaultTargetPlatform == TargetPlatform.android &&
@@ -15,7 +17,7 @@ class NexoraPushService {
   Future<void> initialize() async {
     if (!supported || _started) return;
     _started = true;
-    FirebaseMessaging.instance.onTokenRefresh.listen((token) {
+    _tokenSubscription = FirebaseMessaging.instance.onTokenRefresh.listen((token) {
       saveToken(token);
     });
     await registerIfAllowed();
@@ -79,5 +81,10 @@ class NexoraPushService {
     } catch (error) {
       debugPrint('NEXORA push token removal failed: $error');
     }
+  }
+  Future<void> dispose() async {
+    await _tokenSubscription?.cancel();
+    _tokenSubscription = null;
+    _started = false;
   }
 }
