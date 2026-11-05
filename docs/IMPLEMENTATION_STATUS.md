@@ -31,6 +31,7 @@ Status meanings:
 - [x] Consolidated moderation SELECT policies on reports, appeals, and moderation actions while preserving the same owner/reporter and staff visibility rules; the three Supabase multiple-permissive-policy performance warnings are resolved.
 - [x] Profile visibility now denies non-owner access when either side has blocked the other, including indirect access through friendships or shared conversations.
 - [x] Direct updates to `profiles.is_private` are revoked; privacy changes must use the RPC that keeps `profiles.is_private` and `user_private_settings.profile_visibility` synchronized.
+- [x] Direct INSERT/UPDATE access to `user_private_settings` is revoked; the authenticated privacy RPC is the only client path for changes and preserves synchronization.
 - [x] Private-profile visibility requires an accepted follow or accepted friendship (or an allowed shared conversation); pending/declined friend requests no longer grant access.
 - [x] Private avatar/cover Storage reads now use the same accepted-follow, accepted-friendship, shared-conversation, and block rules as profile-row visibility.
 - [x] Private-account status now overrides public story visibility for both story rows and signed media access; only the owner or accepted followers can view private-account stories.
