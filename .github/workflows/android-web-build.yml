@@ -99,6 +99,27 @@ jobs:
           print("Verified INTERNET permission in source AndroidManifest.xml")
           PY
 
+      - name: Add location permissions to Android manifest
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          content = manifest.read_text(encoding="utf-8")
+          permissions = [
+              "android.permission.ACCESS_COARSE_LOCATION",
+              "android.permission.ACCESS_FINE_LOCATION",
+          ]
+          for permission in permissions:
+              tag = f'<uses-permission android:name="{permission}" />'
+              if permission not in content:
+                  content = content.replace("<application", tag + "\\n    <application", 1)
+          manifest.write_text(content, encoding="utf-8")
+          verified = manifest.read_text(encoding="utf-8")
+          if any(permission not in verified for permission in permissions):
+              raise SystemExit("Location permissions missing from Android manifest")
+          print("Verified coarse and fine location permissions.")
+          PY
+
       - name: Install dependencies
         run: flutter pub get
 
