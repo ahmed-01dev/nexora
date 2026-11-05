@@ -61,6 +61,6 @@ class MessageAttachmentService {
         .delete()
         .eq('message_id', messageId)
         .eq('uploader_id', uid);
-    await client.storage.from('nexora-media').remove([path]);
+    try { await client.storage.from('nexora-media').remove([path]); } catch (_) {}
   }
 }
