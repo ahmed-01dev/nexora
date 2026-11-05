@@ -6,6 +6,7 @@ import 'package:video_player/video_player.dart';
 import '../../core/app_error.dart';
 import '../media/media_upload_service.dart';
 import '../moderation/report_dialog.dart';
+import '../blocks/block_account_service.dart';
 
 class StoriesScreen extends StatefulWidget {
   const StoriesScreen({super.key});
@@ -305,6 +306,33 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> {
         foregroundColor: Colors.white,
         title: const Text('NEXORA Story'),
         actions: [
+          if (widget.story['user_id'] !=
+              Supabase.instance.client.auth.currentUser!.id)
+            IconButton(
+              tooltip: 'حظر صاحب القصة',
+              onPressed: () async {
+                try {
+                  final blocked = await BlockAccountService.confirmAndBlock(
+                    context,
+                    targetUserId: widget.story['user_id'] as String,
+                    displayName: 'صاحب القصة',
+                  );
+                  if (blocked && mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('تم حظر الحساب')),
+                    );
+                  }
+                } catch (error, stack) {
+                  AppErrorService.report(error, stack, source: 'block_story_author');
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(AppErrorService.message(error))),
+                    );
+                  }
+                }
+              },
+              icon: const Icon(Icons.block_outlined),
+            ),
           if (widget.story['user_id'] !=
               Supabase.instance.client.auth.currentUser!.id)
             IconButton(
