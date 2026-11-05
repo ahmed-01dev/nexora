@@ -743,7 +743,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('NEXORA', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2)),
+      title: GestureDetector(onLongPress: kDebugMode ? () => Navigator.of(context).pushNamed('/__design_gallery') : null, child: const Text('NEXORA', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2))),
       actions: [
         IconButton(tooltip: 'القصص', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const StoriesScreen())), icon: const Icon(Icons.auto_awesome)),
         IconButton(tooltip: 'الإشعارات', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const NotificationsScreen())), icon: const Icon(Icons.notifications_none)),
