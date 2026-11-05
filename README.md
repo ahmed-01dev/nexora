@@ -1,53 +1,61 @@
 # NEXORA — BEYOND SOCIAL
 
-NEXORA is an AMOLED-first, Arabic-first social platform under active phased development.
+NEXORA is an Arabic-first, AMOLED-first social platform being developed in phased releases with Flutter and Supabase.
 
-## Current verified app capabilities
-- Supabase email/password registration and sign-in.
-- Basic profile display and editing.
-- Public text posts and feed.
-- Follow/unfollow with server-side checks for private profiles and blocks.
-- Basic privacy center for profile visibility and who can start direct messages.
-- Direct text conversations with realtime message updates and read timestamps.
-- In-app notification records when a new direct message is sent.
-- Private image/video upload for posts, with signed URL viewing in the feed.
-- Basic vertical video feed for public video posts.
-- AMOLED-first theme, with light and optional pink theme definitions.
+## Current implementation
 
-## Important limitations
-NEXORA is not yet production-ready for public launch. Current gaps include:
-- Stories, friend-request UI, full groups/communities, and notification center UX.
-- E2EE is not implemented. Direct messages are server-readable; the UI says so.
-- Voice/video calling has database signaling records only; no WebRTC/STUN/TURN service.
-- Video transcoding, adaptive bitrate, thumbnail generation, malware scanning, and CDN processing are not deployed.
-- No admin dashboard/RBAC, appeals workflow, push provider, monetization, livestreaming, or AI integrations.
-- Arabic RTL is the current UI language; full English/French/Spanish/German localization is pending.
-- Automated RLS tests with distinct authenticated users and an independent penetration test are pending.
+The repository contains a working Flutter Android/Web codebase and a Supabase PostgreSQL backend. Implemented areas include:
 
-See [implementation status](docs/IMPLEMENTATION_STATUS.md), [architecture](docs/ARCHITECTURE.md), [ERD](docs/ERD.md), [API boundaries](docs/API.md), and [security baseline](docs/SECURITY.md).
+- Phone-first signup/login using SMS OTP with Egyptian and international phone normalization; email/password is an alternative.
+- Profiles, profile media, public/following feeds, posts, likes, reposts, bookmarks, comments, and hashtags.
+- Follow/friend requests, account blocking, privacy controls, and opt-in approximate nearby discovery.
+- Direct messaging with realtime updates, read state, and image attachments.
+- Stories, vertical public-video feed, communities, channels, reports, moderation queue, and appeals workflows.
+- In-app notification center and per-category notification preferences.
+- Firebase Cloud Messaging integration code, deployed Supabase Edge Function, and database webhook trigger. Real-device push delivery still requires valid Firebase/Supabase Edge Function secrets and an Android device registered for push.
+- AMOLED, light, and pink theme options.
 
-## Backend
-Supabase project is configured outside the repository. Add the following GitHub Actions repository secrets:
+See [implementation status](docs/IMPLEMENTATION_STATUS.md) for the feature-by-feature state and remaining work. Implemented code does not mean every workflow has passed end-to-end testing with real users/devices.
 
-- `SUPABASE_URL`: the project's HTTPS URL.
-- `SUPABASE_ANON_KEY`: the public anon/publishable client key.
+## Known production gaps
 
-Never add a `service_role` or secret key to the mobile/web app, source code, or GitHub Actions build arguments.
+NEXORA is not yet production-ready for public launch. Important remaining work includes:
 
-## Database migrations
-- `supabase/migrations/20261105000100_nexora_social_foundation.sql` — additive social graph, messaging, notifications, stories, communities, reports, call records, privacy settings, RLS, private storage, and restricted RPCs.
+- End-to-end tests using separate authenticated users, real Android devices, and browser sessions.
+- SMS provider configuration, phone OTP delivery verification, account linking, MFA, and recovery hardening.
+- Push delivery verification on a registered Android device; email notifications are not implemented.
+- WebRTC media transport, STUN/TURN, and reliable incoming-call delivery. Current call records alone are not voice/video calling.
+- E2EE is not implemented. Direct messages are server-readable; do not describe them as end-to-end encrypted.
+- Media transcoding, adaptive bitrate, thumbnails, malware scanning, resumable uploads, and CDN processing.
+- Full admin dashboard, independent penetration test, crash monitoring, backup/restore drills, legal/privacy review, and operational moderation procedures.
+- Full localization beyond the current Arabic-first RTL interface.
 
-The migration is idempotent for the current schema and was applied to the connected Supabase project. Verify RLS and grants after any future changes.
+## Backend and secrets
 
-## Build
-GitHub Actions runs Flutter analysis/tests, Android APK, Android App Bundle, and Flutter Web builds. Download artifacts from the successful run in the repository's Actions tab.
+The connected Supabase project is configured outside the Flutter client. The client may use only the public Supabase URL and anon/publishable key.
 
-The GitHub Pages deployment workflow is configured, but repository Pages enablement must succeed before a public URL is available.
+Never commit or expose:
+- Supabase `service_role` or secret keys.
+- Firebase service-account JSON/private keys.
+- Database passwords, signing keys, OAuth client secrets, or TURN credentials.
+
+Store server-side credentials in Supabase Edge Function secrets or a dedicated secret manager. The Firebase Android `google-services.json` contains app configuration, not an Admin SDK private key; keep it in the intended project configuration path and do not confuse it with the service-account JSON.
+
+## Database
+
+The `supabase/migrations/` directory contains the schema and security changes applied during development. Public tables have RLS enabled; verify grants and policies after every schema change. Nearby discovery is opt-in, stores rounded coordinates in a private schema, returns coarse distance bands, and expires stale presence after 24 hours.
+
+## CI and release builds
+
+- `.github/workflows/flutter-ci.yml` runs Flutter dependency installation, static analysis, and tests on pushes and pull requests.
+- `.github/workflows/android-web-build.yml` is a manual release workflow. It builds Android APK/AAB and Flutter Web only when explicitly dispatched.
+- Do not run the release workflow until the source/configuration audit is complete and release is explicitly approved.
 
 ## Development principles
-- Backend RLS is the authorization boundary.
-- No fake followers, messages, likes, or verification.
-- No false E2EE claims.
+
+- PostgreSQL RLS and trusted server functions are the authorization boundary.
+- Never trust client-supplied ownership, role, recipient, or moderation fields.
+- No fake users, followers, messages, likes, or verification.
+- No false E2EE or calling claims.
 - Keep server secrets server-side.
-- Mark incomplete integrations explicitly.
-- Keep the app buildable at every phase.
+- Label incomplete integrations accurately and test them before launch.
