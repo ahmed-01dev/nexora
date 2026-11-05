@@ -134,3 +134,11 @@ Firebase project: nexora-20712
 - Recounted the current public schema: all 38 public tables have RLS enabled.
 - Rechecked table grants: the `anon` role has no table privileges on public application tables.
 - Rechecked SECURITY DEFINER routines in public/private schemas: no inspected function has PUBLIC EXECUTE.
+
+
+## Localized OTP input — 2026-11-05
+- Added `normalizeNexoraOtp` to accept six-digit OTPs entered using ASCII, Arabic-Indic, or Persian numerals while rejecting malformed input.
+- Wired both the OTP field validator and Supabase `verifyOTP` call to the normalized value.
+- Added unit cases for ASCII, Arabic-Indic, Persian, wrong-length, and non-digit OTP values.
+- CI is queued/running for these commits; do not mark the OTP change green until a completed run on the final commit passes.
+- Verified the scheduled nearby-location cleanup job actually executed successfully at 2026-11-05 19:15 UTC; PostgreSQL reported `DELETE 0` (no expired rows existed at that execution).
