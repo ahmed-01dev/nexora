@@ -15,6 +15,7 @@ import 'features/settings/privacy_settings_screen.dart';
 import 'features/stories/stories_screen.dart';
 import 'features/search/hashtag_service.dart';
 import 'features/communities/communities_screen.dart';
+import 'features/moderation/report_dialog.dart';
 
 final _url = String.fromEnvironment('SUPABASE_URL').trim();
 const _key = String.fromEnvironment('SUPABASE_ANON_KEY');
@@ -1381,7 +1382,35 @@ class _PostCardState extends State<PostCard> {
     final d = DateTime.tryParse((widget.post['created_at'] ?? '').toString())?.toLocal();
     final stamp = d == null ? '' : d.day.toString() + '/' + d.month.toString() + ' • ' + d.hour.toString().padLeft(2, '0') + ':' + d.minute.toString().padLeft(2, '0');
     return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(children: [_ProfileAvatar(url: a is Map ? a['avatar_url']?.toString() : null), const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(fontWeight: FontWeight.w800)), Text('@' + handle + ' • ' + stamp, style: const TextStyle(fontSize: 11, color: Color(0xFF8390A4)))])), const Icon(Icons.more_horiz)]),
+      Row(children: [_ProfileAvatar(url: a is Map ? a['avatar_url']?.toString() : null), const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(fontWeight: FontWeight.w800)), Text('@' + handle + ' • ' + stamp, style: const TextStyle(fontSize: 11, color: Color(0xFF8390A4)))])), PopupMenuButton<String>(
+        tooltip: 'خيارات المنشور',
+        onSelected: (value) async {
+          if (value == 'report') {
+            final submitted = await ReportDialog.show(
+              context,
+              targetType: 'post',
+              targetId: widget.post['id'] as String,
+            );
+            if (submitted && mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('تم إرسال البلاغ للمراجعة')),
+              );
+            }
+          }
+        },
+        itemBuilder: (_) => const [
+          PopupMenuItem(
+            value: 'report',
+            child: Row(
+              children: [
+                Icon(Icons.flag_outlined, size: 18),
+                SizedBox(width: 8),
+                Text('إبلاغ عن المنشور'),
+              ],
+            ),
+          ),
+        ],
+      )]),
       if ((widget.post['content'] ?? '').toString().isNotEmpty)
         Text((widget.post['content'] ?? '').toString(), style: const TextStyle(fontSize: 15, height: 1.65)),
       PostMediaGallery(postId: widget.post['id'] as String),
