@@ -15,6 +15,7 @@ Firebase project: nexora-20712
 ## Verified database security
 - Profile SELECT visibility now checks for a block before allowing any non-owner access path (public, accepted follow, friendship, or shared conversation). The profile owner can still read their own profile.
 - The private-profile friendship path now requires `friendships.status = 'accepted'`; pending, declined, and cancelled requests do not grant profile visibility.
+- Direct client updates to `profiles.is_private` are revoked; the RPC updates it together with `user_private_settings.profile_visibility` to avoid divergent privacy state.
 - Private avatar/cover Storage reads now use the same visibility paths as the profile row, including accepted friendship and allowed shared conversation, while retaining block checks.
 - Private-account privacy now overrides a story's per-story public setting for both the story row and the underlying signed Storage path; only the owner or accepted followers can view stories from a private account.
 - Friends-only post media signed URLs now allow accepted friends under the same conditions as the post-row RLS policy; the previous helper omitted that visibility branch.
@@ -33,8 +34,8 @@ Firebase project: nexora-20712
 - No public or private SQL views were returned by the view inventory query.
 
 ## Migration history synchronization
-- The connected Supabase project currently reports 39 applied migration records; the repository contains 38 SQL migration files.
-- Only seventeen migration version timestamps match exactly. Twenty-two remote migration versions have no same-version file in GitHub, and twenty-one local files are not marked applied under their current version timestamps. Several names suggest semantic equivalents or squashed migrations, but equivalence has not been established by comparing the actual applied SQL.
+- The connected Supabase project currently reports 40 applied migration records; the repository contains 39 SQL migration files.
+- Only eighteen migration version timestamps match exactly. Twenty-two remote migration versions have no same-version file in GitHub, and twenty-one local files are not marked applied under their current version timestamps. Several names suggest semantic equivalents or squashed migrations, but equivalence has not been established by comparing the actual applied SQL.
 - This is a significant migration-history drift risk. Do not run `supabase db push`, reset, or replay migrations until a full schema/data backup is available and every remote migration is mapped to its exact source SQL. Continue using only reviewed, individually applied SQL migrations with matching local version filenames in the interim.
 
 ## Auth and provider configuration
