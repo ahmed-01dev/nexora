@@ -366,12 +366,12 @@ class _ChatScreenState extends State<ChatScreen> {
     );
     if (confirmed != true) return;
     try {
+      await _attachmentService.deleteOwnAttachment(message['id'] as String);
       await Supabase.instance.client
           .from('messages')
           .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
           .eq('id', message['id'] as String)
           .eq('sender_id', Supabase.instance.client.auth.currentUser!.id);
-      await _attachmentService.deleteOwnAttachment(message['id'] as String);
       _attachmentUrls.remove(message['id']);
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'delete_message');
