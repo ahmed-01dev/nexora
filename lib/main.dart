@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_error.dart';
@@ -23,6 +26,12 @@ import 'features/communities/communities_screen.dart';
 import 'features/moderation/report_dialog.dart';
 import 'features/moderation/moderation_queue_screen.dart';
 import 'features/moderation/my_moderation_screen.dart';
+
+
+@pragma('vm:entry-point')
+Future<void> _nexoraFirebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+}
 
 final _url = String.fromEnvironment('SUPABASE_URL', defaultValue: 'https://wwdeexgkwpftyavbhiff.supabase.co').trim();
 const _key = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: 'sb_publishable_vJpkaM72QMGLykLFU5m44g_kwuPCi-Y');
