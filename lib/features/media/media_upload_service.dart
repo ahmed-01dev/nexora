@@ -7,6 +7,7 @@ class MediaUploadService {
   final ImagePicker _picker;
   static const int maxBytes = 50 * 1024 * 1024;
   static const int maxFiles = 10;
+  static const int maxPostTotalBytes = 100 * 1024 * 1024;
 
 
   static const int maxProfileImageBytes = 10 * 1024 * 1024;
@@ -134,6 +135,7 @@ class MediaUploadService {
     }
     final client = Supabase.instance.client;
     final uploaded = <String>[];
+    var totalBytes = 0;
     try {
       for (var i = 0; i < files.length; i++) {
         final file = files[i];
@@ -147,6 +149,10 @@ class MediaUploadService {
         final bytes = await file.readAsBytes();
         if (bytes.isEmpty || bytes.length > maxBytes) {
           throw FormatException('حجم الملف غير صالح أو أكبر من 50 ميجابايت: ${file.name}');
+        }
+        totalBytes += bytes.length;
+        if (totalBytes > maxPostTotalBytes) {
+          throw const FormatException('إجمالي وسائط المنشور لا يمكن أن يتجاوز 100 ميجابايت.');
         }
         if (!hasValidMediaSignature(extension, bytes)) {
           throw FormatException('محتوى الملف لا يطابق نوعه: ${file.name}');
