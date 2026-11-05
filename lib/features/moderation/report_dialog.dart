@@ -88,7 +88,15 @@ class _ReportDialogState extends State<ReportDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: Text(widget.targetType == 'comment' ? 'الإبلاغ عن التعليق' : 'الإبلاغ عن المنشور'),
+        title: Text(
+          widget.targetType == 'comment'
+              ? 'الإبلاغ عن التعليق'
+              : widget.targetType == 'story'
+                  ? 'الإبلاغ عن القصة'
+                  : widget.targetType == 'user'
+                      ? 'الإبلاغ عن الحساب'
+                      : 'الإبلاغ عن المنشور',
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
