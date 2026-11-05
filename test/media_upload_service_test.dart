@@ -29,4 +29,61 @@ void main() {
       expect(MediaUploadService.hasValidImageSignature('svg', [0x3C, 0x73]), isFalse);
     });
   });
+
+  group('MediaUploadService.hasValidMediaSignature', () {
+    test('accepts GIF87a and GIF89a image signatures', () {
+      expect(
+        MediaUploadService.hasValidMediaSignature(
+          'gif',
+          'GIF89a'.codeUnits,
+        ),
+        isTrue,
+      );
+      expect(
+        MediaUploadService.hasValidMediaSignature(
+          'gif',
+          'GIF87a'.codeUnits,
+        ),
+        isTrue,
+      );
+    });
+
+    test('accepts MP4 ftyp and WebM EBML signatures', () {
+      expect(
+        MediaUploadService.hasValidMediaSignature(
+          'mp4',
+          [0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0, 0, 0, 0],
+        ),
+        isTrue,
+      );
+      expect(
+        MediaUploadService.hasValidMediaSignature(
+          'webm',
+          [0x1A, 0x45, 0xDF, 0xA3, 0x93],
+        ),
+        isTrue,
+      );
+    });
+
+    test('rejects extension/content mismatches and truncated video files', () {
+      expect(
+        MediaUploadService.hasValidMediaSignature(
+          'mp4',
+          [0x1A, 0x45, 0xDF, 0xA3],
+        ),
+        isFalse,
+      );
+      expect(
+        MediaUploadService.hasValidMediaSignature(
+          'webm',
+          [0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70],
+        ),
+        isFalse,
+      );
+      expect(
+        MediaUploadService.hasValidMediaSignature('gif', [0x47, 0x49]),
+        isFalse,
+      );
+    });
+  });
 }
