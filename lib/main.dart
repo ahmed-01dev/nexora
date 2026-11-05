@@ -12,6 +12,7 @@ import 'features/messaging/messages_screen.dart';
 import 'features/notifications/notifications_screen.dart';
 import 'features/reels/reels_screen.dart';
 import 'features/settings/privacy_settings_screen.dart';
+import 'features/settings/appearance_settings_screen.dart';
 import 'features/stories/stories_screen.dart';
 import 'features/search/hashtag_service.dart';
 import 'features/communities/communities_screen.dart';
@@ -35,17 +36,81 @@ Future<void> main() async {
   runApp(NexoraApp(ready: ready));
 }
 
-class NexoraApp extends StatelessWidget {
+class NexoraApp extends StatefulWidget {
   const NexoraApp({super.key, required this.ready});
   final bool ready;
+
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    title: 'NEXORA', debugShowCheckedModeBanner: false,
-    theme: NexoraTheme.light,
-    darkTheme: NexoraTheme.amoled,
-    themeMode: ThemeMode.dark,
-    home: Directionality(textDirection: TextDirection.rtl, child: ready ? const AuthGate() : const _Setup()),
-  );
+  State<NexoraApp> createState() => _NexoraAppState();
+}
+
+class _NexoraAppState extends State<NexoraApp> {
+  StreamSubscription<AuthState>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.ready) {
+      _loadAppearance();
+      _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((_) {
+        _loadAppearance();
+      });
+    }
+  }
+
+  Future<void> _loadAppearance() async {
+    final client = Supabase.instance.client;
+    final uid = client.auth.currentUser?.id;
+    if (uid == null) {
+      nexoraThemeNotifier.value = 'amoled';
+      return;
+    }
+    try {
+      final row = await client
+          .from('user_preferences')
+          .select('theme')
+          .eq('user_id', uid)
+          .maybeSingle();
+      if (client.auth.currentUser?.id != uid) return;
+      final value = row?['theme']?.toString() ?? 'amoled';
+      nexoraThemeNotifier.value =
+          const {'amoled', 'light', 'pink_amoled'}.contains(value)
+              ? value
+              : 'amoled';
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'load_appearance');
+    }
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      ValueListenableBuilder<String>(
+        valueListenable: nexoraThemeNotifier,
+        builder: (context, selected, _) {
+          final theme = switch (selected) {
+            'light' => NexoraTheme.light,
+            'pink_amoled' => NexoraTheme.pinkAmoled,
+            _ => NexoraTheme.amoled,
+          };
+          return MaterialApp(
+            title: 'NEXORA',
+            debugShowCheckedModeBanner: false,
+            theme: theme,
+            darkTheme: theme,
+            themeMode: ThemeMode.light,
+            home: Directionality(
+              textDirection: TextDirection.rtl,
+              child: widget.ready ? const AuthGate() : const _Setup(),
+            ),
+          );
+        },
+      );
 }
 
 class AuthGate extends StatelessWidget {
@@ -1063,6 +1128,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       icon: const Icon(Icons.gavel_outlined),
+    ),
+    IconButton(
+      tooltip: 'المظهر',
+      onPressed: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const AppearanceSettingsScreen(),
+        ),
+      ),
+      icon: const Icon(Icons.palette_outlined),
     ),
     IconButton(tooltip: 'مركز الخصوصية', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PrivacySettingsScreen())), icon: const Icon(Icons.shield_outlined)), IconButton(tooltip: 'تسجيل الخروج', onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout))]), body: FutureBuilder<Map<String, dynamic>?>(future: _future, builder: (context, snap) {
     if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
