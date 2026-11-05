@@ -88,14 +88,14 @@ class _ReportDialogState extends State<ReportDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: const Text('الإبلاغ عن المنشور'),
+        title: Text(widget.targetType == 'comment' ? 'الإبلاغ عن التعليق' : 'الإبلاغ عن المنشور'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
-                'اختر السبب الأقرب. البلاغ يذهب لفريق المراجعة ولا يظهر لصاحب المنشور.',
+                'اختر السبب الأقرب. البلاغ يذهب لفريق المراجعة ولا يظهر لصاحب المحتوى.',
                 style: TextStyle(color: Colors.white70, fontSize: 13),
               ),
               const SizedBox(height: 12),
