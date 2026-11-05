@@ -116,7 +116,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
         : 'مستخدم';
     final children = replies[comment['id']] ?? const <Map<String, dynamic>>[];
     return Padding(
-      padding: EdgeInsetsDirectional.only(start: depth.clamp(0, 4) * 18.0),
+      padding: EdgeInsetsDirectional.only(start: (depth.clamp(0, 4) * 18.0).toDouble()),
       child: Column(
         children: [
           _CommentTile(
