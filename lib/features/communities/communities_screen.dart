@@ -182,7 +182,33 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
     );
     controller.dispose();
     if (code == null || !mounted) return;
-    if (!RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}
+    if (!RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$').hasMatch(code)) {
+      _showError(const FormatException('رمز الدعوة غير صحيح.'));
+      return;
+    }
+    try {
+      final response = await Supabase.instance.client.rpc(
+        'accept_community_invite',
+        params: {'p_invite_code': code},
+      );
+      final rows = List<Map<String, dynamic>>.from(response as List);
+      await _loadFirstPage();
+      if (mounted) {
+        final communityName = rows.isNotEmpty
+            ? (rows.first['community_name'] ?? 'المجتمع').toString()
+            : 'المجتمع';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تم الانضمام إلى $communityName')),
+        );
+      }
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'community_invite_accept');
+      _showError(error);
+    }
+  }
+
+  Future<void> _createCommunity() async {
+    final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (dialogContext) {
         final name = TextEditingController();
