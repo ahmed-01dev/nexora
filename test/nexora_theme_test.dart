@@ -22,3 +22,17 @@ void main() {
     expect(NexoraColors.border, const Color(0xFF292929));
   });
 }
+
+  group('normalizeNexoraTheme', () {
+    test('keeps supported theme values', () {
+      expect(normalizeNexoraTheme('amoled'), 'amoled');
+      expect(normalizeNexoraTheme('light'), 'light');
+      expect(normalizeNexoraTheme('pink_amoled'), 'pink_amoled');
+    });
+
+    test('falls back safely for null or unknown values', () {
+      expect(normalizeNexoraTheme(null), 'amoled');
+      expect(normalizeNexoraTheme('neon'), 'amoled');
+      expect(normalizeNexoraTheme(''), 'amoled');
+    });
+  });
