@@ -88,23 +88,25 @@ class _ReportDialogState extends State<ReportDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: Text(
-          widget.targetType == 'comment'
-              ? 'الإبلاغ عن التعليق'
-              : widget.targetType == 'story'
-                  ? 'الإبلاغ عن القصة'
-                  : widget.targetType == 'user'
-                      ? 'الإبلاغ عن الحساب'
-                      : 'الإبلاغ عن المنشور',
-        ),
+        title: Text(switch (widget.targetType) {
+          'user' => 'الإبلاغ عن الحساب',
+          'comment' => 'الإبلاغ عن التعليق',
+          'story' => 'الإبلاغ عن القصة',
+          'message' => 'الإبلاغ عن الرسالة',
+          'community' => 'الإبلاغ عن المجتمع',
+          _ => 'الإبلاغ عن المنشور',
+        }),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
-                'اختر السبب الأقرب. البلاغ يذهب لفريق المراجعة ولا يظهر لصاحب المحتوى.',
-                style: TextStyle(color: Colors.white70, fontSize: 13),
+                'اختر السبب الأقرب. البلاغ يذهب لفريق المراجعة ولا يظهر للطرف المُبلّغ عنه.',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.72),
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
