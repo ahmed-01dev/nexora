@@ -26,16 +26,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<List<Map<String, dynamic>>> _load({int offset = 0}) async {
-    final uid = Supabase.instance.client.auth.currentUser!.id;
-    final rows = await Supabase.instance.client
-        .from('notifications')
-        .select('id,actor_id,notification_type,entity_type,entity_id,payload,read_at,created_at,profiles!notifications_actor_id_fkey(display_name,username)')
-        .eq('recipient_id', uid)
-        .order('created_at', ascending: false)
-        .order('id', ascending: false)
-        .range(offset, offset + _pageSize - 1);
+    final rows = await Supabase.instance.client.rpc(
+      'get_my_notification_page',
+      params: {'p_offset': offset, 'p_limit': _pageSize},
+    );
     if (mounted) setState(() => _hasMore = rows.length == _pageSize);
-    return List<Map<String, dynamic>>.from(rows);
+    return List<Map<String, dynamic>>.from(rows as List);
   }
 
   Future<void> _loadMore(List<Map<String, dynamic>> current) async {
