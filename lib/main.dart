@@ -664,11 +664,65 @@ class PostCard extends StatefulWidget {
 class _PostCardState extends State<PostCard> {
   bool? _liked;
   bool _busy = true;
+  bool _reposted = false;
+  String? _repostId;
+  bool _repostBusy = false;
 
   @override
   void initState() {
     super.initState();
     _loadLikeState();
+    _loadRepostState();
+  }
+
+  Future<void> _loadRepostState() async {
+    try {
+      final uid = Supabase.instance.client.auth.currentUser!.id;
+      final row = await Supabase.instance.client
+          .from('reposts')
+          .select('id')
+          .eq('user_id', uid)
+          .eq('post_id', widget.post['id'] as String)
+          .limit(1)
+          .maybeSingle();
+      if (mounted) setState(() {
+        _reposted = row != null;
+        _repostId = row?['id'] as String?;
+      });
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'load_repost_state');
+    }
+  }
+
+  Future<void> _toggleRepost() async {
+    if (_repostBusy || widget.post['visibility'] != 'public') return;
+    setState(() => _repostBusy = true);
+    final db = Supabase.instance.client;
+    try {
+      if (_reposted && _repostId != null) {
+        await db.from('reposts').delete().eq('id', _repostId!);
+        if (mounted) setState(() { _reposted = false; _repostId = null; });
+      } else {
+        final uid = db.auth.currentUser!.id;
+        final row = await db.from('reposts').insert({
+          'user_id': uid,
+          'post_id': widget.post['id'] as String,
+        }).select('id').single();
+        if (mounted) setState(() {
+          _reposted = true;
+          _repostId = row['id'] as String;
+        });
+      }
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'repost');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppErrorService.message(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _repostBusy = false);
+    }
   }
 
   Future<void> _loadLikeState() async {
@@ -710,7 +764,28 @@ class _PostCardState extends State<PostCard> {
         Text((widget.post['content'] ?? '').toString(), style: const TextStyle(fontSize: 15, height: 1.65)),
       PostMediaGallery(postId: widget.post['id'] as String),
       const Divider(height: 24, color: Color(0xFF292929)),
-      Row(children: [TextButton.icon(onPressed: _busy || _liked == null ? null : _like, icon: Icon(_liked == true ? Icons.favorite : Icons.favorite_border), label: Text(_busy && _liked == null ? '...' : (_liked == true ? 'أعجبك' : 'إعجاب'))), const Spacer(), TextButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => CommentsScreen(postId: widget.post['id'] as String))), icon: const Icon(Icons.chat_bubble_outline, size: 18), label: const Text('تعليق'))]),
+      Row(children: [
+        TextButton.icon(
+          onPressed: _busy || _liked == null ? null : _like,
+          icon: Icon(_liked == true ? Icons.favorite : Icons.favorite_border),
+          label: Text(_busy && _liked == null ? '...' : (_liked == true ? 'أعجبك' : 'إعجاب')),
+        ),
+        TextButton.icon(
+          onPressed: widget.post['visibility'] == 'public' && !_repostBusy ? _toggleRepost : null,
+          icon: _repostBusy
+              ? const SizedBox.square(dimension: 14, child: CircularProgressIndicator(strokeWidth: 2))
+              : Icon(_reposted ? Icons.repeat_on : Icons.repeat, color: _reposted ? const Color(0xFFB8E986) : null),
+          label: Text(_reposted ? 'أعدت النشر' : 'إعادة نشر'),
+        ),
+        const Spacer(),
+        TextButton.icon(
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+            builder: (_) => CommentsScreen(postId: widget.post['id'] as String),
+          )),
+          icon: const Icon(Icons.chat_bubble_outline, size: 18),
+          label: const Text('تعليق'),
+        ),
+      ]),
     ])));
   }
 }
