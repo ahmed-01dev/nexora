@@ -18,18 +18,28 @@ class MessageAttachmentService {
     }
     final path = '$uid/$conversationId/messages/${DateTime.now().microsecondsSinceEpoch}.$ext';
     await client.storage.from('nexora-media').uploadBinary(path, bytes, fileOptions: FileOptions(contentType: type, upsert: false));
+    String? messageId;
     try {
       final row = await client.from('messages').insert({'conversation_id': conversationId, 'sender_id': uid, 'message_type': 'image', 'body': null, 'encryption_mode': 'server_readable'}).select('id').single();
-      final id = row['id'] as String;
-      await client.from('message_attachments').insert({'message_id': id, 'uploader_id': uid, 'storage_path': path, 'mime_type': type, 'size_bytes': bytes.length});
-      return id;
+      messageId = row['id'] as String;
+      await client.from('message_attachments').insert({'message_id': messageId, 'uploader_id': uid, 'storage_path': path, 'mime_type': type, 'size_bytes': bytes.length});
+      return messageId;
     } catch (_) {
-      await client.storage.from('nexora-media').remove([path]);
+      if (messageId != null) {
+        try {
+          await client.from('messages')
+              .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+              .eq('id', messageId)
+              .eq('sender_id', uid);
+        } catch (_) {}
+      }
+      try { await client.storage.from('nexora-media').remove([path]); } catch (_) {}
       rethrow;
     }
   }
 
   Future<String?> signedImageUrl(String messageId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
     final row = await Supabase.instance.client.from('message_attachments').select('storage_path').eq('message_id', messageId).maybeSingle();
     final path = row?['storage_path'] as String?;
     if (path == null) return null;
