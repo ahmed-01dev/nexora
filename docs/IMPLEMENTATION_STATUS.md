@@ -14,6 +14,7 @@ Status meanings:
 - [x] Basic profile display/edit.
 - [x] Text-only post creation and public feed query.
 - [x] Real comment listing, reply-to-comment, posting, and own-comment soft deletion UI connected to Supabase.
+- [x] Feed mode switch (Latest / Following) with server-side 20-row pagination, stable ordering, duplicate filtering, refresh, and RLS-respecting queries.
 - [x] Basic follow insertion/deletion.
 - [x] Central Flutter error presentation/logging.
 - [x] Existing CI run passed analysis, tests, Android release APK build, and web build (run 41929549503).
@@ -41,7 +42,7 @@ Status meanings:
 | Profiles | Partial | Basic text profile; no avatar/cover upload or profile highlights. |
 | Followers | Partial | Follow state loads from DB; private accounts create pending requests through a server-side function; request inbox/accept UI pending. |
 | Friends | Partial | Server-side request/accept/decline/cancel/remove operations with block and permission checks; incoming/outgoing request inbox and profile action buttons. Group roles and friend activity pending. |
-| Feed | Partial | Basic public text feed; no ranking, pagination cursor, offline cache, or mixed content. |
+| Feed | Partial | Latest public feed and Following feed now load in 20-row server pages with stable ordering, duplicate filtering, refresh, and existing RLS privacy/block checks; ranking, cursor pagination, offline cache, and mixed content pending. |
 | Posts | Partial | Text, multi-image and video upload to private storage; feed displays signed image/video URLs. Polls, drafts, scheduling, edit/restore, and media processing pending. |
 | Comments | Partial | Real comments screen now supports listing, replies, posting, and soft-deleting own comments; comment reactions, pagination beyond 100, and moderation UX pending. Build verification for this change pending. |
 | Stories | Partial | Text/photo/video stories with 24-hour expiry, viewer, view records, and visibility/block checks. Highlights, close friends, reactions/replies, viewer list, and cleanup worker pending. |
