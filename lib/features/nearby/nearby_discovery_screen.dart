@@ -185,13 +185,11 @@ class _NearbyDiscoveryScreenState extends State<NearbyDiscoveryScreen> {
                   Card(child: ListTile(
                     leading: CircleAvatar(child: Text(_displayName(person).characters.first.toUpperCase())),
                     title: Text(_displayName(person)),
-                    subtitle: Text('@${person['username'] ?? ''}'),
                     trailing: IconButton(
                       tooltip: 'مراسلة',
                       onPressed: () => _messagePerson(person),
                       icon: const Icon(Icons.chat_bubble_outline),
                     ),
-                    isThreeLine: true,
                     dense: false,
                     subtitle: Text(
                       '@${person['username'] ?? ''} • ${nearbyDistanceLabel(person['distance_band']?.toString() ?? '')}',
