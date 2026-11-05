@@ -5,6 +5,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../core/app_error.dart';
 import '../media/media_upload_service.dart';
+import '../moderation/report_dialog.dart';
 
 class StoriesScreen extends StatefulWidget {
   const StoriesScreen({super.key});
@@ -299,7 +300,31 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> {
     final url = widget.story['signed_url'] as String?;
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white, title: const Text('NEXORA Story')),
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: const Text('NEXORA Story'),
+        actions: [
+          if (widget.story['user_id'] !=
+              Supabase.instance.client.auth.currentUser!.id)
+            IconButton(
+              tooltip: 'الإبلاغ عن القصة',
+              onPressed: () async {
+                final submitted = await ReportDialog.show(
+                  context,
+                  targetType: 'story',
+                  targetId: widget.story['id'] as String,
+                );
+                if (submitted && mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('تم إرسال البلاغ للمراجعة')),
+                  );
+                }
+              },
+              icon: const Icon(Icons.flag_outlined),
+            ),
+        ],
+      ),
       body: Stack(
         fit: StackFit.expand,
         children: [
