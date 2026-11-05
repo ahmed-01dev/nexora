@@ -714,11 +714,36 @@ class _PostCardState extends State<PostCard> {
         });
       }
     } catch (error, stack) {
-      AppErrorService.report(error, stack, source: 'repost');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppErrorService.message(error))),
-        );
+      if (error is PostgrestException && error.code == '23505') {
+        try {
+          final uid = db.auth.currentUser!.id;
+          final existing = await db.from('reposts')
+              .select('id')
+              .eq('user_id', uid)
+              .eq('post_id', widget.post['id'] as String)
+              .limit(1)
+              .maybeSingle();
+          if (mounted && existing != null) {
+            setState(() {
+              _reposted = true;
+              _repostId = existing['id'] as String;
+            });
+          }
+        } catch (reloadError, reloadStack) {
+          AppErrorService.report(reloadError, reloadStack, source: 'repost_conflict_reload');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(AppErrorService.message(reloadError))),
+            );
+          }
+        }
+      } else {
+        AppErrorService.report(error, stack, source: 'repost');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppErrorService.message(error))),
+          );
+        }
       }
     } finally {
       if (mounted) setState(() => _repostBusy = false);
