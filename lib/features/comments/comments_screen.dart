@@ -436,7 +436,9 @@ class _CommentTileState extends State<_CommentTile> {
         : 'مستخدم NEXORA';
     final deleted = comment['deleted_at'] != null;
     final date = DateTime.tryParse((comment['created_at'] ?? '').toString())?.toLocal();
-    final stamp = date == null ? '' : '${date.day}/${date.month} • ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    final stamp = date == null
+        ? ''
+        : '${date.day}/${date.month} • ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}${comment['edited_at'] != null ? ' • معدّل' : ''}';
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
