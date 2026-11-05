@@ -13,6 +13,7 @@ Status meanings:
 - [x] Phone-first authentication UI: phone OTP signup/login with Egyptian mobile normalization and OTP verification over SMS only; email/password remains an explicit alternative. Supabase SMS provider configuration, delivery costs/limits, and real-device OTP delivery remain external setup and end-to-end verification items.
 - [x] Basic profile display/edit, with database-enforced case-insensitive username uniqueness to prevent handles differing only by letter case.
 - [x] Profile avatar and cover image selection/upload UI, private Storage paths, profile path persistence, signed-URL display, and replacement cleanup; authenticated upload/read policy paths are configured. End-to-end upload with a real authenticated device session remains to be validated.
+- [x] Client-side media signature checks for profile images, post/story JPG/PNG/WebP/GIF images, and MP4/WebM videos, with unit coverage; server-side file-signature scanning and malware scanning remain required because client validation can be bypassed.
 - [x] Text-only post creation and public feed query.
 - [x] Real comment listing, reply-to-comment, posting, own-comment soft deletion, and per-comment like/unlike UI connected to Supabase.
 - [x] Feed mode switch (Latest / Following) with server-side 20-row pagination, stable ordering, duplicate filtering, refresh, and RLS-respecting queries.
