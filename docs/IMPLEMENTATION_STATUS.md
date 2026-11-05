@@ -59,7 +59,7 @@ Status meanings:
 | Notifications | Partial | In-app center lists real notifications newest-first in stable 50-row pages with load-older, marks one/all read, and routes message/friend-request events to relevant screens. Push/email delivery, grouping, and full preferences pending. |
 | Search | Partial | Profile discovery searches username/display name; public-post text search and exact normalized hashtag search both use stable server-side 30-row pagination, refresh, and load-more. Publishing indexes unique Arabic/Latin tags into the existing hashtags/post_hashtags tables; trending, ranking, and advanced filters pending. |
 | Nearby | Pending | Must remain disabled until consent, approximate geolocation, and safety protections are implemented. |
-| Moderation | Partial | Account, post, and comment reporting, staff-only active/all report queue, 30-row pagination, self-assignment, dismiss-with-resolution-note, user moderation history, appeals submission/status display, and staff appeal decisions (upheld/overturned). Existing audit triggers record report updates. Automated enforcement actions and complete case workflow pending. |
+| Moderation | Partial | Account, post, comment, and story reporting, staff-only active/all report queue, 30-row pagination, self-assignment, dismiss-with-resolution-note, user moderation history, appeals submission/status display, and staff appeal decisions (upheld/overturned). Existing audit triggers record report updates. Automated enforcement actions and complete case workflow pending. |
 | Admin dashboard | Pending | No trusted RBAC or admin web console yet. |
 | Monetization | Pending | No payment provider, tax, payouts, or legal readiness. |
 | Live streaming | Pending | No streaming provider/ingest infrastructure. |
