@@ -112,7 +112,7 @@ jobs:
           for permission in permissions:
               tag = f'<uses-permission android:name="{permission}" />'
               if permission not in content:
-                  content = content.replace("<application", tag + "\\n    <application", 1)
+                  content = content.replace("<application", tag + "\n    <application", 1)
           manifest.write_text(content, encoding="utf-8")
           verified = manifest.read_text(encoding="utf-8")
           if any(permission not in verified for permission in permissions):
