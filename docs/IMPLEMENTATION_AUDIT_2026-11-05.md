@@ -116,4 +116,10 @@ Firebase project: nexora-20712
 - Verified active job `nexora-cleanup-expired-nearby-locations` runs every 15 minutes and deletes `private.profile_discovery_locations` rows at least 24 hours old.
 - Added the exact matching migration file at `supabase/migrations/20261105190457_schedule_nearby_location_expiry_cleanup.sql` in GitHub. This closes the gap where stale coordinates were excluded from search but could remain stored until a later location update.
 - Re-ran Supabase Security, Performance, and Health Advisors after enabling Cron: Security still reports only leaked-password protection disabled; Health returned no findings; Performance still reports 50 informational unused-index notices.
-- The latest repository commit containing this migration is `db18305af2323c1684f7af449a32ed690e5b5c91`; its Flutter CI run is pending/queued at the time of this documentation update.
+- The migration commit `db18305af2323c1684f7af449a32ed690e5b5c91` passed Flutter CI in run `42090487207`. The subsequent audit-document commit `e788ef3c407d795990f1cfba5f91c33021a028a1` also passed Flutter CI in run `42090626724`.
+
+
+## Storage and realtime verification — 2026-11-05
+- The `nexora-media` Storage bucket is private, has a 50 MiB per-object limit, and restricts accepted MIME types to the configured image/video/audio/PDF allowlist. Storage SELECT is owner-scoped or mediated by `private.can_read_media_path`; message attachment access additionally requires a non-deleted message and current conversation membership.
+- The `messages` table is present in the `supabase_realtime` publication, matching the client chat stream implementation. No call signaling/WebRTC implementation was found in the Flutter dependency manifest or app source.
+- Verified the new nearby cleanup cron job is active. Its first scheduled execution has not yet appeared in `cron.job_run_details` at the time of this check; successful execution will be verified separately.
