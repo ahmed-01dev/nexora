@@ -14,6 +14,7 @@ import 'features/friends/friend_requests_screen.dart';
 import 'features/comments/comments_screen.dart';
 import 'features/messaging/messages_screen.dart';
 import 'features/notifications/notifications_screen.dart';
+import 'features/notifications/nexora_push_service.dart';
 import 'features/reels/reels_screen.dart';
 import 'features/settings/privacy_settings_screen.dart';
 import 'features/settings/appearance_settings_screen.dart';
@@ -36,6 +37,11 @@ Future<void> _nexoraFirebaseMessagingBackgroundHandler(RemoteMessage message) as
 final _url = String.fromEnvironment('SUPABASE_URL', defaultValue: 'https://wwdeexgkwpftyavbhiff.supabase.co').trim();
 const _key = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: 'sb_publishable_vJpkaM72QMGLykLFU5m44g_kwuPCi-Y');
 
+Future<void> _signOutNexora() async {
+  await NexoraPushService.instance.unregisterCurrentDevice();
+  await Supabase.instance.client.auth.signOut();
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AppErrorService.install();
@@ -54,6 +60,7 @@ Future<void> main() async {
     if (_url.startsWith('https://') && _key.isNotEmpty) {
       await Supabase.initialize(url: _url, anonKey: _key);
       ready = true;
+      await NexoraPushService.instance.initialize();
     }
   } catch (e, s) { AppErrorService.report(e, s, source: 'startup'); }
   runApp(NexoraApp(ready: ready));
@@ -76,6 +83,7 @@ class _NexoraAppState extends State<NexoraApp> {
     if (widget.ready) {
       _loadAppearance();
       _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((_) {
+        NexoraPushService.instance.registerIfAllowed();
         _loadAppearance();
       });
     }
