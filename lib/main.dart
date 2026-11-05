@@ -1447,8 +1447,8 @@ class _PostCardState extends State<PostCard> {
             }
           }
         },
-        itemBuilder: (_) => const [
-          PopupMenuItem(
+        itemBuilder: (_) => [
+          const PopupMenuItem(
             value: 'report',
             child: Row(
               children: [
@@ -1458,16 +1458,18 @@ class _PostCardState extends State<PostCard> {
               ],
             ),
           ),
-          PopupMenuItem(
-            value: 'report_user',
-            child: Row(
-              children: [
-                Icon(Icons.person_off_outlined, size: 18),
-                SizedBox(width: 8),
-                Text('إبلاغ عن الحساب'),
-              ],
+          if (widget.post['user_id'] !=
+              Supabase.instance.client.auth.currentUser!.id)
+            const PopupMenuItem(
+              value: 'report_user',
+              child: Row(
+                children: [
+                  Icon(Icons.person_off_outlined, size: 18),
+                  SizedBox(width: 8),
+                  Text('إبلاغ عن الحساب'),
+                ],
+              ),
             ),
-          ),
         ],
       )]),
       if ((widget.post['content'] ?? '').toString().isNotEmpty)
