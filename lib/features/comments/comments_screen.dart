@@ -251,7 +251,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
   }
 }
 
-class _CommentTile extends StatelessWidget {
+class _CommentTile extends StatefulWidget {
   const _CommentTile({
     required this.comment,
     required this.mine,
@@ -265,7 +265,69 @@ class _CommentTile extends StatelessWidget {
   final VoidCallback onDelete;
 
   @override
+  State<_CommentTile> createState() => _CommentTileState();
+}
+
+class _CommentTileState extends State<_CommentTile> {
+  bool _liked = false;
+  bool _likeBusy = false;
+
+  SupabaseClient get _db => Supabase.instance.client;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.comment['deleted_at'] == null) _loadLike();
+  }
+
+  Future<void> _loadLike() async {
+    try {
+      final row = await _db
+          .from('comment_likes')
+          .select('comment_id')
+          .eq('user_id', _db.auth.currentUser!.id)
+          .eq('comment_id', widget.comment['id'] as String)
+          .maybeSingle();
+      if (mounted) setState(() => _liked = row != null);
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'load_comment_like');
+    }
+  }
+
+  Future<void> _toggleLike() async {
+    if (_likeBusy || widget.comment['deleted_at'] != null) return;
+    setState(() => _likeBusy = true);
+    final userId = _db.auth.currentUser!.id;
+    final commentId = widget.comment['id'] as String;
+    try {
+      if (_liked) {
+        await _db.from('comment_likes')
+            .delete()
+            .eq('user_id', userId)
+            .eq('comment_id', commentId);
+        if (mounted) setState(() => _liked = false);
+      } else {
+        await _db.from('comment_likes').insert({
+          'user_id': userId,
+          'comment_id': commentId,
+        });
+        if (mounted) setState(() => _liked = true);
+      }
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'toggle_comment_like');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppErrorService.message(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _likeBusy = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final comment = widget.comment;
     final profile = comment['profiles'];
     final name = profile is Map
         ? (profile['display_name'] ?? profile['username'] ?? 'مستخدم NEXORA').toString()
@@ -286,11 +348,11 @@ class _CommentTile extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.w800))),
                 Text(stamp, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                if (mine && !deleted)
+                if (widget.mine && !deleted)
                   IconButton(
                     tooltip: 'حذف التعليق',
                     visualDensity: VisualDensity.compact,
-                    onPressed: onDelete,
+                    onPressed: widget.onDelete,
                     icon: const Icon(Icons.delete_outline, size: 18),
                   ),
               ],
@@ -305,13 +367,22 @@ class _CommentTile extends StatelessWidget {
               ),
             ),
             if (!deleted)
-              Align(
-                alignment: AlignmentDirectional.centerEnd,
-                child: TextButton.icon(
-                  onPressed: onReply,
-                  icon: const Icon(Icons.reply, size: 16),
-                  label: const Text('رد'),
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: _likeBusy ? null : _toggleLike,
+                    icon: _likeBusy
+                        ? const SizedBox.square(dimension: 13, child: CircularProgressIndicator(strokeWidth: 2))
+                        : Icon(_liked ? Icons.favorite : Icons.favorite_border, size: 17),
+                    label: Text(_liked ? 'أعجبك' : 'إعجاب'),
+                  ),
+                  TextButton.icon(
+                    onPressed: widget.onReply,
+                    icon: const Icon(Icons.reply, size: 16),
+                    label: const Text('رد'),
+                  ),
+                ],
               ),
           ],
         ),
