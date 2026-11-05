@@ -286,8 +286,8 @@ class _AuthScreenState extends State<AuthScreen> {
 
   Future<void> _verifyPhoneCode() async {
     final phone = _normalizedPhone;
-    final token = _otp.text.trim();
-    if (phone == null || !RegExp(r'^\d{6}$').hasMatch(token)) {
+    final token = normalizeNexoraOtp(_otp.text);
+    if (phone == null || token == null) {
       setState(() => _error = 'اكتب كود التحقق المكوّن من 6 أرقام');
       return;
     }
@@ -433,7 +433,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             prefixIcon: Icon(Icons.password),
                             counterText: '',
                           ),
-                          validator: (v) => v == null || !RegExp(r'^\d{6}$').hasMatch(v.trim())
+                          validator: (v) => normalizeNexoraOtp(v ?? '') == null
                               ? 'الكود لازم يكون 6 أرقام' : null,
                         ),
                         Align(
