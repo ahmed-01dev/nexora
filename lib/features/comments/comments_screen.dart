@@ -41,8 +41,8 @@ class _CommentsScreenState extends State<CommentsScreen> {
         .from('comments')
         .select('id,post_id,user_id,content,parent_id,created_at,edited_at,deleted_at,profiles!comments_user_id_fkey(id,username,display_name,avatar_url)')
         .eq('post_id', widget.postId)
-        .order('created_at', ascending: true)
-        .order('id', ascending: true)
+        .order('created_at', ascending: false)
+        .order('id', ascending: false)
         .range(0, _pageSize - 1);
     if (mounted) setState(() => _hasMore = rows.length == _pageSize);
     return List<Map<String, dynamic>>.from(rows);
@@ -202,11 +202,16 @@ class _CommentsScreenState extends State<CommentsScreen> {
                     ),
                   );
                 }
-                final roots = comments.where((c) => c['parent_id'] == null).toList();
+                final loadedIds = comments.map((c) => c['id']).toSet();
+                // If a reply is newer than its parent and the parent is on an older
+                // page, keep it visible at the top level until that parent is loaded.
+                final roots = comments
+                    .where((c) => c['parent_id'] == null || !loadedIds.contains(c['parent_id']))
+                    .toList();
                 final replies = <String, List<Map<String, dynamic>>>{};
                 for (final comment in comments) {
                   final parent = comment['parent_id'] as String?;
-                  if (parent != null) {
+                  if (parent != null && loadedIds.contains(parent)) {
                     (replies[parent] ??= []).add(comment);
                   }
                 }
