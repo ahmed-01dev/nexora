@@ -39,6 +39,16 @@ const _key = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: 'sb_publi
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AppErrorService.install();
+  if (!kIsWeb) {
+    try {
+      await Firebase.initializeApp();
+      FirebaseMessaging.onBackgroundMessage(
+        _nexoraFirebaseMessagingBackgroundHandler,
+      );
+    } catch (e, s) {
+      AppErrorService.report(e, s, source: 'firebase_startup');
+    }
+  }
   var ready = false;
   try {
     if (_url.startsWith('https://') && _key.isNotEmpty) {
