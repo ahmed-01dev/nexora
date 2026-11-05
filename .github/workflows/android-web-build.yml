@@ -69,20 +69,20 @@ jobs:
           text = settings.read_text(encoding="utf-8")
           plugin_line = '    id("com.google.gms.google-services") version "4.5.0" apply false'
           if 'com.google.gms.google-services' not in text:
-              match = re.search(r"plugins\\s*\\{", text)
+              match = re.search(r"plugins\s*\{", text)
               if not match:
                   raise SystemExit("Could not find plugins block in android/settings.gradle.kts")
               insert_at = match.end()
-              text = text[:insert_at] + "\\n" + plugin_line + text[insert_at:]
+              text = text[:insert_at] + "\n" + plugin_line + text[insert_at:]
               settings.write_text(text, encoding="utf-8")
 
           text = app_gradle.read_text(encoding="utf-8")
           if 'id("com.google.gms.google-services")' not in text:
-              match = re.search(r"plugins\\s*\\{", text)
+              match = re.search(r"plugins\s*\{", text)
               if not match:
                   raise SystemExit("Could not find plugins block in android/app/build.gradle.kts")
               insert_at = match.end()
-              text = text[:insert_at] + '\\n    id("com.google.gms.google-services")' + text[insert_at:]
+              text = text[:insert_at] + '\n    id("com.google.gms.google-services")' + text[insert_at:]
               app_gradle.write_text(text, encoding="utf-8")
 
           manifest = Path("android/app/src/main/AndroidManifest.xml")
@@ -91,7 +91,7 @@ jobs:
           if permission not in text:
               text = text.replace(
                   "<application",
-                  '<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\\n    <application',
+                  '<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <application',
                   1,
               )
               manifest.write_text(text, encoding="utf-8")
