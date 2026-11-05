@@ -14,10 +14,12 @@ alter table public.community_channels enable row level security;
 revoke all on public.community_channels from anon;
 grant select, insert, delete on public.community_channels to authenticated;
 
+drop policy if exists community_channels_read_members on public.community_channels;
 create policy community_channels_read_members
 on public.community_channels for select to authenticated
 using (private.is_community_member(community_id) or private.is_community_owner(community_id));
 
+drop policy if exists community_channels_create_owner on public.community_channels;
 create policy community_channels_create_owner
 on public.community_channels for insert to authenticated
 with check (
@@ -31,6 +33,7 @@ with check (
   )
 );
 
+drop policy if exists community_channels_delete_owner on public.community_channels;
 create policy community_channels_delete_owner
 on public.community_channels for delete to authenticated
 using (private.is_community_owner(community_id));
@@ -73,14 +76,17 @@ $$;
 
 revoke all on function private.sync_community_channel_members() from public, anon, authenticated;
 
+drop trigger if exists sync_community_channels_after_member_insert on public.community_members;
 create trigger sync_community_channels_after_member_insert
 after insert on public.community_members
 for each row execute function private.sync_community_channel_members();
 
+drop trigger if exists sync_community_channels_after_member_delete on public.community_members;
 create trigger sync_community_channels_after_member_delete
 after delete on public.community_members
 for each row execute function private.sync_community_channel_members();
 
+drop trigger if exists sync_community_members_after_channel_insert on public.community_channels;
 create trigger sync_community_members_after_channel_insert
 after insert on public.community_channels
 for each row execute function private.sync_community_channel_members();
