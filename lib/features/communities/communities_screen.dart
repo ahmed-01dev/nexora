@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
 import 'community_channels_screen.dart';
+import 'community_members_screen.dart';
 
 class CommunitiesScreen extends StatefulWidget {
   const CommunitiesScreen({super.key});
@@ -15,6 +16,7 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
   static const int _pageSize = 30;
   final List<Map<String, dynamic>> _communities = [];
   final Set<String> _joined = {};
+  final Map<String, String> _roles = {};
   final Set<String> _busyIds = {};
   bool _loading = true;
   bool _loadingMore = false;
@@ -35,6 +37,7 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
       _error = null;
       _communities.clear();
       _joined.clear();
+      _roles.clear();
     });
     try {
       final page = await _fetchPage(0);
@@ -68,14 +71,21 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
       final ids = page.map((row) => row['id'] as String).toList();
       final memberships = await db
           .from('community_members')
-          .select('community_id')
+          .select('community_id,user_id,role')
           .eq('user_id', uid)
           .inFilter('community_id', ids);
       final joined = memberships
           .map((row) => row['community_id'] as String)
           .toSet();
+      for (final membership in memberships) {
+        _roles[membership['community_id'] as String] =
+            membership['role'] as String;
+      }
       for (final row in page) {
-        if (row['owner_id'] == uid) joined.add(row['id'] as String);
+        if (row['owner_id'] == uid) {
+          joined.add(row['id'] as String);
+          _roles[row['id'] as String] = 'owner';
+        }
       }
       _joined.addAll(joined);
     }
@@ -121,14 +131,20 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
             .delete()
             .eq('community_id', id)
             .eq('user_id', uid);
-        if (mounted) setState(() => _joined.remove(id));
+        if (mounted) setState(() {
+          _joined.remove(id);
+          _roles.remove(id);
+        });
       } else {
         await Supabase.instance.client.from('community_members').insert({
           'community_id': id,
           'user_id': uid,
           'role': 'member',
         });
-        if (mounted) setState(() => _joined.add(id));
+        if (mounted) setState(() {
+          _joined.add(id);
+          _roles[id] = 'member';
+        });
       }
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'community_membership');
@@ -323,6 +339,8 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
                               final isOwner = community['owner_id'] ==
                                   Supabase.instance.client.auth.currentUser!.id;
                               final joined = _joined.contains(id);
+                              final role = _roles[id] ?? (isOwner ? 'owner' : 'member');
+                              final canManageChannels = isOwner || role == 'moderator';
                               final busy = _busyIds.contains(id);
                               return Card(
                                 child: Padding(
@@ -360,38 +378,47 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
                                         Text(community['description'].toString()),
                                       ],
                                       const SizedBox(height: 10),
-                                      Row(
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 6,
+                                        alignment: WrapAlignment.end,
                                         children: [
                                           if (joined || isOwner)
-                                            Expanded(
-                                              child: OutlinedButton.icon(
-                                                onPressed: () => Navigator.of(context).push(
-                                                  MaterialPageRoute<void>(
-                                                    builder: (_) => CommunityChannelsScreen(
-                                                      communityId: id,
-                                                      communityName: community['name'].toString(),
-                                                      isOwner: isOwner,
-                                                    ),
+                                            OutlinedButton.icon(
+                                              onPressed: () => Navigator.of(context).push(
+                                                MaterialPageRoute<void>(
+                                                  builder: (_) => CommunityChannelsScreen(
+                                                    communityId: id,
+                                                    communityName: community['name'].toString(),
+                                                    canManageChannels: canManageChannels,
                                                   ),
                                                 ),
-                                                icon: const Icon(Icons.forum_outlined),
-                                                label: const Text('القنوات'),
                                               ),
+                                              icon: const Icon(Icons.forum_outlined),
+                                              label: const Text('القنوات'),
                                             ),
-                                          if (joined && !isOwner) const SizedBox(width: 8),
                                           if (isOwner)
-                                            const Expanded(child: Text('أنت تدير هذا المجتمع'))
-                                          else
-                                            Expanded(
-                                              child: OutlinedButton(
-                                                onPressed: busy ? null : () => _toggleMembership(community),
-                                                child: busy
-                                                    ? const SizedBox.square(
-                                                        dimension: 16,
-                                                        child: CircularProgressIndicator(strokeWidth: 2),
-                                                      )
-                                                    : Text(joined ? 'مغادرة المجتمع' : 'انضمام'),
+                                            OutlinedButton.icon(
+                                              onPressed: () => Navigator.of(context).push(
+                                                MaterialPageRoute<void>(
+                                                  builder: (_) => CommunityMembersScreen(
+                                                    communityId: id,
+                                                    communityName: community['name'].toString(),
+                                                  ),
+                                                ),
                                               ),
+                                              icon: const Icon(Icons.manage_accounts_outlined),
+                                              label: const Text('إدارة الأعضاء'),
+                                            ),
+                                          if (!isOwner)
+                                            OutlinedButton(
+                                              onPressed: busy ? null : () => _toggleMembership(community),
+                                              child: busy
+                                                  ? const SizedBox.square(
+                                                      dimension: 16,
+                                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                                    )
+                                                  : Text(joined ? 'مغادرة المجتمع' : 'انضمام'),
                                             ),
                                         ],
                                       ),
