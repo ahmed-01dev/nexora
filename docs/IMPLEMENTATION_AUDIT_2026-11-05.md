@@ -102,3 +102,10 @@ Firebase project: nexora-20712
 - Rechecked messaging and calling implementation: text messages are explicitly stored with `encryption_mode = 'server_readable'`, and the chat UI states that end-to-end encryption is not enabled. The current dependency manifest and app source contain no WebRTC/LiveKit calling implementation; call database tables alone do not provide real voice/video calling.
 - Rechecked push delivery: `send-push-notification` remains ACTIVE version 6 with `verify_jwt=false` and explicit webhook-secret or validated-user authentication. The Vault webhook secret exists. The available connector cannot inspect Edge Function environment secrets, so the Firebase service-account secret's presence and real-device FCM delivery remain unverified.
 - Current Security Advisor still reports only the leaked-password-protection warning. The project is not production-ready; CI success does not clear the provider, E2EE, calling, real-device, integration, or release blockers.
+
+
+## Phone input validation follow-up — 2026-11-05
+- Tightened `normalizeNexoraPhone`: it now converts Arabic-Indic and Persian digits to ASCII, permits only common visual separators, and rejects embedded letters or misplaced symbols instead of silently stripping them.
+- Added unit coverage for Egyptian local numbers, international E.164 input, Arabic-Indic/Persian digits, and malformed strings.
+- Latest Flutter CI run `42090053690` completed successfully on commit `7c1e62ff0c908d7b63f30b37f653d659693cd483`; dependency installation, Analyze, and Test all passed.
+- This does not enable the Supabase Phone provider. SMS delivery remains blocked until the project owner enables Phone Auth and configures a provider; the client currently requests SMS, not WhatsApp.
