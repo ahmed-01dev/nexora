@@ -604,6 +604,9 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   late Future<Map<String, dynamic>?> _future;
   late Future<List<Map<String, dynamic>>> _postsFuture;
+  bool _postsHasMore = true;
+  bool _postsLoadingMore = false;
+  static const int _profilePostPageSize = 50;
   @override
   void initState() {
     super.initState();
@@ -614,7 +617,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final u = Supabase.instance.client.auth.currentUser!;
     return Supabase.instance.client.from('profiles').select().eq('id', u.id).maybeSingle();
   }
-  Future<List<Map<String, dynamic>>> _loadOwnPosts() async {
+  Future<List<Map<String, dynamic>>> _loadOwnPosts({int offset = 0}) async {
     final client = Supabase.instance.client;
     final userId = client.auth.currentUser!.id;
     final rows = await client
@@ -624,8 +627,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
         .isFilter('deleted_at', null)
         .order('created_at', ascending: false)
         .order('id', ascending: false)
-        .limit(50);
+        .range(offset, offset + _profilePostPageSize - 1);
+    if (mounted) setState(() => _postsHasMore = rows.length == _profilePostPageSize);
     return List<Map<String, dynamic>>.from(rows);
+  }
+
+  Future<void> _loadMoreOwnPosts(List<Map<String, dynamic>> current) async {
+    if (_postsLoadingMore || !_postsHasMore) return;
+    setState(() => _postsLoadingMore = true);
+    try {
+      final additions = await _loadOwnPosts(offset: current.length);
+      if (!mounted) return;
+      final known = current.map((post) => post['id']).toSet();
+      final unique = additions.where((post) => !known.contains(post['id']));
+      setState(() {
+        _postsFuture = Future.value([...current, ...unique]);
+        _postsLoadingMore = false;
+      });
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'profile_posts_more');
+      if (mounted) {
+        setState(() => _postsLoadingMore = false);
+        _toast(AppErrorService.message(error));
+      }
+    }
+  }
+
+  void _refreshOwnPosts() {
+    setState(() {
+      _postsHasMore = true;
+      _postsLoadingMore = false;
+      _postsFuture = _loadOwnPosts();
+    });
   }
   void _toast(String v) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(v))); }
   Future<void> _edit(Map<String, dynamic> p) async {
@@ -680,7 +713,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const Expanded(child: Text('منشوراتي', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900))),
           IconButton(
             tooltip: 'تحديث المنشورات',
-            onPressed: () => setState(() => _postsFuture = _loadOwnPosts()),
+            onPressed: _refreshOwnPosts,
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -698,7 +731,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             return AppErrorView(
               title: 'تعذر تحميل منشوراتك',
               error: postsSnapshot.error,
-              onRetry: () => setState(() => _postsFuture = _loadOwnPosts()),
+              onRetry: _refreshOwnPosts,
             );
           }
           final posts = postsSnapshot.data ?? const <Map<String, dynamic>>[];
@@ -715,12 +748,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 PostCard(post: post),
                 const SizedBox(height: 10),
               ],
-              if (posts.length == 50)
+              if (_postsLoadingMore)
                 const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
-                    'يعرض آخر 50 منشورًا حاليًا.',
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  padding: EdgeInsets.all(14),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_postsHasMore)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: OutlinedButton.icon(
+                    onPressed: () => _loadMoreOwnPosts(posts),
+                    icon: const Icon(Icons.expand_more),
+                    label: const Text('تحميل منشورات أقدم'),
                   ),
                 ),
             ],
