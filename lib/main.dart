@@ -1582,6 +1582,35 @@ class _PersonTileState extends State<PersonTile> {
         Text('@' + (p['username'] ?? 'user').toString(), style: const TextStyle(color: Color(0xFF9AA7BA), fontSize: 12)),
         if ((p['bio'] ?? '').toString().isNotEmpty) Text(p['bio'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF8996AA), fontSize: 12)),
       ])),
+      if (p['id'] != Supabase.instance.client.auth.currentUser!.id)
+        PopupMenuButton<String>(
+          tooltip: 'خيارات الحساب',
+          onSelected: (value) async {
+            if (value != 'report') return;
+            final submitted = await ReportDialog.show(
+              context,
+              targetType: 'user',
+              targetId: p['id'] as String,
+            );
+            if (submitted && mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('تم إرسال البلاغ للمراجعة')),
+              );
+            }
+          },
+          itemBuilder: (_) => const [
+            PopupMenuItem(
+              value: 'report',
+              child: Row(
+                children: [
+                  Icon(Icons.flag_outlined, size: 18),
+                  SizedBox(width: 8),
+                  Text('الإبلاغ عن الحساب'),
+                ],
+              ),
+            ),
+          ],
+        ),
       FriendRequestAction(otherUserId: p['id'] as String),
       if (widget.follow) OutlinedButton(onPressed: _busy ? null : _toggle, child: _busy ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2)) : Text(_followStatus == 'pending' ? 'إلغاء الطلب' : (_followStatus == 'accepted' ? 'إلغاء المتابعة' : 'متابعة'))),
     ])));
