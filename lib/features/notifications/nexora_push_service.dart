@@ -5,14 +5,15 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Registers real Firebase Cloud Messaging registration tokens for this account.
+/// Android FCM registration lifecycle using Firebase Installation IDs (FIDs).
 class NexoraPushService {
   NexoraPushService._();
   static final instance = NexoraPushService._();
 
   bool _started = false;
-  String? _lastFcmToken;
-  StreamSubscription<String>? _tokenRefreshSubscription;
+  String? _lastInstallationId;
+  StreamSubscription<String>? _registrationSubscription;
+  StreamSubscription<String>? _unregistrationSubscription;
 
   bool get supported => !kIsWeb &&
       defaultTargetPlatform == TargetPlatform.android &&
@@ -21,16 +22,17 @@ class NexoraPushService {
   Future<void> initialize() async {
     if (!supported || _started) return;
     _started = true;
-    _tokenRefreshSubscription =
-        FirebaseMessaging.instance.onTokenRefresh.listen(
-      (token) {
-        _lastFcmToken = token;
-        saveFcmToken(token);
-      },
-      onError: (Object error) {
-        debugPrint('NEXORA FCM token refresh failed: $error');
-      },
-    );
+    final messaging = FirebaseMessaging.instance;
+    _registrationSubscription = messaging.onRegistered.listen((fid) {
+      _lastInstallationId = fid;
+      saveInstallationId(fid);
+    }, onError: (Object error) {
+      debugPrint('NEXORA FCM registration failed: $error');
+    });
+    _unregistrationSubscription = messaging.onUnregistered.listen((fid) {
+      _lastInstallationId = null;
+      _deleteInstallationId(fid);
+    });
     await registerIfAllowed();
   }
 
@@ -47,33 +49,21 @@ class NexoraPushService {
       badge: true,
       sound: true,
     );
-    final allowed =
-        settings.authorizationStatus == AuthorizationStatus.authorized ||
-        settings.authorizationStatus == AuthorizationStatus.provisional;
-    if (!allowed) return false;
-    await registerIfAllowed();
+    if (settings.authorizationStatus != AuthorizationStatus.authorized) {
+      return false;
+    }
+    await FirebaseMessaging.instance.register();
     return true;
   }
 
   Future<void> registerIfAllowed() async {
     if (!supported || Supabase.instance.client.auth.currentUser == null) return;
-    final authorization = await status();
-    if (authorization != AuthorizationStatus.authorized &&
-        authorization != AuthorizationStatus.provisional) {
-      return;
-    }
-    try {
-      final token = await FirebaseMessaging.instance.getToken();
-      if (token == null || token.isEmpty) return;
-      _lastFcmToken = token;
-      await saveFcmToken(token);
-    } catch (error) {
-      debugPrint('NEXORA FCM token registration failed: $error');
-    }
+    if (await status() != AuthorizationStatus.authorized) return;
+    await FirebaseMessaging.instance.register();
   }
 
-  Future<void> saveFcmToken(String token) async {
-    if (!supported || token.isEmpty) return;
+  Future<void> saveInstallationId(String fid) async {
+    if (!supported || fid.isEmpty) return;
     final client = Supabase.instance.client;
     final userId = client.auth.currentUser?.id;
     if (userId == null) return;
@@ -81,39 +71,45 @@ class NexoraPushService {
       await client.from('user_devices').upsert({
         'user_id': userId,
         'platform': 'android',
-        'push_token': token,
+        'push_token': fid,
         'device_label': 'Android device',
         'last_seen_at': DateTime.now().toUtc().toIso8601String(),
       }, onConflict: 'user_id,push_token');
     } catch (error) {
-      debugPrint('NEXORA FCM token save failed: $error');
+      debugPrint('NEXORA FCM installation registration failed: $error');
     }
   }
 
-  Future<void> _deleteFcmToken(String token) async {
+  Future<void> _deleteInstallationId(String fid) async {
     final client = Supabase.instance.client;
     final userId = client.auth.currentUser?.id;
-    if (userId == null || token.isEmpty) return;
+    if (userId == null || fid.isEmpty) return;
     try {
       await client.from('user_devices').delete()
           .eq('user_id', userId)
-          .eq('push_token', token);
+          .eq('push_token', fid);
     } catch (error) {
-      debugPrint('NEXORA FCM token cleanup failed: $error');
+      debugPrint('NEXORA FCM installation cleanup failed: $error');
     }
   }
 
-  /// Remove this account's token before signing out; keep the FCM token on-device.
+  /// Remove this account's installation before signing out.
   Future<void> unregisterCurrentDevice() async {
     if (!supported) return;
-    final token = _lastFcmToken ?? await FirebaseMessaging.instance.getToken();
-    if (token != null) await _deleteFcmToken(token);
-    _lastFcmToken = null;
+    final fid = _lastInstallationId;
+    if (fid != null) await _deleteInstallationId(fid);
+    try {
+      await FirebaseMessaging.instance.unregister();
+    } catch (error) {
+      debugPrint('NEXORA FCM unregister failed: $error');
+    }
   }
 
   Future<void> dispose() async {
-    await _tokenRefreshSubscription?.cancel();
-    _tokenRefreshSubscription = null;
+    await _registrationSubscription?.cancel();
+    await _unregistrationSubscription?.cancel();
+    _registrationSubscription = null;
+    _unregistrationSubscription = null;
     _started = false;
   }
 }
