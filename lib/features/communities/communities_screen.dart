@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/app_error.dart';
 import 'community_channels_screen.dart';
 import 'community_members_screen.dart';
+import '../moderation/report_dialog.dart';
 
 class CommunitiesScreen extends StatefulWidget {
   const CommunitiesScreen({super.key});
@@ -622,6 +623,23 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
                                               ),
                                               icon: const Icon(Icons.manage_accounts_outlined),
                                               label: const Text('إدارة الأعضاء'),
+                                            ),
+                                          if (!isOwner)
+                                            OutlinedButton.icon(
+                                              onPressed: () async {
+                                                final submitted = await ReportDialog.show(
+                                                  context,
+                                                  targetType: 'community',
+                                                  targetId: id,
+                                                );
+                                                if (submitted && mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    const SnackBar(content: Text('تم إرسال البلاغ للمراجعة')),
+                                                  );
+                                                }
+                                              },
+                                              icon: const Icon(Icons.flag_outlined, size: 18),
+                                              label: const Text('إبلاغ'),
                                             ),
                                           if (!isOwner)
                                             OutlinedButton(
