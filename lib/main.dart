@@ -1684,37 +1684,16 @@ class _PersonTileState extends State<PersonTile> {
   }
 
   Future<void> _blockAccount() async {
-    final other = widget.profile['id'] as String;
-    final name =
-        (widget.profile['display_name'] ?? widget.profile['username'] ?? 'الحساب')
-            .toString();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('حظر الحساب؟'),
-        content: Text(
-          'لن يتمكن $name من بدء محادثة معك أو التفاعل معك في المساحات التي تطبق الحظر. يمكنك إلغاء الحظر من مركز الخصوصية.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('إلغاء'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('حظر'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
     try {
-      final me = Supabase.instance.client.auth.currentUser!.id;
-      await Supabase.instance.client.from('blocks').insert({
-        'blocker_id': me,
-        'blocked_id': other,
-      });
-      if (!mounted) return;
+      final blocked = await BlockAccountService.confirmAndBlock(
+        context,
+        targetUserId: widget.profile['id'] as String,
+        displayName: (widget.profile['display_name'] ??
+                widget.profile['username'] ??
+                'الحساب')
+            .toString(),
+      );
+      if (!mounted || !blocked) return;
       setState(() => _blocked = true);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('تم حظر الحساب')),
