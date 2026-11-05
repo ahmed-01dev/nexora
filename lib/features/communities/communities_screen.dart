@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
+import 'community_channels_screen.dart';
 
 class CommunitiesScreen extends StatefulWidget {
   const CommunitiesScreen({super.key});
@@ -359,11 +360,30 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
                                         Text(community['description'].toString()),
                                       ],
                                       const SizedBox(height: 10),
-                                      Align(
-                                        alignment: AlignmentDirectional.centerEnd,
-                                        child: isOwner
-                                            ? const Text('أنت تدير هذا المجتمع')
-                                            : OutlinedButton(
+                                      Row(
+                                        children: [
+                                          if (joined || isOwner)
+                                            Expanded(
+                                              child: OutlinedButton.icon(
+                                                onPressed: () => Navigator.of(context).push(
+                                                  MaterialPageRoute<void>(
+                                                    builder: (_) => CommunityChannelsScreen(
+                                                      communityId: id,
+                                                      communityName: community['name'].toString(),
+                                                      isOwner: isOwner,
+                                                    ),
+                                                  ),
+                                                ),
+                                                icon: const Icon(Icons.forum_outlined),
+                                                label: const Text('القنوات'),
+                                              ),
+                                            ),
+                                          if (joined && !isOwner) const SizedBox(width: 8),
+                                          if (isOwner)
+                                            const Expanded(child: Text('أنت تدير هذا المجتمع'))
+                                          else
+                                            Expanded(
+                                              child: OutlinedButton(
                                                 onPressed: busy ? null : () => _toggleMembership(community),
                                                 child: busy
                                                     ? const SizedBox.square(
@@ -372,6 +392,8 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
                                                       )
                                                     : Text(joined ? 'مغادرة المجتمع' : 'انضمام'),
                                               ),
+                                            ),
+                                        ],
                                       ),
                                     ],
                                   ),
