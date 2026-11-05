@@ -35,3 +35,17 @@ String? normalizeNexoraPhone(String raw) {
   }
   return null;
 }
+/// Normalizes a six-digit OTP entered with Arabic, Persian, or ASCII digits.
+String? normalizeNexoraOtp(String raw) {
+  final value = raw.trim().replaceAllMapped(
+    RegExp(r'[٠-٩۰-۹]'),
+    (match) {
+      final codePoint = match.group(0)!.runes.single;
+      final digit = codePoint >= 0x0660 && codePoint <= 0x0669
+          ? codePoint - 0x0660
+          : codePoint - 0x06F0;
+      return String.fromCharCode(0x30 + digit);
+    },
+  );
+  return RegExp(r'^\d{6}$').hasMatch(value) ? value : null;
+}
