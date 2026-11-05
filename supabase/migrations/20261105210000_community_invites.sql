@@ -18,7 +18,11 @@ create index if not exists community_invites_created_by_idx
 alter table public.community_invites enable row level security;
 revoke all on public.community_invites from public, anon, authenticated;
 
-create or replace function public.create_community_invite(
+create policy community_invites_deny_direct_access
+on public.community_invites for all to anon, authenticated
+using (false) with check (false);
+
+create or replace function private.create_community_invite_internal(
   p_community_id uuid,
   p_expires_in_hours integer default 168,
   p_max_uses integer default 10
@@ -44,7 +48,6 @@ begin
   if not private.is_community_owner(p_community_id) then
     raise exception 'Only the community owner can create invites' using errcode = '42501';
   end if;
-
   v_expires := now() + make_interval(hours => p_expires_in_hours);
   insert into public.community_invites (
     community_id, invite_code, created_by, expires_at, max_uses
@@ -55,7 +58,7 @@ begin
 end;
 $$;
 
-create or replace function public.accept_community_invite(p_invite_code uuid)
+create or replace function private.accept_community_invite_internal(p_invite_code uuid)
 returns table(community_id uuid, community_name text)
 language plpgsql
 security definer
@@ -69,7 +72,6 @@ begin
   if auth.uid() is null then
     raise exception 'Authentication required' using errcode = '42501';
   end if;
-
   select ci.* into v_invite
   from public.community_invites ci
   where ci.invite_code = p_invite_code
@@ -77,15 +79,12 @@ begin
     and ci.expires_at > now()
     and ci.use_count < ci.max_uses
   for update;
-
   if not found then
     raise exception 'Invite is invalid, expired, revoked, or fully used' using errcode = '22023';
   end if;
-
   select c.name into v_name
   from public.communities c
   where c.id = v_invite.community_id;
-
   if exists (
     select 1 from public.community_members cm
     where cm.community_id = v_invite.community_id
@@ -94,24 +93,49 @@ begin
     return query select v_invite.community_id, v_name;
     return;
   end if;
-
   insert into public.community_members (community_id, user_id, role)
   values (v_invite.community_id, auth.uid(), 'member')
   on conflict (community_id, user_id) do nothing;
   get diagnostics v_inserted = row_count;
-
   if v_inserted > 0 then
     update public.community_invites
     set use_count = use_count + 1
     where id = v_invite.id;
   end if;
-
   return query select v_invite.community_id, v_name;
 end;
 $$;
 
+revoke all on function private.create_community_invite_internal(uuid, integer, integer) from public, anon, authenticated;
+grant execute on function private.create_community_invite_internal(uuid, integer, integer) to authenticated;
+revoke all on function private.accept_community_invite_internal(uuid) from public, anon, authenticated;
+grant execute on function private.accept_community_invite_internal(uuid) to authenticated;
+
+create or replace function public.create_community_invite(
+  p_community_id uuid,
+  p_expires_in_hours integer default 168,
+  p_max_uses integer default 10
+)
+returns table(invite_code uuid, expires_at timestamptz)
+language sql
+security invoker
+set search_path = pg_catalog, public, private, auth
+as $$
+  select * from private.create_community_invite_internal(
+    p_community_id, p_expires_in_hours, p_max_uses
+  );
+$$;
+
+create or replace function public.accept_community_invite(p_invite_code uuid)
+returns table(community_id uuid, community_name text)
+language sql
+security invoker
+set search_path = pg_catalog, public, private, auth
+as $$
+  select * from private.accept_community_invite_internal(p_invite_code);
+$$;
+
 revoke all on function public.create_community_invite(uuid, integer, integer) from public, anon, authenticated;
 grant execute on function public.create_community_invite(uuid, integer, integer) to authenticated;
-
 revoke all on function public.accept_community_invite(uuid) from public, anon, authenticated;
 grant execute on function public.accept_community_invite(uuid) to authenticated;
