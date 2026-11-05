@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
+import 'moderation_appeals_screen.dart';
 
 class ModerationQueueScreen extends StatefulWidget {
   const ModerationQueueScreen({super.key, required this.role});
@@ -192,6 +193,16 @@ class _ModerationQueueScreenState extends State<ModerationQueueScreen> {
         appBar: AppBar(
           title: const Text('مركز مراجعة البلاغات'),
           actions: [
+            if (_canReview)
+              IconButton(
+                tooltip: 'مراجعة الاستئنافات',
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const ModerationAppealsScreen(),
+                  ),
+                ),
+                icon: const Icon(Icons.gavel_outlined),
+              ),
             IconButton(
               tooltip: 'تحديث',
               onPressed: _loading ? null : _loadFirstPage,
