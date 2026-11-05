@@ -478,7 +478,6 @@ class _ChatScreenState extends State<ChatScreen> {
                               PopupMenuButton<String>(
                                 tooltip: 'خيارات الرسالة',
                                 padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
                                 iconSize: 18,
                                 onSelected: (value) {
                                   if (value == 'edit') _editMessage(message);
