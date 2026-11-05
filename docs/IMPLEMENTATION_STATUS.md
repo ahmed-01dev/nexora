@@ -24,7 +24,7 @@ Status meanings:
 - [x] Save/unsave bookmarks backed by the existing `saves` table, plus a saved-posts library in the profile that reads the user's own saved posts under RLS.
 - [x] Basic follow insertion/deletion.
 - [x] Central Flutter error presentation/logging.
-- [x] Latest source-only CI run passed Flutter analysis and unit/widget tests (run 42081293244). This run did not build an APK/AAB or Web release; the release workflow remains manual-only.
+- [x] Latest source-only CI run passed Flutter analysis and unit/widget tests (run 42087865651). This run did not build an APK/AAB or Web release; the release workflow remains manual-only.
 - [x] Additive PostgreSQL foundation migration applied and verified for RLS on all newly added tables.
 - [x] Anonymous role has no SELECT privilege on the newly added social tables.
 - [x] Community-channel grants were narrowed to SELECT/INSERT/DELETE for authenticated clients; unnecessary UPDATE/TRUNCATE/REFERENCES/TRIGGER/MAINTAIN privileges were removed and verified.
