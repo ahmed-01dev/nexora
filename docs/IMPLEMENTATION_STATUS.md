@@ -33,6 +33,7 @@ Status meanings:
 - [x] Blocking either participant now revokes access to existing direct conversations through the shared membership helper; group/community conversations remain unaffected. Verified function definition and execute grants in Postgres.
 - [x] Friend-request acceptance and pending-follow acceptance now re-check mutual block state at the database boundary, preventing requests created before a block from being accepted afterward.
 - [x] Follow and friendship relationship rows are hidden from both participants while a mutual block exists; records are retained so unblocking can restore the prior relationship.
+- [x] A creator can no longer remove the other participant from a direct 1:1 conversation; self-removal remains allowed, and group/community creators retain member-management rights.
 - [x] Profile handles have a verified unique index on `lower(username)`, preventing case-only duplicate handles. Notification UPDATE grants are restricted to `read_at`; recipient, actor, type, payload, and entity metadata columns cannot be changed by authenticated clients. Verified with PostgreSQL privilege checks.
 - [x] Removed the permissive message-attachment SELECT policy that bypassed deleted-message filtering; the remaining restrictive SELECT policy requires a non-deleted message and conversation membership.
 - [x] Made image attachment MIME/10 MiB/message-type validation restrictive, so it is combined with uploader ownership, user-folder path, existing Storage object, and conversation-membership checks rather than OR-ed with them.
