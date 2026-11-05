@@ -20,82 +20,40 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
-    final client = Supabase.instance.client;
-    final userId = client.auth.currentUser!.id;
-    final memberships = await client
-        .from('conversation_members')
-        .select('conversation_id,conversations!conversation_members_conversation_id_fkey(id,conversation_type,title,created_at,last_message_at)')
-        .eq('user_id', userId)
-        .order('joined_at', ascending: false)
-        .limit(60);
-
-    final result = <Map<String, dynamic>>[];
-    final conversationIds = memberships
-        .map((membership) => membership['conversation_id'] as String)
-        .toList();
-    if (conversationIds.isEmpty) return result;
-
-    // Fetch peer profiles and latest messages in two batched queries rather
-    // than issuing two additional requests for every conversation.
-    final allMembers = await client
-        .from('conversation_members')
-        .select('conversation_id,user_id,profiles!conversation_members_user_id_fkey(id,username,display_name,avatar_url)')
-        .inFilter('conversation_id', conversationIds)
-        .neq('user_id', userId);
-
-    final peerByConversation = <String, Map<String, dynamic>>{};
-    for (final member in allMembers) {
-      final conversationId = member['conversation_id'] as String;
-      final profile = member['profiles'];
-      if (profile is Map && !peerByConversation.containsKey(conversationId)) {
-        peerByConversation[conversationId] = Map<String, dynamic>.from(profile);
-      }
-    }
-
-    final latestRows = await client
-        .from('messages')
-        .select('id,conversation_id,body,message_type,created_at,sender_id,deleted_at')
-        .inFilter('conversation_id', conversationIds)
-        .order('created_at', ascending: false)
-        .order('id', ascending: false);
-    final latestByConversation = <String, Map<String, dynamic>>{};
-    for (final message in latestRows) {
-      final conversationId = message['conversation_id'] as String;
-      latestByConversation.putIfAbsent(
-        conversationId,
-        () => Map<String, dynamic>.from(message),
-      );
-    }
-
-    for (final membership in memberships) {
-      final conversationId = membership['conversation_id'] as String;
-      final rawConversation = membership['conversations'];
-      if (rawConversation is! Map) continue;
-      final conversation = Map<String, dynamic>.from(rawConversation);
-      result.add({
-        'id': conversationId,
-        'conversation': conversation,
-        'peer': peerByConversation[conversationId] ?? <String, dynamic>{},
-        'latest': latestByConversation[conversationId],
-      });
-    }
-
-    result.sort((a, b) {
-      final ad = DateTime.tryParse(
-        (a['conversation']['last_message_at'] ??
-                a['conversation']['created_at'] ??
-                '')
-            .toString(),
-      );
-      final bd = DateTime.tryParse(
-        (b['conversation']['last_message_at'] ??
-                b['conversation']['created_at'] ??
-                '')
-            .toString(),
-      );
-      return (bd ?? DateTime(2000)).compareTo(ad ?? DateTime(2000));
-    });
-    return result;
+    final rows = await Supabase.instance.client.rpc(
+      'get_my_conversation_previews',
+    );
+    return List<Map<String, dynamic>>.from(
+      (rows as List).map((raw) {
+        final row = Map<String, dynamic>.from(raw as Map);
+        return {
+          'id': row['conversation_id'],
+          'conversation': {
+            'id': row['conversation_id'],
+            'conversation_type': row['conversation_type'],
+            'title': row['conversation_title'],
+            'created_at': row['conversation_created_at'],
+            'last_message_at': row['last_message_at'],
+          },
+          'peer': {
+            'id': row['peer_id'],
+            'username': row['peer_username'],
+            'display_name': row['peer_display_name'],
+            'avatar_url': row['peer_avatar_url'],
+          },
+          'latest': row['latest_message_id'] == null
+              ? null
+              : {
+                  'id': row['latest_message_id'],
+                  'body': row['latest_body'],
+                  'message_type': row['latest_message_type'],
+                  'created_at': row['latest_created_at'],
+                  'sender_id': row['latest_sender_id'],
+                  'deleted_at': row['latest_deleted_at'],
+                },
+        };
+      }),
+    );
   }
 
   Future<void> _refresh() async {
