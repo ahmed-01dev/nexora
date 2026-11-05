@@ -17,6 +17,7 @@ import 'features/search/hashtag_service.dart';
 import 'features/communities/communities_screen.dart';
 import 'features/moderation/report_dialog.dart';
 import 'features/moderation/moderation_queue_screen.dart';
+import 'features/moderation/my_moderation_screen.dart';
 
 final _url = String.fromEnvironment('SUPABASE_URL').trim();
 const _key = String.fromEnvironment('SUPABASE_ANON_KEY');
@@ -1053,6 +1054,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           icon: const Icon(Icons.gavel_outlined),
         );
       },
+    ),
+    IconButton(
+      tooltip: 'إجراءاتي والاستئنافات',
+      onPressed: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const MyModerationScreen(),
+        ),
+      ),
+      icon: const Icon(Icons.gavel_outlined),
     ),
     IconButton(tooltip: 'مركز الخصوصية', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PrivacySettingsScreen())), icon: const Icon(Icons.shield_outlined)), IconButton(tooltip: 'تسجيل الخروج', onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout))]), body: FutureBuilder<Map<String, dynamic>?>(future: _future, builder: (context, snap) {
     if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
