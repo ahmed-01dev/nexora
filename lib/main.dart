@@ -667,12 +667,56 @@ class _PostCardState extends State<PostCard> {
   bool _reposted = false;
   String? _repostId;
   bool _repostBusy = false;
+  bool _saved = false;
+  bool _saveBusy = false;
 
   @override
   void initState() {
     super.initState();
     _loadLikeState();
     _loadRepostState();
+    _loadSavedState();
+  }
+
+  Future<void> _loadSavedState() async {
+    try {
+      final uid = Supabase.instance.client.auth.currentUser!.id;
+      final row = await Supabase.instance.client
+          .from('saves')
+          .select('post_id')
+          .eq('user_id', uid)
+          .eq('post_id', widget.post['id'] as String)
+          .maybeSingle();
+      if (mounted) setState(() => _saved = row != null);
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'load_saved_state');
+    }
+  }
+
+  Future<void> _toggleSave() async {
+    if (_saveBusy) return;
+    setState(() => _saveBusy = true);
+    final db = Supabase.instance.client;
+    final uid = db.auth.currentUser!.id;
+    final postId = widget.post['id'] as String;
+    try {
+      if (_saved) {
+        await db.from('saves').delete().eq('user_id', uid).eq('post_id', postId);
+        if (mounted) setState(() => _saved = false);
+      } else {
+        await db.from('saves').insert({'user_id': uid, 'post_id': postId});
+        if (mounted) setState(() => _saved = true);
+      }
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'toggle_save');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppErrorService.message(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saveBusy = false);
+    }
   }
 
   Future<void> _loadRepostState() async {
@@ -801,6 +845,13 @@ class _PostCardState extends State<PostCard> {
               ? const SizedBox.square(dimension: 14, child: CircularProgressIndicator(strokeWidth: 2))
               : Icon(_reposted ? Icons.repeat_on : Icons.repeat, color: _reposted ? const Color(0xFFB8E986) : null),
           label: Text(_reposted ? 'أعدت النشر' : 'إعادة نشر'),
+        ),
+        IconButton(
+          tooltip: _saved ? 'إزالة من المحفوظات' : 'حفظ المنشور',
+          onPressed: _saveBusy ? null : _toggleSave,
+          icon: _saveBusy
+              ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : Icon(_saved ? Icons.bookmark : Icons.bookmark_border),
         ),
         const Spacer(),
         TextButton.icon(
