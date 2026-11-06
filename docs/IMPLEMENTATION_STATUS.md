@@ -291,3 +291,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Additional expired-session hardening across blocked accounts, community channels/members, friendship requests, messaging, and moderation views: async loads now fail through their error states or return safely, create/unblock actions stop without a current user, and build methods no longer force-unwrap the active user ID.
 
 - Followers/following page reads now verify that the authenticated user is unchanged after the database request; results fetched for a previous account are discarded instead of entering the current list. Device-level account-switch and multi-user RLS tests remain pending.
+
+- Community-channel loading and creation now handle expired sessions without null assertions or undefined UI helpers. Channel reads discard results after a viewer change; creation rechecks the owner between conversation/member/channel writes and only attempts rollback under the original owner. A session switch after a partial insert may leave a server-side orphan requiring reconciliation; authenticated device tests remain pending.
