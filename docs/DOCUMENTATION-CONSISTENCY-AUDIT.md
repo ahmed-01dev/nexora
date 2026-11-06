@@ -258,3 +258,18 @@ No function definition, grant, schema privilege, or API setting was changed.
 Static source review found that the account screen called `Supabase.auth.signOut()` directly even though `_signOutNexora()` already existed to remove the current user's FID row from `user_devices` and unregister Firebase Messaging before signing out. That bypass could leave an old account's device row behind when the same installation changes accounts.
 
 The work branch now routes the account-screen logout button through `_signOutNexora`. A source re-read confirmed the direct logout call was removed from that screen and the helper is now referenced by the UI. The device service's deletion is still best-effort (it catches network/database errors), so offline logout and rapid multi-account switching need an explicit product policy and authenticated integration test. No database change was made.
+
+### Follow graph UI and live authorization review — 2026-11-06
+
+- Added a paged incoming follow-request inbox and a directional accepted-followers/following list. The lists use the existing `follows` foreign keys and keep embedded profile reads subject to ordinary profile RLS; hidden private profiles are represented without exposing their details.
+- Read-only live policy inspection confirmed the `follows` SELECT policy exposes edges only to their two participants and excludes mutual blocks. The UPDATE policy permits only the recipient to transition their own incoming row from pending to accepted and rechecks block state. Authenticated has column-level UPDATE on `status`, not table-wide UPDATE or UPDATE on either ownership column.
+- The friend-request UI's dynamic dispatcher was checked against live RPCs. `public.decline_friend_request(uuid)` exists as an authenticated-only SECURITY INVOKER wrapper; its private SECURITY DEFINER helper checks `auth.uid()` against the pending request addressee, uses an empty search path, and denies anon/PUBLIC execution.
+- The current follow-request backend has no recipient-side decline operation; the follow inbox intentionally offers accept only and does not issue an unauthorized delete or fabricate a decline RPC.
+- Static Flutter-to-live-schema review is recorded in `docs/API.md`: 18 distinct RPC names across 20 call sites (19 literal plus one dynamic dispatcher), 31 literal table names, and no mismatches in the reviewed select projections, write keys, or filter/order column references. These checks do not replace authenticated integration tests.
+
+### Android preview Firebase configuration and platform inventory — 2026-11-06
+
+- The Android preview workflow generates the Flutter 3.47.9 Kotlin-DSL Android platform when absent and copies `firebase/android/google-services.json` into the app module. It now also declares Google Services Gradle plugin 4.5.0 in settings and applies it in the app module, then verifies the generated `applicationId` matches the Firebase config package.
+- The workflow change was checked against the official Flutter 3.47.9 template and Firebase Android setup documentation; the script logic was simulated. No Android project was generated and no Gradle/APK build was run.
+- The checked-in Firebase package remains `com.example.nexora`, which is placeholder-style and must be replaced with the final unique package plus matching Firebase registration before public release.
+- Repository-tree review confirms no committed `android/` or `web/` platform directory and no Web release workflow. Documentation was corrected to describe Android scaffold generation and the missing Web scaffold accurately. No workflow was dispatched and no APK/AAB/Web artifact was produced.
