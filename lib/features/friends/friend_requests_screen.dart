@@ -12,6 +12,7 @@ class FriendRequestsScreen extends StatefulWidget {
 
 class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
   late Future<Map<String, List<Map<String, dynamic>>>> _future;
+  final Set<String> _busyIds = {};
 
   @override
   void initState() {
@@ -41,6 +42,8 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
   }
 
   Future<void> _act(String function, String id) async {
+    if (_busyIds.contains(id)) return;
+    setState(() => _busyIds.add(id));
     try {
       await Supabase.instance.client.rpc(function, params: {'p_request_id': id});
       if (mounted) setState(() => _future = _load());
@@ -51,6 +54,8 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
           SnackBar(content: Text(AppErrorService.message(error))),
         );
       }
+    } finally {
+      if (mounted) setState(() => _busyIds.remove(id));
     }
   }
 
@@ -89,6 +94,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
                     _FriendRequestTile(
                       row: row,
                       incoming: true,
+                      busy: _busyIds.contains(row['id']),
                       onAccept: () => _act('accept_friend_request', row['id'] as String),
                       onDecline: () => _act('decline_friend_request', row['id'] as String),
                     ),
@@ -101,6 +107,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
                     _FriendRequestTile(
                       row: row,
                       incoming: false,
+                      busy: _busyIds.contains(row['id']),
                       onDecline: () => _act('cancel_friend_request', row['id'] as String),
                     ),
                 ],
@@ -119,19 +126,24 @@ class _FriendRequestTile extends StatelessWidget {
     required this.incoming,
     required this.onDecline,
     this.onAccept,
+    this.busy = false,
   });
 
   final Map<String, dynamic> row;
   final bool incoming;
   final VoidCallback onDecline;
   final VoidCallback? onAccept;
+  final bool busy;
 
   @override
   Widget build(BuildContext context) {
     final profile = row['profiles'] is Map
         ? Map<String, dynamic>.from(row['profiles'] as Map)
         : <String, dynamic>{};
-    final name = (profile['display_name'] ?? profile['username'] ?? 'مستخدم').toString();
+    final profileHidden = profile.isEmpty;
+    final name = profileHidden
+        ? 'حساب خاص'
+        : (profile['display_name'] ?? profile['username'] ?? 'مستخدم').toString();
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -144,21 +156,28 @@ class _FriendRequestTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(name, style: const TextStyle(fontWeight: FontWeight.w800)),
-                  Text('@${profile['username'] ?? 'user'}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  Text(profileHidden ? 'الملف الشخصي غير متاح' : '@${profile['username'] ?? 'user'}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
                 ],
               ),
             ),
-            if (incoming)
+            if (busy)
+              const SizedBox.square(
+                dimension: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else ...[
+              if (incoming)
+                IconButton(
+                  tooltip: 'قبول',
+                  onPressed: onAccept,
+                  icon: const Icon(Icons.check_circle_outline),
+                ),
               IconButton(
-                tooltip: 'قبول',
-                onPressed: onAccept,
-                icon: const Icon(Icons.check_circle_outline),
+                tooltip: incoming ? 'رفض' : 'إلغاء الطلب',
+                onPressed: onDecline,
+                icon: Icon(incoming ? Icons.close : Icons.cancel_outlined),
               ),
-            IconButton(
-              tooltip: incoming ? 'رفض' : 'إلغاء الطلب',
-              onPressed: onDecline,
-              icon: Icon(incoming ? Icons.close : Icons.cancel_outlined),
-            ),
+            ],
           ],
         ),
       ),
