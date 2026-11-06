@@ -200,3 +200,7 @@ The inbox uses a request-generation guard for first-page, refresh, and load-more
 ### Authentication runtime trigger evidence — 2026-11-06
 
 A read-only live catalog inspection confirmed the `auth.users` AFTER INSERT trigger `on_auth_user_created` invokes `public.handle_new_user()`. The function is SECURITY DEFINER with an empty search path and inserts the new auth UUID plus a generated `user_<uuid-without-hyphens>` username and `raw_user_meta_data.display_name` into `public.profiles`. This supports both phone OTP and email signup metadata paths at the database-trigger level. It does not prove the Supabase Phone provider/SMS vendor is enabled, that an SMS can be delivered, or that signup completes on a physical device. The current Flutter channel is SMS only; WhatsApp OTP is not implemented/configured.
+
+## Live RPC signature and authorization audit
+
+The current client-side RPC call names and argument signatures have been matched against the deployed PostgreSQL catalog. See [`RPC-CONTRACT-TRACEABILITY.md`](RPC-CONTRACT-TRACEABILITY.md) for the 17-function mapping, authenticated-only EXECUTE evidence, and the corresponding SECURITY DEFINER helper authorization checks. This is a read-only contract audit; it does not replace authenticated integration tests.
