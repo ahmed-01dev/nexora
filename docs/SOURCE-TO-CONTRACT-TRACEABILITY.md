@@ -56,7 +56,7 @@
 
 | Concern | Source location | Observed operation | Evidence boundary |
 |---|---|---|---|
-| Device registration | `lib/features/notifications/nexora_push_service.dart` | Firebase Messaging registration; upsert/delete `user_devices` | Device token lifecycle exists in source; actual device registration needs platform/provider testing |
+| Device registration and sign-out cleanup | `lib/features/notifications/nexora_push_service.dart`; `lib/main.dart` | Firebase Messaging FID registration; upsert/delete `user_devices`; sign-out now calls `_signOutNexora` to delete the current user's device row before Supabase sign-out | Cleanup is best-effort because the service catches deletion failures; stale-row behavior under offline logout still needs a deliberate policy and multi-account test |
 | Notification preferences | `lib/features/notifications/notification_preferences_screen.dart` | `notification_preferences` | Preference UI/client data path exists |
 | Notification feed | `lib/features/notifications/notifications_screen.dart` | RPC `get_my_notification_page`; `notifications` read state | In-app list path exists; not proof of successful push delivery |
 | Push Edge Function | `supabase/functions/send-push-notification/index.ts` | Reads Supabase and Firebase secrets, validates bearer/webhook path, checks preferences/devices, calls FCM HTTP v1 | Function source exists; runtime secret presence, webhook authentication configuration, FCM response handling and device delivery require deployment tests |
