@@ -219,3 +219,7 @@ Read-only catalog checks also confirmed that `public.community_channels`, `publi
 ### Live RLS and Storage baseline
 
 Read-only catalog checks found RLS enabled on all 38 ordinary `public` tables and the 1 ordinary `private` table. The `nexora-media` bucket is private, has a 50 MiB object limit, and allows a wider MIME set than the restrictive message-attachment policy. Selected live policies enforce post visibility/block checks, story visibility, non-deleted message attachment reads, image-only message attachment inserts up to 10 MiB, denied direct invite-table access, and owner-only nearby-location rows. This is a policy-definition review, not authenticated integration testing.
+
+### Live push Edge Function parity
+
+Supabase reports `send-push-notification` as ACTIVE version 6 with `verify_jwt = false`. The deployed `index.ts` content was fetched read-only and compared with `main/supabase/functions/send-push-notification/index.ts`; the files match exactly (7,677 characters). The function performs its own authentication: trusted webhook-secret path or bearer-token `auth.getUser` path, with the user path restricted to notifications where the caller is the actor. Flutter uses Firebase Messaging `onRegistered` to obtain a Firebase Installation ID (FID), stores it in `user_devices.push_token`, and the Edge Function sends with FCM HTTP v1 `message.fid`, which matches the FID registration model. Secret values and actual device delivery were not tested.
