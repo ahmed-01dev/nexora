@@ -22,9 +22,15 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
-    final rows = await Supabase.instance.client.rpc(
-      'get_my_conversation_previews',
-    );
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) {
+      throw StateError('انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
+    }
+    final rows = await client.rpc('get_my_conversation_previews');
+    if (client.auth.currentUser?.id != userId) {
+      throw StateError('تغير الحساب أثناء تحميل المحادثات.');
+    }
     return List<Map<String, dynamic>>.from(
       (rows as List).map((raw) {
         final row = Map<String, dynamic>.from(raw as Map);
@@ -71,22 +77,30 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Future<void> _newMessage() async {
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('انتهت جلسة الدخول. سجّل الدخول مرة تانية.')),
+      );
+      return;
+    }
     final profile = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (_) => const _NewConversationSheet(),
     );
-    if (!mounted || profile == null) return;
+    if (!mounted || profile == null || client.auth.currentUser?.id != userId) return;
 
     try {
-      final conversationId = await Supabase.instance.client.rpc(
+      final conversationId = await client.rpc(
         'create_direct_conversation',
         params: {'p_other_user_id': profile['id']},
       );
-      if (!mounted) return;
+      if (!mounted || client.auth.currentUser?.id != userId) return;
       await _refresh();
-      if (!mounted) return;
+      if (!mounted || client.auth.currentUser?.id != userId) return;
       Navigator.of(context).push(MaterialPageRoute<void>(
         builder: (_) => ChatScreen(
           conversationId: conversationId.toString(),
@@ -105,6 +119,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   void _open(Map<String, dynamic> item) {
+    if (Supabase.instance.client.auth.currentUser == null) return;
     final peer = item['peer'] as Map<String, dynamic>;
     final conversation = item['conversation'] as Map<String, dynamic>;
     final title = conversation['conversation_type'] == 'group'
