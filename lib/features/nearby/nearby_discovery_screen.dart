@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/theme/nexora_theme.dart';
+
 import '../../core/app_error.dart';
 import '../messaging/messages_screen.dart';
 import 'nearby_distance_band.dart';
@@ -19,6 +21,7 @@ class _NearbyDiscoveryScreenState extends State<NearbyDiscoveryScreen> {
   bool _busy = false;
   bool _enabled = false;
   String? _error;
+  String? _loadedUserId;
   List<Map<String, dynamic>> _people = const [];
 
   @override
@@ -30,9 +33,17 @@ class _NearbyDiscoveryScreenState extends State<NearbyDiscoveryScreen> {
   Future<void> _loadStatus() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final result = await Supabase.instance.client.rpc('my_nearby_presence_enabled');
+      final client = Supabase.instance.client;
+      final userId = client.auth.currentUser?.id;
+      if (userId == null) throw StateError('انتهت جلسة الدخول.');
+      final result = await client.rpc('my_nearby_presence_enabled');
+      if (client.auth.currentUser?.id != userId) {
+        if (mounted) setState(() { _loading = false; _error = 'تغير الحساب. أعد تحميل اكتشاف الأشخاص القريبين.'; });
+        return;
+      }
       final enabled = result == true;
       if (!mounted) return;
+      _loadedUserId = userId;
       setState(() { _enabled = enabled; _loading = false; });
       if (enabled) await _loadPeople();
     } catch (error, stack) {
@@ -43,11 +54,16 @@ class _NearbyDiscoveryScreenState extends State<NearbyDiscoveryScreen> {
 
   Future<void> _loadPeople() async {
     try {
-      final rows = await Supabase.instance.client.rpc(
+      final client = Supabase.instance.client;
+      final userId = client.auth.currentUser?.id;
+      if (userId == null || userId != _loadedUserId) {
+        throw StateError('تغير الحساب. حدّث اكتشاف الأشخاص القريبين.');
+      }
+      final rows = await client.rpc(
         'find_nearby_people',
         params: {'p_limit': 50},
       );
-      if (!mounted) return;
+      if (!mounted || client.auth.currentUser?.id != userId) return;
       setState(() => _people = List<Map<String, dynamic>>.from(rows as List));
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'nearby_people');
@@ -55,15 +71,39 @@ class _NearbyDiscoveryScreenState extends State<NearbyDiscoveryScreen> {
     }
   }
 
+  String _nearbyErrorMessage(Object error) {
+    final detail = error.toString();
+    if (detail.contains('فعّل خدمة الموقع')) {
+      return 'خدمة الموقع مقفولة. فعّلها من إعدادات الجهاز وحاول تاني.';
+    }
+    if (detail.contains('لازم تسمح بإذن الموقع')) {
+      return 'لازم تسمح بإذن الموقع أثناء استخدام التطبيق لتشغيل اكتشاف الأشخاص القريبين.';
+    }
+    if (detail.contains('إذن الموقع مرفوض نهائيًا')) {
+      return 'إذن الموقع مرفوض نهائيًا. افتح إعدادات التطبيق واسمح بالموقع، ثم ارجع وحاول تاني.';
+    }
+    if (detail.contains('Location service') ||
+        detail.contains('location permissions')) {
+      return 'تعذر الوصول للموقع. راجع خدمة الموقع والأذونات وحاول تاني.';
+    }
+    return AppErrorService.message(error);
+  }
+
   Future<void> _setEnabled(bool value) async {
     if (_busy) return;
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null || userId != _loadedUserId) {
+      setState(() => _error = 'تغير الحساب. أعد تحميل اكتشاف الأشخاص القريبين.');
+      return;
+    }
     setState(() { _busy = true; _error = null; });
     try {
       if (!value) {
-        await Supabase.instance.client.rpc('update_my_nearby_presence', params: {
+        await client.rpc('update_my_nearby_presence', params: {
           'p_latitude': null, 'p_longitude': null, 'p_enabled': false,
         });
-        if (!mounted) return;
+        if (!mounted || client.auth.currentUser?.id != userId) return;
         setState(() { _enabled = false; _people = const []; });
         return;
       }
@@ -87,17 +127,18 @@ class _NearbyDiscoveryScreenState extends State<NearbyDiscoveryScreen> {
           timeLimit: Duration(seconds: 20),
         ),
       );
-      await Supabase.instance.client.rpc('update_my_nearby_presence', params: {
+      if (client.auth.currentUser?.id != userId) return;
+      await client.rpc('update_my_nearby_presence', params: {
         'p_latitude': position.latitude,
         'p_longitude': position.longitude,
         'p_enabled': true,
       });
-      if (!mounted) return;
+      if (!mounted || client.auth.currentUser?.id != userId) return;
       setState(() => _enabled = true);
       await _loadPeople();
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'nearby_toggle');
-      if (mounted) setState(() => _error = AppErrorService.message(error));
+      if (mounted) setState(() => _error = _nearbyErrorMessage(error));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -110,12 +151,15 @@ class _NearbyDiscoveryScreenState extends State<NearbyDiscoveryScreen> {
   }
 
   Future<void> _messagePerson(Map<String, dynamic> person) async {
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null || userId != _loadedUserId) return;
     try {
-      final conversationId = await Supabase.instance.client.rpc(
+      final conversationId = await client.rpc(
         'create_direct_conversation',
         params: {'p_other_user_id': person['id']},
       );
-      if (!mounted) return;
+      if (!mounted || client.auth.currentUser?.id != userId) return;
       await Navigator.of(context).push(MaterialPageRoute<void>(
         builder: (_) => ChatScreen(
           conversationId: conversationId.toString(),
@@ -124,7 +168,7 @@ class _NearbyDiscoveryScreenState extends State<NearbyDiscoveryScreen> {
       ));
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'nearby_start_conversation');
-      if (!mounted) return;
+      if (!mounted || client.auth.currentUser?.id != userId) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppErrorService.message(error))),
       );
@@ -132,7 +176,11 @@ class _NearbyDiscoveryScreenState extends State<NearbyDiscoveryScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final viewerChanged = currentUserId == null ||
+        (_loadedUserId != null && currentUserId != _loadedUserId);
+    return Scaffold(
     appBar: AppBar(
       title: const Text('الأشخاص القريبون'),
       actions: [
@@ -143,7 +191,9 @@ class _NearbyDiscoveryScreenState extends State<NearbyDiscoveryScreen> {
         ),
       ],
     ),
-    body: _loading
+    body: viewerChanged
+      ? Center(child: TextButton(onPressed: _loadStatus, child: const Text('تغير الحساب. أعد تحميل اكتشاف الأشخاص القريبين.')))
+      : _loading
       ? const Center(child: CircularProgressIndicator())
       : ListView(
           padding: const EdgeInsets.all(16),
@@ -168,7 +218,7 @@ class _NearbyDiscoveryScreenState extends State<NearbyDiscoveryScreen> {
             ),
             if (_error != null) ...[
               const SizedBox(height: 12),
-              Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+              Text(_error!, style: const TextStyle(color: NexoraColors.danger)),
               TextButton(onPressed: _loadStatus, child: const Text('إعادة المحاولة')),
             ],
             if (_enabled && !_busy) ...[
@@ -201,4 +251,5 @@ class _NearbyDiscoveryScreenState extends State<NearbyDiscoveryScreen> {
           ],
         ),
   );
+  }
 }

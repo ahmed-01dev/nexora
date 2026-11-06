@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/theme/nexora_theme.dart';
+
 import '../../core/app_error.dart';
 import '../messaging/messages_screen.dart';
 
@@ -38,13 +40,26 @@ class _CommunityChannelsScreenState extends State<CommunityChannelsScreen> {
       _error = null;
     });
     try {
-      final rows = await Supabase.instance.client
+      final client = Supabase.instance.client;
+      final userId = client.auth.currentUser?.id;
+      if (userId == null) {
+        throw StateError('انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
+      }
+      final rows = await client
           .from('community_channels')
           .select('id,conversation_id,name,slug,created_at')
           .eq('community_id', widget.communityId)
           .order('created_at')
           .order('id');
       if (!mounted) return;
+      if (client.auth.currentUser?.id != userId) {
+        setState(() {
+          _channels = [];
+          _error = 'تغير الحساب أثناء تحميل القنوات.';
+          _loading = false;
+        });
+        return;
+      }
       setState(() {
         _channels = List<Map<String, dynamic>>.from(rows);
         _loading = false;
@@ -92,7 +107,7 @@ class _CommunityChannelsScreenState extends State<CommunityChannelsScreen> {
                   decoration: const InputDecoration(labelText: 'معرّف القناة بالإنجليزية'),
                 ),
                 if (validation != null)
-                  Text(validation!, style: const TextStyle(color: Colors.redAccent)),
+                  Text(validation!, style: const TextStyle(color: NexoraColors.danger)),
               ],
             ),
             actions: [
@@ -122,9 +137,15 @@ class _CommunityChannelsScreenState extends State<CommunityChannelsScreen> {
       },
     );
     if (result == null || !mounted || _creating) return;
-    setState(() => _creating = true);
     final db = Supabase.instance.client;
-    final uid = db.auth.currentUser!.id;
+    final uid = db.auth.currentUser?.id;
+    if (uid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('انتهت جلسة الدخول. سجّل الدخول مرة تانية.')),
+      );
+      return;
+    }
+    setState(() => _creating = true);
     String? conversationId;
     try {
       final conversation = await db.from('conversations').insert({
@@ -133,11 +154,17 @@ class _CommunityChannelsScreenState extends State<CommunityChannelsScreen> {
         'title': '${widget.communityName} · ${result['name']}',
       }).select('id').single();
       conversationId = conversation['id'] as String;
+      if (db.auth.currentUser?.id != uid) {
+        throw StateError('تغير الحساب أثناء إنشاء القناة.');
+      }
       await db.from('conversation_members').insert({
         'conversation_id': conversationId,
         'user_id': uid,
         'role': 'owner',
       });
+      if (db.auth.currentUser?.id != uid) {
+        throw StateError('تغير الحساب أثناء إنشاء القناة.');
+      }
       await db.from('community_channels').insert({
         'community_id': widget.communityId,
         'conversation_id': conversationId,
@@ -145,10 +172,13 @@ class _CommunityChannelsScreenState extends State<CommunityChannelsScreen> {
         'slug': result['slug'],
         'created_by': uid,
       });
+      if (db.auth.currentUser?.id != uid) {
+        throw StateError('تغير الحساب أثناء إنشاء القناة.');
+      }
       await _load();
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'community_channel_create');
-      if (conversationId != null) {
+      if (conversationId != null && db.auth.currentUser?.id == uid) {
         try {
           await db.from('conversations').delete().eq('id', conversationId);
         } catch (cleanupError, cleanupStack) {

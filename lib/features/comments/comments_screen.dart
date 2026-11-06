@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/theme/nexora_theme.dart';
+
 import '../../core/app_error.dart';
 import '../moderation/report_dialog.dart';
 
@@ -20,10 +22,11 @@ class _CommentsScreenState extends State<CommentsScreen> {
   bool _sending = false;
   bool _hasMore = true;
   bool _loadingMore = false;
+  int _nextOffset = 0;
+  int _requestGeneration = 0;
   static const int _pageSize = 100;
 
   SupabaseClient get _db => Supabase.instance.client;
-  String get _myId => _db.auth.currentUser!.id;
 
   @override
   void initState() {
@@ -37,51 +40,75 @@ class _CommentsScreenState extends State<CommentsScreen> {
     super.dispose();
   }
 
-  Future<List<Map<String, dynamic>>> _load() async {
+  Future<List<Map<String, dynamic>>> _load({int offset = 0}) async {
+    final generation = ++_requestGeneration;
     final rows = await _db
         .from('comments')
         .select('id,post_id,user_id,content,parent_id,created_at,edited_at,deleted_at,profiles!comments_user_id_fkey(id,username,display_name,avatar_url)')
         .eq('post_id', widget.postId)
         .order('created_at', ascending: false)
         .order('id', ascending: false)
-        .range(0, _pageSize - 1);
-    if (mounted) setState(() => _hasMore = rows.length == _pageSize);
+        .range(offset, offset + _pageSize - 1);
+    if (mounted && generation == _requestGeneration) {
+      setState(() {
+        _hasMore = rows.length == _pageSize;
+        _nextOffset = offset + rows.length;
+      });
+    }
     return List<Map<String, dynamic>>.from(rows);
   }
 
   Future<void> _loadMore(List<Map<String, dynamic>> current) async {
     if (_loadingMore || !_hasMore) return;
+    final generation = _requestGeneration;
+    final offset = _nextOffset;
     setState(() => _loadingMore = true);
     try {
       final rows = await _db
           .from('comments')
           .select('id,post_id,user_id,content,parent_id,created_at,edited_at,deleted_at,profiles!comments_user_id_fkey(id,username,display_name,avatar_url)')
           .eq('post_id', widget.postId)
-          .order('created_at', ascending: true)
-          .order('id', ascending: true)
-          .range(current.length, current.length + _pageSize - 1);
-      if (!mounted) return;
+          .order('created_at', ascending: false)
+          .order('id', ascending: false)
+          .range(offset, offset + _pageSize - 1);
+      if (!mounted || generation != _requestGeneration) return;
       final knownIds = current.map((comment) => comment['id']).toSet();
       final additions = List<Map<String, dynamic>>.from(rows)
           .where((comment) => !knownIds.contains(comment['id']))
           .toList();
       setState(() {
         _future = Future.value([...current, ...additions]);
+        _nextOffset = offset + rows.length;
         _hasMore = rows.length == _pageSize;
         _loadingMore = false;
       });
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'load_more_comments');
-      if (mounted) {
+      if (mounted && generation == _requestGeneration) {
         setState(() => _loadingMore = false);
         _notice(AppErrorService.message(error));
+      }
+    } finally {
+      if (mounted && generation == _requestGeneration && _loadingMore) {
+        setState(() => _loadingMore = false);
       }
     }
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = _load());
-    await _future;
+    if (!mounted) return;
+    final next = _load();
+    setState(() {
+      _nextOffset = 0;
+      _loadingMore = false;
+      _future = next;
+    });
+    try {
+      await next;
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'comments_refresh');
+      // FutureBuilder owns the visible error state; resolve pull-to-refresh.
+    }
   }
 
   Future<void> _send() async {
@@ -91,21 +118,26 @@ class _CommentsScreenState extends State<CommentsScreen> {
       _notice('التعليق لازم يكون أقل من 2000 حرف.');
       return;
     }
+    final userId = _db.auth.currentUser?.id;
+    if (userId == null) {
+      _notice('انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
+      return;
+    }
     setState(() => _sending = true);
     try {
       await _db.from('comments').insert({
         'post_id': widget.postId,
-        'user_id': _myId,
+        'user_id': userId,
         'content': content,
         'parent_id': _replyTo,
       });
+      if (!mounted) return;
       _composer.clear();
       setState(() {
         _replyTo = null;
         _replyName = null;
-        _future = _load();
       });
-      await _future;
+      await _refresh();
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'create_comment');
       _notice(AppErrorService.message(error));
@@ -149,6 +181,11 @@ class _CommentsScreenState extends State<CommentsScreen> {
       _notice('التعليق لازم يكون من حرف إلى 2000 حرف.');
       return;
     }
+    final userId = _db.auth.currentUser?.id;
+    if (userId == null) {
+      _notice('انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
+      return;
+    }
     try {
       await _db
           .from('comments')
@@ -157,7 +194,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
             'edited_at': DateTime.now().toUtc().toIso8601String(),
           })
           .eq('id', comment['id'] as String)
-          .eq('user_id', _myId);
+          .eq('user_id', userId);
       await _refresh();
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'edit_comment');
@@ -186,9 +223,14 @@ class _CommentsScreenState extends State<CommentsScreen> {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
+    final userId = _db.auth.currentUser?.id;
+    if (userId == null) {
+      _notice('انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
+      return;
+    }
     try {
-      await _db.from('comments').update({'deleted_at': DateTime.now().toUtc().toIso8601String()}).eq('id', comment['id'] as String).eq('user_id', _myId);
+      await _db.from('comments').update({'deleted_at': DateTime.now().toUtc().toIso8601String()}).eq('id', comment['id'] as String).eq('user_id', userId);
       await _refresh();
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'delete_comment');
@@ -216,8 +258,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
       child: Column(
         children: [
           _CommentTile(
+            key: ValueKey(comment['id']),
             comment: comment,
-            mine: comment['user_id'] == _myId,
+            mine: comment['user_id'] == _db.auth.currentUser?.id,
             onReply: () => setState(() {
               _replyTo = comment['id'] as String;
               _replyName = name;
@@ -316,7 +359,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   if (_replyTo != null)
                     Row(
                       children: [
-                        Expanded(child: Text('الرد على $_replyName', style: const TextStyle(fontSize: 12, color: Colors.grey))),
+                        Expanded(child: Text('الرد على $_replyName', style: const TextStyle(fontSize: 12, color: NexoraColors.textMuted))),
                         IconButton(
                           tooltip: 'إلغاء الرد',
                           onPressed: () => setState(() { _replyTo = null; _replyName = null; }),
@@ -364,6 +407,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
 class _CommentTile extends StatefulWidget {
   const _CommentTile({
+    super.key,
     required this.comment,
     required this.mine,
     required this.onReply,
@@ -397,10 +441,12 @@ class _CommentTileState extends State<_CommentTile> {
 
   Future<void> _loadLike() async {
     try {
+      final userId = _db.auth.currentUser?.id;
+      if (userId == null) return;
       final row = await _db
           .from('comment_likes')
           .select('comment_id')
-          .eq('user_id', _db.auth.currentUser!.id)
+          .eq('user_id', userId)
           .eq('comment_id', widget.comment['id'] as String)
           .maybeSingle();
       if (mounted) setState(() => _liked = row != null);
@@ -411,8 +457,14 @@ class _CommentTileState extends State<_CommentTile> {
 
   Future<void> _toggleLike() async {
     if (_likeBusy || widget.comment['deleted_at'] != null) return;
+    final userId = _db.auth.currentUser?.id;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('انتهت جلسة الدخول. سجّل الدخول مرة تانية.')),
+      );
+      return;
+    }
     setState(() => _likeBusy = true);
-    final userId = _db.auth.currentUser!.id;
     final commentId = widget.comment['id'] as String;
     try {
       if (_liked) {
@@ -464,7 +516,7 @@ class _CommentTileState extends State<_CommentTile> {
                 const CircleAvatar(radius: 15, child: Icon(Icons.person_outline, size: 17)),
                 const SizedBox(width: 8),
                 Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.w800))),
-                Text(stamp, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                Text(stamp, style: const TextStyle(fontSize: 10, color: NexoraColors.textMuted)),
                 if (!widget.mine && !deleted)
                   IconButton(
                     tooltip: 'الإبلاغ عن التعليق',
@@ -492,7 +544,7 @@ class _CommentTileState extends State<_CommentTile> {
             Text(
               deleted ? 'تم حذف هذا التعليق' : (comment['content'] ?? '').toString(),
               style: TextStyle(
-                color: deleted ? Colors.grey : null,
+                color: deleted ? NexoraColors.textMuted : null,
                 fontStyle: deleted ? FontStyle.italic : FontStyle.normal,
                 height: 1.5,
               ),

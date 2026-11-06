@@ -5,6 +5,23 @@ class MediaUploadService {
   MediaUploadService({ImagePicker? picker}) : _picker = picker ?? ImagePicker();
 
   final ImagePicker _picker;
+
+  static void validateUploadOwner({
+    required String? authenticatedUserId,
+    required String requestedUserId,
+  }) {
+    if (authenticatedUserId == null || authenticatedUserId != requestedUserId) {
+      throw StateError('يجب استخدام الحساب المسجل حاليًا لرفع الملفات.');
+    }
+  }
+
+  void _requireCurrentUser(String userId) {
+    validateUploadOwner(
+      authenticatedUserId: Supabase.instance.client.auth.currentUser?.id,
+      requestedUserId: userId,
+    );
+  }
+
   static const int maxBytes = 50 * 1024 * 1024;
   static const int maxFiles = 10;
   static const int maxPostTotalBytes = 100 * 1024 * 1024;
@@ -73,6 +90,7 @@ class MediaUploadService {
     required XFile file,
     required String imageType,
   }) async {
+    _requireCurrentUser(userId);
     if (imageType != 'avatar' && imageType != 'cover') {
       throw const FormatException('نوع صورة الملف الشخصي غير صالح.');
     }
@@ -96,11 +114,13 @@ class MediaUploadService {
       throw const FormatException('محتوى الصورة لا يطابق امتداد الملف. اختر صورة JPG أو PNG أو WebP سليمة.');
     }
     final path = '$userId/profile/${imageType}_${DateTime.now().microsecondsSinceEpoch}.$extension';
+    _requireCurrentUser(userId);
     await Supabase.instance.client.storage.from('nexora-media').uploadBinary(
       path,
       bytes,
       fileOptions: FileOptions(contentType: contentType, upsert: false),
     );
+    _requireCurrentUser(userId);
     return path;
   }
 
@@ -130,6 +150,7 @@ class MediaUploadService {
     required String postId,
     required List<XFile> files,
   }) async {
+    _requireCurrentUser(userId);
     if (files.length > maxFiles) {
       throw const FormatException('الحد الأقصى 10 ملفات في المنشور.');
     }
@@ -138,6 +159,7 @@ class MediaUploadService {
     var totalBytes = 0;
     try {
       for (var i = 0; i < files.length; i++) {
+        _requireCurrentUser(userId);
         final file = files[i];
         final extension = file.name.contains('.')
             ? file.name.split('.').last.toLowerCase()
@@ -158,12 +180,14 @@ class MediaUploadService {
           throw FormatException('محتوى الملف لا يطابق نوعه: ${file.name}');
         }
         final path = '$userId/$postId/${DateTime.now().microsecondsSinceEpoch}_$i.$extension';
+        _requireCurrentUser(userId);
         await client.storage.from('nexora-media').uploadBinary(
           path,
           bytes,
           fileOptions: FileOptions(contentType: details.$2, upsert: false),
         );
         uploaded.add(path);
+        _requireCurrentUser(userId);
         await client.from('media').insert({
           'post_id': postId,
           'user_id': userId,
@@ -177,20 +201,22 @@ class MediaUploadService {
       // Remove any metadata rows created before a later file failed. The
       // caller also removes the parent post, but the service remains safe
       // when reused independently.
-      try {
-        await client
-            .from('media')
-            .delete()
-            .eq('post_id', postId)
-            .eq('user_id', userId);
-      } catch (_) {
-        // Preserve the original upload error; parent-post cleanup can retry.
-      }
-      if (uploaded.isNotEmpty) {
+      if (client.auth.currentUser?.id == userId) {
         try {
-          await client.storage.from('nexora-media').remove(uploaded);
+          await client
+              .from('media')
+              .delete()
+              .eq('post_id', postId)
+              .eq('user_id', userId);
         } catch (_) {
-          // Preserve the original failure; orphan cleanup can be retried server-side.
+          // Preserve the original upload error; parent-post cleanup can retry.
+        }
+        if (uploaded.isNotEmpty) {
+          try {
+            await client.storage.from('nexora-media').remove(uploaded);
+          } catch (_) {
+            // Preserve the original failure; orphan cleanup can be retried server-side.
+          }
         }
       }
       rethrow;
@@ -201,6 +227,7 @@ class MediaUploadService {
     required String userId,
     required XFile file,
   }) async {
+    _requireCurrentUser(userId);
     final extension = file.name.contains('.')
         ? file.name.split('.').last.toLowerCase()
         : '';
@@ -216,16 +243,23 @@ class MediaUploadService {
       throw FormatException('محتوى الملف لا يطابق نوعه: ${file.name}');
     }
     final path = '$userId/stories/${DateTime.now().microsecondsSinceEpoch}.$extension';
+    _requireCurrentUser(userId);
     await Supabase.instance.client.storage.from('nexora-media').uploadBinary(
       path,
       bytes,
       fileOptions: FileOptions(contentType: details.$2, upsert: false),
     );
+    _requireCurrentUser(userId);
     return path;
   }
 
   Future<void> removeUploaded(List<String> paths) async {
     if (paths.isEmpty) return;
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null ||
+        paths.any((path) => !path.startsWith('$userId/'))) {
+      throw StateError('لا يمكن حذف ملفات لا تخص الحساب الحالي.');
+    }
     await Supabase.instance.client.storage.from('nexora-media').remove(paths);
   }
 

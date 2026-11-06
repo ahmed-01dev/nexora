@@ -4,7 +4,7 @@ import '../../core/widgets/nexora_glass.dart';
 class DesignGalleryScreen extends StatefulWidget { const DesignGalleryScreen({super.key}); @override State<DesignGalleryScreen> createState()=>_DesignGalleryScreenState(); }
 class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
  String _theme='amoled'; bool _rtl=true;
- ThemeData get _data=>switch(_theme){'light'=>NexoraTheme.light,'pink_amoled'=>NexoraTheme.pinkAmoled,'custom'=>NexoraTheme.custom(const Color(0xFF38E8A5)),_=>NexoraTheme.amoled};
+ ThemeData get _data=>switch(_theme){'light'=>NexoraTheme.light,'pink_amoled'=>NexoraTheme.pinkAmoled,'custom'=>NexoraTheme.custom(NexoraColors.pink),_=>NexoraTheme.amoled};
  @override Widget build(BuildContext context)=>Theme(data:_data,child:Directionality(textDirection:_rtl?TextDirection.rtl:TextDirection.ltr,child:Scaffold(
  appBar:AppBar(title:const Text('NEXORA · Design Gallery'),actions:[IconButton(onPressed:()=>setState(()=>_rtl=!_rtl),icon:const Icon(Icons.format_textdirection_r_to_l))]),
  body:ListView(padding:const EdgeInsets.all(16),children:[

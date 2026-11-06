@@ -6,18 +6,18 @@ The Flutter client uses the active Supabase project URL and a public publishable
 
 The manual release workflow accepts optional GitHub Actions secrets named `SUPABASE_URL` and `SUPABASE_ANON_KEY`. If they are absent, it uses the public client configuration in the workflow.
 
-## Phone authentication (SMS)
+## Email authentication
 
-The app uses phone OTP through Supabase Auth with `OtpChannel.sms`; WhatsApp delivery is not part of the current implementation. Email/password remains an alternative.
+NEXORA uses email and password for account creation and sign-in. Phone-number authentication, SMS OTP, and WhatsApp OTP are not part of the product.
 
-Dashboard setup required before real SMS delivery:
-1. Open Supabase Dashboard → Authentication → Sign In / Providers → Phone.
-2. Enable Phone provider.
-3. Configure a supported SMS provider and its credentials/template according to the provider's Supabase integration.
-4. Set suitable OTP expiry and rate limits for the intended launch region.
-5. Test new signup, existing-user login, resend, wrong/expired OTP, and Egyptian/international number formats with real phones.
+Required Supabase setup:
+1. Open Supabase Dashboard → Authentication → Sign In / Providers → Email.
+2. Enable email/password sign-in and require email confirmation for new accounts.
+3. Configure the project email/SMTP delivery settings and sender identity.
+4. Add `nexora://auth-callback/` to Supabase Authentication → URL Configuration → Redirect URLs. Keep the production Site URL set to the real website; do not replace it with the custom scheme.
+5. Test signup, confirmation delivery, expired/invalid confirmation links, resend, sign-in before and after confirmation, password-reset delivery, and completed password recovery.
 
-SMS delivery is not considered verified until a real code is received and successfully verified. Provider charges, country coverage, and sender registration are external dependencies.
+Do not claim email delivery is production-ready until a real inbox receives the messages and the confirmation/recovery flows are tested end to end. Provider limits, deliverability, and sender-domain verification remain external dependencies.
 
 ## Push notifications
 

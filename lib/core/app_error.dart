@@ -10,7 +10,8 @@ class AppErrorService {
 
   static void install() {
     FlutterError.onError = (details) {
-      FlutterError.presentError(details);
+      // Do not call FlutterError.presentError here: it prints the raw
+      // exception message, which may contain user or backend data.
       report(details.exception, details.stack, source: 'flutter');
     };
     PlatformDispatcher.instance.onError = (error, stack) {
@@ -20,7 +21,9 @@ class AppErrorService {
   }
 
   static void report(Object error, StackTrace? stack, {String source = 'app'}) {
-    debugPrint('[NEXORA][$source] $error');
+    // Backend/plugin exceptions can embed phone numbers, email addresses,
+    // identifiers, or server response details. Log only the error type.
+    debugPrint('[NEXORA][$source] ${error.runtimeType}');
     if (stack != null) debugPrintStack(stackTrace: stack);
   }
 

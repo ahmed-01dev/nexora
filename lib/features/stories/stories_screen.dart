@@ -17,6 +17,7 @@ class StoriesScreen extends StatefulWidget {
 
 class _StoriesScreenState extends State<StoriesScreen> {
   late Future<List<Map<String, dynamic>>> _future;
+  String? _loadedUserId;
 
   @override
   void initState() {
@@ -26,6 +27,8 @@ class _StoriesScreenState extends State<StoriesScreen> {
 
   Future<List<Map<String, dynamic>>> _load() async {
     final client = Supabase.instance.client;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) throw StateError('انتهت جلسة الدخول.');
     final rows = await client
         .from('stories')
         .select('id,user_id,media_path,text_content,story_type,visibility,created_at,expires_at,profiles!stories_user_id_fkey(display_name,username)')
@@ -33,16 +36,33 @@ class _StoriesScreenState extends State<StoriesScreen> {
         .gt('expires_at', DateTime.now().toUtc().toIso8601String())
         .order('created_at', ascending: false)
         .limit(100);
-    final result = <Map<String, dynamic>>[];
-    for (final row in rows) {
-      final item = Map<String, dynamic>.from(row);
-      if (item['media_path'] != null) {
-        item['signed_url'] = await client.storage
-            .from('nexora-media')
-            .createSignedUrl(item['media_path'] as String, 3600);
-      }
-      result.add(item);
+    if (client.auth.currentUser?.id != userId) {
+      throw StateError('تغير الحساب أثناء تحميل القصص.');
     }
+    final result = rows
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList(growable: false);
+    // Sign URLs in bounded batches so a full 100-story page does not issue
+    // 100 sequential network round-trips or overwhelm Storage at once.
+    for (var start = 0; start < result.length; start += 8) {
+      final end = (start + 8 < result.length) ? start + 8 : result.length;
+      await Future.wait(result.sublist(start, end).map((item) async {
+        final path = item['media_path'] as String?;
+        if (path == null) return;
+        try {
+          item['signed_url'] = await client.storage
+              .from('nexora-media')
+              .createSignedUrl(path, 3600);
+        } catch (error, stack) {
+          AppErrorService.report(error, stack, source: 'story_signed_url');
+          item['signed_url'] = null;
+        }
+      }));
+      if (client.auth.currentUser?.id != userId) {
+        throw StateError('تغير الحساب أثناء تجهيز القصص.');
+      }
+    }
+    _loadedUserId = userId;
     return result;
   }
 
@@ -54,11 +74,19 @@ class _StoriesScreenState extends State<StoriesScreen> {
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = _load());
-    await _future;
+    if (!mounted) return;
+    final next = _load();
+    setState(() => _future = next);
+    try {
+      await next;
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'stories_refresh');
+      // FutureBuilder owns the error state; do not leak a failed refresh future.
+    }
   }
 
   void _open(Map<String, dynamic> story) {
+    if (Supabase.instance.client.auth.currentUser?.id != _loadedUserId) return;
     Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => StoryViewerScreen(story: story),
     ));
@@ -66,6 +94,9 @@ class _StoriesScreenState extends State<StoriesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final viewerChanged = currentUserId == null ||
+        (_loadedUserId != null && currentUserId != _loadedUserId);
     return Scaffold(
       appBar: AppBar(
         title: const Text('القصص'),
@@ -76,7 +107,9 @@ class _StoriesScreenState extends State<StoriesScreen> {
         icon: const Icon(Icons.add),
         label: const Text('قصتك'),
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
+      body: viewerChanged
+          ? Center(child: TextButton(onPressed: _refresh, child: const Text('تغير الحساب. أعد تحميل القصص.')))
+          : FutureBuilder<List<Map<String, dynamic>>>(
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -87,7 +120,16 @@ class _StoriesScreenState extends State<StoriesScreen> {
           }
           final stories = snapshot.data ?? [];
           if (stories.isEmpty) {
-            return const Center(child: Text('مفيش قصص متاحة. شارك أول قصة مع متابعينك.'));
+            return RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 140),
+                  Center(child: Text('مفيش قصص متاحة. شارك أول قصة مع متابعينك.')),
+                ],
+              ),
+            );
           }
           return RefreshIndicator(
             onRefresh: _refresh,
@@ -138,6 +180,13 @@ class _StoryComposerScreenState extends State<StoryComposerScreen> {
   String _visibility = 'followers';
   bool _busy = false;
   String? _error;
+  late final String? _ownerUserId;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownerUserId = Supabase.instance.client.auth.currentUser?.id;
+  }
 
   Future<void> _pickImage() async {
     try {
@@ -165,9 +214,13 @@ class _StoryComposerScreenState extends State<StoryComposerScreen> {
       setState(() => _error = 'أضف نصًا أو صورة أو فيديو.');
       return;
     }
-    setState(() { _busy = true; _error = null; });
     final client = Supabase.instance.client;
-    final userId = client.auth.currentUser!.id;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null || userId != _ownerUserId) {
+      setState(() => _error = 'تغير الحساب. أغلق محرر القصة وافتحه من الحساب الحالي.');
+      return;
+    }
+    setState(() { _busy = true; _error = null; });
     String? path;
     try {
       if (_file != null) {
@@ -175,6 +228,9 @@ class _StoryComposerScreenState extends State<StoryComposerScreen> {
       }
       final isVideo = _file?.name.toLowerCase().endsWith('.mp4') == true ||
           _file?.name.toLowerCase().endsWith('.webm') == true;
+      if (client.auth.currentUser?.id != userId) {
+        throw StateError('تغير الحساب أثناء رفع القصة. سجّل الدخول مرة تانية.');
+      }
       await client.from('stories').insert({
         'user_id': userId,
         'media_path': path,
@@ -277,11 +333,15 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> {
   }
 
   Future<void> _markViewed() async {
+    final client = Supabase.instance.client;
+    final viewerId = client.auth.currentUser?.id;
+    if (viewerId == null) return;
     try {
-      await Supabase.instance.client.from('story_views').insert({
+      await client.from('story_views').insert({
         'story_id': widget.story['id'],
-        'viewer_id': Supabase.instance.client.auth.currentUser!.id,
+        'viewer_id': viewerId,
       });
+      if (client.auth.currentUser?.id != viewerId) return;
     } catch (error, stack) {
       if (!error.toString().contains('23505')) {
         AppErrorService.report(error, stack, source: 'story_view');
@@ -299,6 +359,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> {
   Widget build(BuildContext context) {
     final text = (widget.story['text_content'] ?? '').toString();
     final url = widget.story['signed_url'] as String?;
+    final viewerId = Supabase.instance.client.auth.currentUser?.id;
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -306,8 +367,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> {
         foregroundColor: Colors.white,
         title: const Text('NEXORA Story'),
         actions: [
-          if (widget.story['user_id'] !=
-              Supabase.instance.client.auth.currentUser!.id)
+          if (viewerId != null && widget.story['user_id'] != viewerId)
             IconButton(
               tooltip: 'حظر صاحب القصة',
               onPressed: () async {
@@ -333,8 +393,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> {
               },
               icon: const Icon(Icons.block_outlined),
             ),
-          if (widget.story['user_id'] !=
-              Supabase.instance.client.auth.currentUser!.id)
+          if (viewerId != null && widget.story['user_id'] != viewerId)
             IconButton(
               tooltip: 'الإبلاغ عن القصة',
               onPressed: () async {
@@ -359,9 +418,25 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> {
           if (widget.story['story_type'] == 'video' && _video != null)
             FutureBuilder<void>(
               future: _videoReady,
-              builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done
-                  ? Center(child: AspectRatio(aspectRatio: _video!.value.aspectRatio, child: VideoPlayer(_video!)))
-                  : const Center(child: CircularProgressIndicator()),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return const Center(
+                    child: Text(
+                      'تعذر تشغيل الفيديو.',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  );
+                }
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                return Center(
+                  child: AspectRatio(
+                    aspectRatio: _video!.value.aspectRatio,
+                    child: VideoPlayer(_video!),
+                  ),
+                );
+              },
             )
           else if (url != null)
             Center(child: Image.network(url, fit: BoxFit.contain))

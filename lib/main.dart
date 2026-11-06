@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -8,12 +7,14 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_error.dart';
 import 'core/theme/nexora_theme.dart';
+import 'core/widgets/nexora_glass.dart';
+import 'features/auth/email_auth_validation.dart';
 import 'features/design_gallery/design_gallery_screen.dart';
 import 'features/preview/nexora_preview_screen.dart';
-import 'features/auth/phone_number.dart';
 import 'features/media/media_upload_service.dart';
 import 'features/media/post_media_gallery.dart';
 import 'features/friends/friend_requests_screen.dart';
+import 'features/friends/follow_requests_screen.dart';
 import 'features/comments/comments_screen.dart';
 import 'features/messaging/messages_screen.dart';
 import 'features/notifications/notifications_screen.dart';
@@ -42,10 +43,20 @@ final _nexoraMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 final _url = String.fromEnvironment('SUPABASE_URL', defaultValue: 'https://wwdeexgkwpftyavbhiff.supabase.co').trim();
 const _key = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: 'sb_publishable_vJpkaM72QMGLykLFU5m44g_kwuPCi-Y');
+const _authRedirectUrl = 'nexora://auth-callback/';
 
 Future<void> _signOutNexora() async {
   await NexoraPushService.instance.unregisterCurrentDevice();
-  await Supabase.instance.client.auth.signOut();
+  try {
+    await Supabase.instance.client.auth.signOut();
+  } catch (_) {
+    // If Supabase sign-out fails, restore push registration for the still
+    // authenticated account rather than leaving notifications suspended.
+    await NexoraPushService.instance.registerIfAllowed(
+      resumeAfterSignIn: true,
+    );
+    rethrow;
+  }
 }
 
 Future<void> main() async {
@@ -67,12 +78,12 @@ Future<void> main() async {
     startupError = 'إعدادات الاتصال غير مكتملة. تحقق من عنوان Supabase ومفتاح Publishable/Anon.';
   } else {
     try {
-      await Supabase.initialize(url: _url, anonKey: _key.trim());
+      await Supabase.initialize(url: _url, publishableKey: _key.trim());
       ready = true;
       await NexoraPushService.instance.initialize();
     } catch (e, s) {
       AppErrorService.report(e, s, source: 'startup');
-      startupError = e.toString();
+      startupError = AppErrorService.message(e);
     }
   }
   runApp(NexoraApp(ready: ready, startupError: startupError));
@@ -97,8 +108,18 @@ class _NexoraAppState extends State<NexoraApp> {
     super.initState();
     if (widget.ready) {
       _loadAppearance();
-      _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((_) {
-        NexoraPushService.instance.registerIfAllowed();
+      _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((state) {
+        if (state.event == AuthChangeEvent.signedOut) {
+          // Also clean up when the session ends outside the account-screen
+          // button (for example, remote revocation or session invalidation).
+          unawaited(NexoraPushService.instance.unregisterCurrentDevice());
+        } else {
+          final isNewSession = state.event == AuthChangeEvent.initialSession ||
+              state.event == AuthChangeEvent.signedIn;
+          NexoraPushService.instance.registerIfAllowed(
+            resumeAfterSignIn: isNewSession,
+          );
+        }
         _loadAppearance();
       });
       if (!kIsWeb && Firebase.apps.isNotEmpty) {
@@ -197,10 +218,162 @@ class _NexoraAppState extends State<NexoraApp> {
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
+
   @override
   Widget build(BuildContext context) => StreamBuilder<AuthState>(
     stream: Supabase.instance.client.auth.onAuthStateChange,
-    builder: (context, snap) => (snap.data?.session ?? Supabase.instance.client.auth.currentSession) == null ? const AuthScreen() : const MainShell(),
+    builder: (context, snap) {
+      if (snap.data?.event == AuthChangeEvent.passwordRecovery) {
+        return const PasswordRecoveryScreen();
+      }
+      final session =
+          snap.data?.session ?? Supabase.instance.client.auth.currentSession;
+      return session == null ? const AuthScreen() : const MainShell();
+    },
+  );
+}
+
+class PasswordRecoveryScreen extends StatefulWidget {
+  const PasswordRecoveryScreen({super.key});
+
+  @override
+  State<PasswordRecoveryScreen> createState() => _PasswordRecoveryScreenState();
+}
+
+class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
+  final _form = GlobalKey<FormState>();
+  final _password = TextEditingController();
+  final _confirm = TextEditingController();
+  bool _busy = false;
+  bool _visible = false;
+  String? _error;
+  String? _notice;
+
+  @override
+  void dispose() {
+    _password.dispose();
+    _confirm.dispose();
+    super.dispose();
+  }
+
+  Future<void> _savePassword() async {
+    if (!_form.currentState!.validate()) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+      _notice = null;
+    });
+    try {
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(password: _password.text),
+      );
+      if (mounted) {
+        setState(() => _notice = 'تم تحديث كلمة المرور بنجاح.');
+      }
+    } on AuthException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (e, s) {
+      AppErrorService.report(e, s, source: 'email_password_recovery');
+      if (mounted) setState(() => _error = AppErrorService.message(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460),
+            child: Form(
+              key: _form,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Center(child: _Brand(size: 76)),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'كلمة مرور جديدة',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'اختار كلمة مرور قوية لحساب NEXORA.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: NexoraColors.textMuted),
+                  ),
+                  const SizedBox(height: 26),
+                  TextFormField(
+                    controller: _password,
+                    enabled: !_busy && _notice == null,
+                    obscureText: !_visible,
+                    textDirection: TextDirection.ltr,
+                    decoration: InputDecoration(
+                      labelText: 'كلمة المرور الجديدة',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        onPressed: () => setState(() => _visible = !_visible),
+                        icon: Icon(
+                          _visible ? Icons.visibility_off : Icons.visibility,
+                        ),
+                      ),
+                    ),
+                    validator: (value) =>
+                        NexoraEmailAuthValidation.password(
+                      value,
+                      registering: true,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _confirm,
+                    enabled: !_busy && _notice == null,
+                    obscureText: true,
+                    textDirection: TextDirection.ltr,
+                    decoration: const InputDecoration(
+                      labelText: 'تأكيد كلمة المرور',
+                      prefixIcon: Icon(Icons.lock_reset_outlined),
+                    ),
+                    validator: (value) => value != _password.text
+                        ? 'كلمتا المرور غير متطابقتين'
+                        : null,
+                  ),
+                  if (_error != null) _Notice(text: _error!, error: true),
+                  if (_notice != null) _Notice(text: _notice!, error: false),
+                  const SizedBox(height: 20),
+                  FilledButton(
+                    onPressed: _busy || _notice != null ? null : _savePassword,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(54),
+                    ),
+                    child: _busy
+                        ? const SizedBox.square(
+                            dimension: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('حفظ كلمة المرور الجديدة'),
+                  ),
+                  if (_notice != null)
+                    OutlinedButton(
+                      onPressed: () => Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const MainShell(),
+                        ),
+                        (_) => false,
+                      ),
+                      child: const Text('متابعة إلى NEXORA'),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
   );
 }
 
@@ -251,31 +424,21 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
-  final _phone = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
-  final _otp = TextEditingController();
 
   bool _register = true;
   bool _busy = false;
   bool _visible = false;
-  bool _phoneOtpSent = false;
   bool _emailConfirmationPending = false;
-  int _resendSeconds = 0;
-  Timer? _resendTimer;
-  String _method = 'phone';
   String? _error;
   String? _notice;
-  String? _normalizedPhone;
 
   @override
   void dispose() {
     _name.dispose();
-    _phone.dispose();
     _email.dispose();
     _password.dispose();
-    _otp.dispose();
-    _resendTimer?.cancel();
     super.dispose();
   }
 
@@ -284,86 +447,57 @@ class _AuthScreenState extends State<AuthScreen> {
     _notice = null;
   }
 
-  void _startOtpResendCooldown() {
-    _resendTimer?.cancel();
-    setState(() => _resendSeconds = 60);
-    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      setState(() {
-        if (_resendSeconds <= 1) {
-          _resendSeconds = 0;
-          timer.cancel();
-        } else {
-          _resendSeconds--;
-        }
-      });
+  String? _validateEmail(String? value) =>
+      NexoraEmailAuthValidation.email(value);
+
+  String? _validatePassword(String? value) =>
+      NexoraEmailAuthValidation.password(value, registering: _register);
+
+  Future<void> _submit() async {
+    if (!_form.currentState!.validate()) return;
+    setState(() {
+      _busy = true;
+      _clearFeedback();
+      _emailConfirmationPending = false;
     });
-  }
-
-  void _resetPhoneOtp() {
-    _resendTimer?.cancel();
-    _resendSeconds = 0;
-    _phoneOtpSent = false;
-    _normalizedPhone = null;
-    _otp.clear();
-  }
-
-  Future<void> _sendPhoneCode() async {
-    final normalized = normalizeNexoraPhone(_phone.text);
-    if (normalized == null) {
-      setState(() => _error = 'اكتب رقم موبايل صحيح. في مصر اكتب 01xxxxxxxxx أو +201xxxxxxxxx');
-      return;
-    }
-    if (_register && _name.text.trim().length < 2) {
-      setState(() => _error = 'اكتب اسمك الظاهر الأول');
-      return;
-    }
-    setState(() { _busy = true; _clearFeedback(); });
     try {
-      await Supabase.instance.client.auth.signInWithOtp(
-        phone: normalized,
-        channel: OtpChannel.sms,
-        shouldCreateUser: _register,
-        data: _register ? {'display_name': _name.text.trim()} : null,
-      );
+      final auth = Supabase.instance.client.auth;
+      final email = _email.text.trim().toLowerCase();
+      if (_register) {
+        final result = await auth.signUp(
+          email: email,
+          password: _password.text,
+          emailRedirectTo: _authRedirectUrl,
+          data: {'display_name': _name.text.trim()},
+        );
+        if (!mounted) return;
+        if (result.session == null) {
+          setState(() {
+            _emailConfirmationPending = true;
+            _notice = 'تم إنشاء الحساب. افتح رسالة NEXORA في بريدك واضغط رابط التأكيد لتفعيل الحساب. راجع مجلد Spam إذا لم تجد الرسالة.';
+          });
+        } else {
+          setState(() => _notice = 'تم إنشاء حسابك بنجاح.');
+        }
+      } else {
+        await auth.signInWithPassword(
+          email: email,
+          password: _password.text,
+        );
+      }
+    } on AuthException catch (e) {
       if (!mounted) return;
-      setState(() {
-        _normalizedPhone = normalized;
-        _phoneOtpSent = true;
-        _notice = 'بعتنالك كود التحقق برسالة SMS على الرقم $normalized';
-      });
-      _startOtpResendCooldown();
-    } on AuthException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      final message = e.message.toLowerCase();
+      if (message.contains('email not confirmed')) {
+        setState(() {
+          _emailConfirmationPending = true;
+          _notice = 'البريد الإلكتروني غير مؤكد. افتح رسالة التأكيد أو أعد إرسالها من الزر بالأسفل.';
+        });
+      } else {
+        setState(() => _error = e.message);
+      }
     } catch (e, s) {
-      AppErrorService.report(e, s, source: 'phone_auth_send_otp');
-      if (mounted) setState(() => _error = AppErrorService.message(e));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _verifyPhoneCode() async {
-    final phone = _normalizedPhone;
-    final token = normalizeNexoraOtp(_otp.text);
-    if (phone == null || token == null) {
-      setState(() => _error = 'اكتب كود التحقق المكوّن من 6 أرقام');
-      return;
-    }
-    setState(() { _busy = true; _clearFeedback(); });
-    try {
-      await Supabase.instance.client.auth.verifyOTP(
-        phone: phone,
-        token: token,
-        type: OtpType.sms,
-      );
-    } on AuthException catch (e) {
-      if (mounted) setState(() => _error = e.message);
-    } catch (e, s) {
-      AppErrorService.report(e, s, source: 'phone_auth_verify_otp');
+      AppErrorService.report(e, s, source: 'email_auth');
       if (mounted) setState(() => _error = AppErrorService.message(e));
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -371,12 +505,15 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> _resendEmailConfirmation() async {
-    final email = _email.text.trim();
-    if (email.isEmpty) {
-      setState(() => _error = 'اكتب البريد الإلكتروني الأول');
+    final email = _email.text.trim().toLowerCase();
+    if (_validateEmail(email) != null) {
+      setState(() => _error = 'اكتب بريدك الإلكتروني الصحيح أولًا');
       return;
     }
-    setState(() { _busy = true; _clearFeedback(); });
+    setState(() {
+      _busy = true;
+      _clearFeedback();
+    });
     try {
       await Supabase.instance.client.auth.resend(
         type: OtpType.signup,
@@ -385,7 +522,7 @@ class _AuthScreenState extends State<AuthScreen> {
       if (mounted) {
         setState(() {
           _emailConfirmationPending = true;
-          _notice = 'طلبنا إعادة إرسال رسالة التأكيد إلى $email. الرسالة فيها رابط تأكيد، مش كود رقمي. راجع Spam كمان.';
+          _notice = 'تم طلب إعادة إرسال رابط التأكيد إلى $email. راجع صندوق الوارد ومجلد Spam.';
         });
       }
     } on AuthException catch (e) {
@@ -398,70 +535,35 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  Future<void> _submitEmail() async {
-    if (!_form.currentState!.validate()) return;
-    setState(() { _busy = true; _clearFeedback(); });
+  Future<void> _sendPasswordReset() async {
+    final email = _email.text.trim().toLowerCase();
+    if (_validateEmail(email) != null) {
+      setState(() => _error = 'اكتب البريد الإلكتروني المرتبط بحسابك أولًا');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _clearFeedback();
+    });
     try {
-      final auth = Supabase.instance.client.auth;
-      if (_register) {
-        final result = await auth.signUp(
-          email: _email.text.trim(),
-          password: _password.text,
-          data: {'display_name': _name.text.trim()},
-        );
-        if (result.session == null && mounted) {
-          setState(() {
-            _emailConfirmationPending = true;
-            _notice = 'الحساب اتعمل. بعتنالك رسالة تأكيد فيها رابط، مش كود. افتح الرسالة واضغط رابط التأكيد، ولو مش لاقيها راجع Spam أو اضغط إعادة الإرسال.';
-          });
-        }
-      } else {
-        await auth.signInWithPassword(
-          email: _email.text.trim(),
-          password: _password.text,
-        );
+      await Supabase.instance.client.auth.resetPasswordForEmail(email, redirectTo: _authRedirectUrl);
+      if (mounted) {
+        setState(() {
+          _notice = 'إذا كان البريد مرتبطًا بحساب، فستصلك رسالة لاستعادة كلمة المرور. راجع Spam أيضًا.';
+        });
       }
     } on AuthException catch (e) {
-      if (mounted) {
-        if (e.message.toLowerCase().contains('email not confirmed')) {
-          setState(() {
-            _emailConfirmationPending = true;
-            _notice = 'البريد لسه غير مؤكد. افتح رسالة التأكيد واضغط الرابط، أو اطلب إرسالها مرة تانية من الزر بالأسفل.';
-            _error = null;
-          });
-        } else {
-          setState(() => _error = e.message);
-        }
-      }
+      if (mounted) setState(() => _error = e.message);
     } catch (e, s) {
-      AppErrorService.report(e, s, source: 'email_auth');
+      AppErrorService.report(e, s, source: 'email_password_reset');
       if (mounted) setState(() => _error = AppErrorService.message(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _submit() async {
-    if (_method == 'phone') {
-      if (_phoneOtpSent) {
-        await _verifyPhoneCode();
-      } else {
-        if (_register) {
-          if (_name.text.trim().length < 2) {
-            setState(() => _error = 'اكتب اسمك الظاهر الأول');
-            return;
-          }
-        }
-        await _sendPhoneCode();
-      }
-      return;
-    }
-    await _submitEmail();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final phoneMode = _method == 'phone';
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -476,153 +578,136 @@ class _AuthScreenState extends State<AuthScreen> {
                   children: [
                     const Center(child: _Brand(size: 82)),
                     const SizedBox(height: 20),
-                    const Text('NEXORA', textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, letterSpacing: 4)),
-                    const SizedBox(height: 8),
-                    Text(_register ? 'مساحتك. صوتك. عالمك.' : 'رجعت تنوّر عالمك',
+                    const Text(
+                      'NEXORA',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Color(0xFFA1A1AA))),
-                    const SizedBox(height: 24),
-                    SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(value: 'phone', icon: Icon(Icons.phone_android), label: Text('رقم الهاتف')),
-                        ButtonSegment(value: 'email', icon: Icon(Icons.alternate_email), label: Text('البريد الإلكتروني')),
-                      ],
-                      selected: {_method},
-                      onSelectionChanged: _busy ? null : (selection) {
-                        setState(() {
-                          _method = selection.first;
-                          _resetPhoneOtp();
-                          _clearFeedback();
-                        });
-                      },
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 4,
+                      ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 8),
+                    Text(
+                      _register ? 'مساحتك. صوتك. عالمك.' : 'رجعت تنوّر عالمك',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: NexoraColors.textMuted),
+                    ),
+                    const SizedBox(height: 28),
                     if (_register) ...[
                       TextFormField(
                         controller: _name,
+                        enabled: !_busy,
                         textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(labelText: 'اسمك الظاهر', prefixIcon: Icon(Icons.person_outline)),
-                        validator: (v) => v == null || v.trim().length < 2 ? 'اكتب اسم من حرفين على الأقل' : null,
-                      ),
-                      const SizedBox(height: 13),
-                    ],
-                    if (phoneMode) ...[
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _phone,
-                        enabled: !_phoneOtpSent && !_busy,
-                        keyboardType: TextInputType.phone,
-                        textDirection: TextDirection.ltr,
+                        textCapitalization: TextCapitalization.words,
                         decoration: const InputDecoration(
-                          labelText: 'رقم الهاتف',
-                          hintText: '01xxxxxxxxx',
-                          helperText: 'مصر: 01xxxxxxxxx أو الرقم الدولي +20',
-                          prefixIcon: Icon(Icons.phone_android),
+                          labelText: 'اسمك الظاهر',
+                          prefixIcon: Icon(Icons.person_outline),
                         ),
-                        validator: (v) => normalizeNexoraPhone(v ?? '') == null ? 'اكتب رقم هاتف صحيح' : null,
+                        validator: (v) => _register
+                            ? NexoraEmailAuthValidation.displayName(v)
+                            : null,
                       ),
-                      if (_phoneOtpSent) ...[
-                        const SizedBox(height: 13),
-                        TextFormField(
-                          controller: _otp,
-                          keyboardType: TextInputType.number,
-                          textDirection: TextDirection.ltr,
-                          maxLength: 6,
-                          decoration: const InputDecoration(
-                            labelText: 'كود التحقق',
-                            prefixIcon: Icon(Icons.password),
-                            counterText: '',
-                          ),
-                          validator: (v) => normalizeNexoraOtp(v ?? '') == null
-                              ? 'الكود لازم يكون 6 أرقام' : null,
-                        ),
-                        Align(
-                          alignment: AlignmentDirectional.centerEnd,
-                          child: TextButton(
-                            onPressed: _busy ? null : () {
-                              setState(() { _resetPhoneOtp(); _clearFeedback(); });
-                            },
-                            child: const Text('تغيير رقم الهاتف'),
-                          ),
-                        ),
-                      ],
-                    ] else ...[
-                      TextFormField(
-                        controller: _email,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(labelText: 'البريد الإلكتروني', prefixIcon: Icon(Icons.alternate_email)),
-                        validator: (v) => v == null || !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim())
-                            ? 'اكتب بريد إلكتروني صحيح' : null,
-                      ),
-                      const SizedBox(height: 13),
-                      TextFormField(
-                        controller: _password,
-                        obscureText: !_visible,
-                        decoration: InputDecoration(
-                          labelText: 'كلمة المرور',
-                          prefixIcon: const Icon(Icons.lock_outline),
-                          suffixIcon: IconButton(
-                            onPressed: () => setState(() => _visible = !_visible),
-                            icon: Icon(_visible ? Icons.visibility_off : Icons.visibility),
-                          ),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) return 'اكتب كلمة المرور';
-                          if (_register) {
-                            if (v.length < 12) return 'استخدم 12 حرفًا على الأقل عند إنشاء الحساب';
-                            if (!RegExp(r'[A-Za-z]').hasMatch(v) ||
-                                !RegExp(r'\d').hasMatch(v)) {
-                              return 'أضف حرفًا ورقمًا على الأقل';
-                            }
-                          } else if (v.length < 8) {
-                            return 'كلمة المرور غير صحيحة';
-                          }
-                          return null;
-                        },
-                      ),
+                      const SizedBox(height: 14),
                     ],
+                    TextFormField(
+                      controller: _email,
+                      enabled: !_busy,
+                      keyboardType: TextInputType.emailAddress,
+                      textDirection: TextDirection.ltr,
+                      textInputAction: TextInputAction.next,
+                      autocorrect: false,
+                      decoration: const InputDecoration(
+                        labelText: 'البريد الإلكتروني',
+                        hintText: 'name@example.com',
+                        prefixIcon: Icon(Icons.alternate_email),
+                      ),
+                      validator: _validateEmail,
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _password,
+                      enabled: !_busy,
+                      obscureText: !_visible,
+                      textDirection: TextDirection.ltr,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _busy ? null : _submit(),
+                      decoration: InputDecoration(
+                        labelText: 'كلمة المرور',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          tooltip: _visible ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور',
+                          onPressed: () => setState(() => _visible = !_visible),
+                          icon: Icon(
+                            _visible ? Icons.visibility_off : Icons.visibility,
+                          ),
+                        ),
+                      ),
+                      validator: _validatePassword,
+                    ),
+                    if (_register)
+                      const Padding(
+                        padding: EdgeInsetsDirectional.only(top: 8, start: 4),
+                        child: Text(
+                          '12 حرفًا على الأقل، مع حرف إنجليزي ورقم.',
+                          style: TextStyle(
+                            color: NexoraColors.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
                     if (_error != null) _Notice(text: _error!, error: true),
                     if (_notice != null) _Notice(text: _notice!, error: false),
-                    if (!phoneMode && _emailConfirmationPending)
+                    if (_emailConfirmationPending)
                       Padding(
                         padding: const EdgeInsets.only(top: 10),
                         child: OutlinedButton.icon(
                           onPressed: _busy ? null : _resendEmailConfirmation,
                           icon: const Icon(Icons.mark_email_unread_outlined),
-                          label: const Text('إعادة إرسال رسالة التأكيد'),
+                          label: const Text('إعادة إرسال رابط التأكيد'),
                         ),
                       ),
                     const SizedBox(height: 20),
                     FilledButton(
                       onPressed: _busy ? null : _submit,
-                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(54)),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(54),
+                      ),
                       child: _busy
-                        ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : Text(phoneMode
-                            ? (_phoneOtpSent ? 'تأكيد الكود' : 'إرسال كود SMS')
-                            : (_register ? 'إنشاء حساب بالبريد' : 'تسجيل الدخول بالبريد')),
+                          ? const SizedBox.square(
+                              dimension: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(_register ? 'إنشاء حساب' : 'تسجيل الدخول'),
                     ),
-                    if (phoneMode && _phoneOtpSent)
+                    if (!_register)
                       TextButton(
-                        onPressed: _busy || _resendSeconds > 0 ? null : _sendPhoneCode,
-                        child: Text(_resendSeconds > 0
-                            ? 'إعادة إرسال الكود بعد $_resendSeconds ثانية'
-                            : 'إعادة إرسال الكود'),
+                        onPressed: _busy ? null : _sendPasswordReset,
+                        child: const Text('نسيت كلمة المرور؟'),
                       ),
                     TextButton(
-                      onPressed: _busy ? null : () => setState(() {
-                        _register = !_register;
-                        _resetPhoneOtp();
-                        _clearFeedback();
-                      }),
-                      child: Text(_register ? 'عندك حساب؟ سجّل الدخول' : 'مستخدم جديد؟ أنشئ حساب'),
+                      onPressed: _busy
+                          ? null
+                          : () => setState(() {
+                                _register = !_register;
+                                _emailConfirmationPending = false;
+                                _clearFeedback();
+                              }),
+                      child: Text(
+                        _register
+                            ? 'عندك حساب؟ سجّل الدخول'
+                            : 'مستخدم جديد؟ أنشئ حساب',
+                      ),
                     ),
                     const SizedBox(height: 8),
                     OutlinedButton.icon(
-                      onPressed: _busy ? null : () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(builder: (_) => const NexoraPreviewScreen()),
-                      ),
+                      onPressed: _busy
+                          ? null
+                          : () => Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const NexoraPreviewScreen(),
+                                ),
+                              ),
                       icon: const Icon(Icons.visibility_outlined),
                       label: const Text('استكشف NEXORA قبل التسجيل · معاينة'),
                     ),
@@ -642,54 +727,248 @@ class MainShell extends StatefulWidget {
   @override
   State<MainShell> createState() => _MainShellState();
 }
+
 class _MainShellState extends State<MainShell> {
   int _tab = 0, _feedVersion = 0;
-  void _posted() => setState(() { _tab = 0; _feedVersion++; });
+
+  void _posted() => setState(() {
+    _tab = 0;
+    _feedVersion++;
+  });
+
   @override
   Widget build(BuildContext context) {
-    final pages = <Widget>[HomeScreen(key: ValueKey(_feedVersion)), const ExploreScreen(), CreateScreen(onPosted: _posted), const ReelsScreen(), const MessagesScreen(), const ProfileScreen()];
+    final pages = <Widget>[
+      HomeScreen(key: ValueKey(_feedVersion)),
+      const ExploreScreen(),
+      CreateScreen(onPosted: _posted),
+      const MessagesScreen(),
+      const ProfileScreen(),
+    ];
     return Scaffold(
       extendBody: true,
-      body: Stack(children: [
-        const Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(
-          gradient: RadialGradient(center: Alignment(-.85, -.9), radius: 1.25,
-            colors: [Color(0xFF193A62), Color(0xFF0A1427), Color(0xFF070B16)],
-            stops: [0, .42, 1]),
-        ))),
-        IndexedStack(index: _tab, children: pages),
-      ]),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(25),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xD914223A),
-                borderRadius: BorderRadius.circular(25),
-                border: Border.all(color: const Color(0x447BD8FF)),
-                boxShadow: const [BoxShadow(color: Color(0x3315BCEB), blurRadius: 28, offset: Offset(0, 8))],
+      body: Stack(
+        children: [
+          const Positioned.fill(child: _NexoraAuroraBackdrop()),
+          Positioned.fill(
+            bottom: 108,
+            child: IndexedStack(index: _tab, children: pages),
+          ),
+          Positioned(
+            left: 14,
+            right: 14,
+            bottom: 8,
+            child: SafeArea(
+              top: false,
+              child: NexoraGlass(
+                radius: NexoraRadius.sheet,
+                blur: 30,
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
+                child: Row(
+                  children: [
+                    _NexoraNavItem(
+                      icon: Icons.home_rounded,
+                      label: 'الرئيسية',
+                      selected: _tab == 0,
+                      onTap: () => setState(() => _tab = 0),
+                    ),
+                    _NexoraNavItem(
+                      icon: Icons.explore_rounded,
+                      label: 'استكشف',
+                      selected: _tab == 1,
+                      onTap: () => setState(() => _tab = 1),
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: Semantics(
+                          button: true,
+                          label: 'إنشاء محتوى',
+                          child: GestureDetector(
+                            onTap: () => setState(() => _tab = 2),
+                            child: AnimatedScale(
+                              scale: _tab == 2 ? 1.06 : 1,
+                              duration: MediaQuery.of(context).disableAnimations
+                                  ? Duration.zero
+                                  : NexoraMotion.standard,
+                              curve: Curves.easeOutBack,
+                              child: Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: NexoraColors.brandGradient,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: NexoraColors.violet.withValues(alpha: .30),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 5),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.add_rounded,
+                                  color: Colors.white,
+                                  size: 29,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    _NexoraNavItem(
+                      icon: Icons.forum_rounded,
+                      label: 'الدردشة',
+                      selected: _tab == 3,
+                      onTap: () => setState(() => _tab = 3),
+                    ),
+                    _NexoraNavItem(
+                      icon: Icons.person_rounded,
+                      label: 'حسابي',
+                      selected: _tab == 4,
+                      onTap: () => setState(() => _tab = 4),
+                    ),
+                  ],
+                ),
               ),
-              child: NavigationBar(
-                selectedIndex: _tab,
-                onDestinationSelected: (v) => setState(() => _tab = v),
-                backgroundColor: Colors.transparent,
-                destinations: const [
-                  NavigationDestination(icon: Icon(Icons.home_rounded), label: 'الرئيسية'),
-                  NavigationDestination(icon: Icon(Icons.explore_rounded), label: 'استكشاف'),
-                  NavigationDestination(icon: Icon(Icons.add_circle_rounded), label: 'إنشاء'),
-                  NavigationDestination(icon: Icon(Icons.play_circle_rounded), label: 'ريلز'),
-                  NavigationDestination(icon: Icon(Icons.forum_rounded), label: 'الرسائل'),
-                  NavigationDestination(icon: Icon(Icons.person_rounded), label: 'حسابي'),
-                ],
-              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NexoraNavItem extends StatelessWidget {
+  const _NexoraNavItem({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
+    return Expanded(
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: label,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(NexoraRadius.pill),
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: reduceMotion
+                ? Duration.zero
+                : NexoraMotion.standard,
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            decoration: BoxDecoration(
+              color: selected
+                  ? NexoraColors.violet.withValues(alpha: .13)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(NexoraRadius.pill),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedScale(
+                  scale: selected ? 1.08 : 1,
+                  duration: reduceMotion
+                      ? Duration.zero
+                      : NexoraMotion.standard,
+                  curve: Curves.easeOutBack,
+                  child: Icon(
+                    icon,
+                    size: 22,
+                    color: selected
+                        ? NexoraColors.cyan
+                        : NexoraColors.textMuted,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 10,
+                    height: 1.1,
+                    fontWeight:
+                        selected ? FontWeight.w700 : FontWeight.w500,
+                    color: selected
+                        ? NexoraColors.text
+                        : NexoraColors.textMuted,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       ),
     );
   }
+}
+
+class _NexoraAuroraBackdrop extends StatelessWidget {
+  const _NexoraAuroraBackdrop();
+
+  @override
+  Widget build(BuildContext context) => const ColoredBox(
+    color: NexoraColors.bg,
+    child: Stack(
+      children: [
+        Positioned(
+          top: -170,
+          right: -150,
+          child: _NexoraGlow(color: NexoraColors.violet, size: 330),
+        ),
+        Positioned(
+          top: 300,
+          left: -210,
+          child: _NexoraGlow(color: NexoraColors.cyan, size: 310),
+        ),
+        Positioned(
+          bottom: -220,
+          right: 10,
+          child: _NexoraGlow(color: NexoraColors.pink, size: 320),
+        ),
+      ],
+    ),
+  );
+}
+
+class _NexoraGlow extends StatelessWidget {
+  const _NexoraGlow({required this.color, required this.size});
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+    child: Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: .11),
+            blurRadius: 110,
+            spreadRadius: 24,
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class HomeScreen extends StatefulWidget {
@@ -705,6 +984,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Map<String, dynamic>> _posts = [];
   _FeedMode _mode = _FeedMode.latest;
   bool _loading = true, _loadingMore = false, _hasMore = true;
+  int _nextOffset = 0;
+  int _requestGeneration = 0;
   String? _error;
 
   @override
@@ -727,43 +1008,59 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadFirstPage() async {
+    final generation = ++_requestGeneration;
     setState(() {
       _loading = true;
       _loadingMore = false;
       _hasMore = true;
+      _nextOffset = 0;
       _error = null;
       _posts.clear();
     });
     try {
       final rows = await _fetchPage(0);
-      if (!mounted) return;
+      if (!mounted || generation != _requestGeneration) return;
       setState(() {
         _posts.addAll(rows);
+        _nextOffset = rows.length;
         _hasMore = rows.length == _pageSize;
         _loading = false;
       });
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'feed_initial');
-      if (mounted) setState(() { _error = AppErrorService.message(error); _loading = false; });
+      if (mounted && generation == _requestGeneration) {
+        setState(() {
+          _error = AppErrorService.message(error);
+          _loading = false;
+        });
+      }
     }
   }
 
   Future<void> _loadMore() async {
     if (_loading || _loadingMore || !_hasMore || _error != null) return;
+    final generation = _requestGeneration;
     setState(() => _loadingMore = true);
     try {
-      final rows = await _fetchPage(_posts.length);
-      if (!mounted) return;
+      final rows = await _fetchPage(_nextOffset);
+      if (!mounted || generation != _requestGeneration) return;
       final knownIds = _posts.map((p) => p['id']).toSet();
       final uniqueRows = rows.where((p) => !knownIds.contains(p['id']));
       setState(() {
         _posts.addAll(uniqueRows);
+        // Advance by backend rows fetched, not only newly visible rows.
+        _nextOffset += rows.length;
         _hasMore = rows.length == _pageSize;
         _loadingMore = false;
       });
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'feed_more');
-      if (mounted) setState(() { _error = AppErrorService.message(error); _loadingMore = false; });
+      if (mounted && generation == _requestGeneration) {
+        setState(() {
+          _error = AppErrorService.message(error);
+          _loadingMore = false;
+        });
+      }
     }
   }
 
@@ -814,44 +1111,89 @@ class _HomeScreenState extends State<HomeScreen> {
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(28),
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(22),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(28),
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topRight, end: Alignment.bottomLeft,
-                                  colors: [Color(0xCC245B86), Color(0xAA172C55), Color(0xAA392B70)],
-                                ),
-                                border: Border.all(color: const Color(0x667EDCFF)),
-                                boxShadow: const [BoxShadow(color: Color(0x3319BFEA), blurRadius: 30, offset: Offset(0, 12))],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: NexoraColors.surface,
+                            borderRadius: BorderRadius.circular(NexoraRadius.sheet),
+                            border: Border.all(color: NexoraColors.hairline),
+                            gradient: const LinearGradient(
+                              begin: Alignment.topRight,
+                              end: Alignment.bottomLeft,
+                              colors: [
+                                Color(0xFF1B142D),
+                                NexoraColors.surface,
+                                Color(0xFF101018),
+                              ],
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
                                 children: [
-                                  Row(children: [
-                                    Container(width: 42, height: 42, decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(14),
-                                      gradient: const LinearGradient(colors: [Color(0xFF75E2FF), Color(0xFF9383FF)]),
-                                    ), child: const Icon(Icons.bolt_rounded, color: Color(0xFF071321), size: 26)),
-                                    const SizedBox(width: 12),
-                                    const Text('N E X O R A', style: TextStyle(color: Color(0xFFD8F5FF), fontWeight: FontWeight.w900, letterSpacing: 2.2, fontSize: 13)),
-                                    const Spacer(),
-                                    const Icon(Icons.auto_awesome_rounded, color: Color(0xFF9BEAFF)),
-                                  ]),
-                                  const SizedBox(height: 22),
-                                  const Text('مساحتك. صوتك. عالمك.', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
-                                  const SizedBox(height: 7),
-                                  const Text('خلّي حضورك يُحكى.', style: TextStyle(color: Colors.white, fontSize: 27, height: 1.15, fontWeight: FontWeight.w900)),
-                                  const SizedBox(height: 8),
-                                  const Text('شارك لحظاتك واكتشف ناس شبهك.', style: TextStyle(color: Color(0xFFD5E7FA), fontSize: 13)),
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(13),
+                                      gradient: const LinearGradient(
+                                        colors: NexoraColors.brandGradient,
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.auto_awesome_rounded,
+                                      color: Colors.white,
+                                      size: 23,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 11),
+                                  const Text(
+                                    'N E X O R A',
+                                    style: TextStyle(
+                                      color: NexoraColors.text,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 2,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  const Icon(
+                                    Icons.bolt_rounded,
+                                    color: NexoraColors.amber,
+                                  ),
                                 ],
                               ),
-                            ),
+                              const SizedBox(height: 20),
+                              const Text(
+                                'مساحتك. صوتك. عالمك.',
+                                style: TextStyle(
+                                  color: NexoraColors.textMuted,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 7),
+                              const Text(
+                                'خلّي حضورك يُحكى.',
+                                style: TextStyle(
+                                  color: NexoraColors.text,
+                                  fontSize: 26,
+                                  height: 1.18,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'شارك لحظاتك واكتشف ناس شبهك.',
+                                style: TextStyle(
+                                  color: NexoraColors.textMuted,
+                                  fontSize: 13,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -885,7 +1227,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         else if (_posts.isNotEmpty)
                           const Padding(
                             padding: EdgeInsets.all(16),
-                            child: Center(child: Text('وصلت لآخر المنشورات', style: TextStyle(color: Color(0xFF8A8A8A)))),
+                            child: Center(child: Text('وصلت لآخر المنشورات', style: TextStyle(color: NexoraColors.textMuted))),
                           ),
                       ],
                     ),
@@ -937,7 +1279,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
     int offset = 0,
   }) async {
     final client = Supabase.instance.client;
-    final me = client.auth.currentUser!.id;
+    final me = client.auth.currentUser?.id;
+    if (me == null) throw StateError('يجب تسجيل الدخول لعرض المحتوى.');
     late final List<Map<String, dynamic>> rows;
     if (_searchPosts && term.startsWith('#') && term.length > 1) {
       final tag = term.substring(1).toLowerCase();
@@ -991,6 +1334,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
         .order('created_at', ascending: false)
         .order('id', ascending: false)
         .range(offset, offset + _pageSize - 1);
+    if (client.auth.currentUser?.id != me) {
+      throw StateError('تغير الحساب أثناء تحميل الأشخاص.');
+    }
     return List<Map<String, dynamic>>.from(rows);
   }
 
@@ -1051,6 +1397,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
           ),
           actions: [
             IconButton(
+              tooltip: 'ريلز',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const ReelsScreen(),
+                ),
+              ),
+              icon: const Icon(Icons.play_circle_outline_rounded),
+            ),
+            IconButton(
               tooltip: 'الأشخاص القريبون',
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -1076,6 +1431,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 ),
               ),
               icon: const Icon(Icons.person_add_alt_1),
+            ),
+            IconButton(
+              tooltip: 'طلبات المتابعة',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const FollowRequestsScreen(),
+                ),
+              ),
+              icon: const Icon(Icons.person_add_alt),
             ),
             IconButton(
               tooltip: 'الأصدقاء والمتابَعون',
@@ -1202,7 +1566,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         }
                         return _searchPosts
                             ? PostCard(post: people[index])
-                            : PersonTile(profile: people[index], follow: true);
+                            : PersonTile(key: ValueKey(people[index]['id']), profile: people[index], follow: true);
                       },
                     ),
                   );
@@ -1219,23 +1583,236 @@ class FriendsScreen extends StatefulWidget {
   @override
   State<FriendsScreen> createState() => _FriendsScreenState();
 }
+
 class _FriendsScreenState extends State<FriendsScreen> {
-  late Future<List<Map<String, dynamic>>> _future;
+  static const int _pageSize = 30;
+  final List<Map<String, dynamic>> _rows = [];
+  bool _showFollowers = false;
+  bool _initialLoading = true;
+  bool _loadingMore = false;
+  bool _hasMore = true;
+  Object? _loadError;
+  int _offset = 0;
+  int _requestGeneration = 0;
+
   @override
-  void initState() { super.initState(); _future = _load(); }
-  Future<List<Map<String, dynamic>>> _load() async {
-    final id = Supabase.instance.client.auth.currentUser!.id;
-    final rows = await Supabase.instance.client.from('follows').select('status,profiles!follows_following_id_fkey(id,username,display_name,bio,avatar_url,is_verified)').eq('follower_id', id).eq('status', 'accepted').order('created_at', ascending: false).limit(100);
+  void initState() {
+    super.initState();
+    _loadFirstPage();
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchPage(int offset) async {
+    final client = Supabase.instance.client;
+    final id = client.auth.currentUser?.id;
+    if (id == null) throw StateError('يجب تسجيل الدخول لعرض القائمة.');
+    final profileRelation = _showFollowers
+        ? 'profiles!follows_follower_id_fkey'
+        : 'profiles!follows_following_id_fkey';
+    final profileFields =
+        '$profileRelation(id,username,display_name,bio,avatar_url,is_verified)';
+    final rows = await client
+        .from('follows')
+        .select('follower_id,following_id,created_at,$profileFields')
+        .eq(_showFollowers ? 'following_id' : 'follower_id', id)
+        .eq('status', 'accepted')
+        .order('created_at', ascending: false)
+        .order(_showFollowers ? 'follower_id' : 'following_id', ascending: true)
+        .range(offset, offset + _pageSize - 1);
+    if (client.auth.currentUser?.id != id) {
+      throw StateError('تغير الحساب أثناء تحميل قائمة الأصدقاء.');
+    }
     return List<Map<String, dynamic>>.from(rows);
   }
+
+  Future<void> _loadFirstPage() async {
+    if (!mounted) return;
+    final generation = ++_requestGeneration;
+    setState(() {
+      _initialLoading = true;
+      _loadingMore = false;
+      _loadError = null;
+      _offset = 0;
+      _hasMore = true;
+      _rows.clear();
+    });
+    try {
+      final rows = await _fetchPage(0);
+      if (!mounted || generation != _requestGeneration) return;
+      setState(() {
+        _rows.addAll(rows);
+        _offset = rows.length;
+        _hasMore = rows.length == _pageSize;
+      });
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'friends_list_load');
+      if (mounted && generation == _requestGeneration) {
+        setState(() => _loadError = error);
+      }
+    } finally {
+      if (mounted && generation == _requestGeneration) {
+        setState(() => _initialLoading = false);
+      }
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore || _initialLoading) return;
+    final generation = _requestGeneration;
+    setState(() => _loadingMore = true);
+    try {
+      final rows = await _fetchPage(_offset);
+      if (!mounted || generation != _requestGeneration) return;
+      final relationshipKey = _showFollowers ? 'follower_id' : 'following_id';
+      final knownIds = _rows.map((row) => row[relationshipKey]).toSet();
+      final additions = rows.where(
+        (row) => !knownIds.contains(row[relationshipKey]),
+      );
+      setState(() {
+        _rows.addAll(additions);
+        // Offset tracks backend rows fetched, not only newly visible rows.
+        _offset += rows.length;
+        _hasMore = rows.length == _pageSize;
+      });
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'friends_list_load_more');
+      if (mounted && generation == _requestGeneration) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppErrorService.message(error))),
+        );
+      }
+    } finally {
+      if (mounted && generation == _requestGeneration) {
+        setState(() => _loadingMore = false);
+      }
+    }
+  }
+
+  void _removeFollowing(String userId) {
+    final previousLength = _rows.length;
+    _requestGeneration++;
+    setState(() {
+      _rows.removeWhere((row) => row['following_id'] == userId);
+      if (_rows.length < previousLength && _offset > 0) _offset--;
+      _loadingMore = false;
+    });
+  }
+
+  void _switchList(bool showFollowers) {
+    if (_showFollowers == showFollowers) return;
+    setState(() => _showFollowers = showFollowers);
+    _loadFirstPage();
+  }
+
+  Widget _buildPerson(Map<String, dynamic> row) {
+    final profile = row['profiles'];
+    if (profile is! Map) {
+      return Card(
+        child: ListTile(
+          leading: const CircleAvatar(child: Icon(Icons.lock_outline)),
+          title: const Text('حساب خاص'),
+          subtitle: const Text('الملف الشخصي غير متاح'),
+        ),
+      );
+    }
+    final profileMap = Map<String, dynamic>.from(profile);
+    return PersonTile(
+      key: ValueKey(profileMap['id']),
+      profile: profileMap,
+      follow: true,
+      onUnfollow: _showFollowers
+          ? null
+          : () => _removeFollowing(profileMap['id'].toString()),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('مجتمعك', style: TextStyle(fontWeight: FontWeight.w800)), actions: [IconButton(onPressed: () => setState(() => _future = _load()), icon: const Icon(Icons.refresh))]), body: FutureBuilder<List<Map<String, dynamic>>>(future: _future, builder: (context, snap) {
-    if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-    if (snap.hasError) return AppErrorView(title: 'تعذر تحميل المتابَعين', error: snap.error, onRetry: () => setState(() => _future = _load()));
-    final rows = snap.data ?? [];
-    if (rows.isEmpty) return const _Empty(icon: Icons.group_add, title: 'شبكتك لسه بتبدأ', subtitle: 'اكتشف أشخاص وتابعهم عشان يظهروا هنا.');
-    return ListView.separated(padding: const EdgeInsets.all(16), itemCount: rows.length, separatorBuilder: (_, __) => const SizedBox(height: 10), itemBuilder: (_, i) => rows[i]['profiles'] is Map<String, dynamic> ? PersonTile(profile: Map<String, dynamic>.from(rows[i]['profiles']), follow: false) : const SizedBox.shrink());
-  }));
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(
+          title: const Text('مجتمعك', style: TextStyle(fontWeight: FontWeight.w800)),
+          actions: [
+            IconButton(
+              tooltip: 'تحديث',
+              onPressed: _initialLoading ? null : _loadFirstPage,
+              icon: const Icon(Icons.refresh),
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(
+                    value: false,
+                    label: Text('أتابعهم'),
+                    icon: Icon(Icons.person_add_alt),
+                  ),
+                  ButtonSegment(
+                    value: true,
+                    label: Text('متابعيني'),
+                    icon: Icon(Icons.people_alt_outlined),
+                  ),
+                ],
+                selected: {_showFollowers},
+                onSelectionChanged: (selection) => _switchList(selection.first),
+              ),
+            ),
+            Expanded(
+              child: _initialLoading && _rows.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : _loadError != null && _rows.isEmpty
+                      ? AppErrorView(
+                          title: 'تعذر تحميل القائمة',
+                          error: _loadError,
+                          onRetry: _loadFirstPage,
+                        )
+                      : _rows.isEmpty
+                          ? _Empty(
+                              icon: _showFollowers
+                                  ? Icons.people_outline
+                                  : Icons.group_add,
+                              title: _showFollowers
+                                  ? 'لسه مفيش متابعين'
+                                  : 'شبكتك لسه بتبدأ',
+                              subtitle: _showFollowers
+                                  ? 'لما حد يتابعك هتلاقيه هنا.'
+                                  : 'اكتشف أشخاص وتابعهم عشان يظهروا هنا.',
+                            )
+                          : RefreshIndicator(
+                              onRefresh: _loadFirstPage,
+                              child: ListView.separated(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.all(16),
+                                itemCount: _rows.length + (_hasMore ? 1 : 0),
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 10),
+                                itemBuilder: (_, i) {
+                                  if (i == _rows.length) {
+                                    return Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                        child: OutlinedButton.icon(
+                                          onPressed: _loadingMore ? null : _loadMore,
+                                          icon: _loadingMore
+                                              ? const SizedBox.square(
+                                                  dimension: 16,
+                                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                                )
+                                              : const Icon(Icons.expand_more),
+                                          label: Text(_loadingMore ? 'جارٍ التحميل...' : 'تحميل المزيد'),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return _buildPerson(_rows[i]);
+                                },
+                              ),
+                            ),
+            ),
+          ],
+        ),
+      );
 }
 
 class CreateScreen extends StatefulWidget {
@@ -1296,9 +1873,13 @@ class _CreateScreenState extends State<CreateScreen> {
       setState(() => _error = value.length > 5000 ? 'الحد الأقصى 5000 حرف.' : 'اكتب محتوى أو أضف صورة/فيديو.');
       return;
     }
-    setState(() { _busy = true; _error = null; });
     final client = Supabase.instance.client;
-    final userId = client.auth.currentUser!.id;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) {
+      setState(() => _error = 'انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
+      return;
+    }
+    setState(() { _busy = true; _error = null; });
     String? postId;
     List<String> uploadedPaths = [];
     try {
@@ -1387,7 +1968,7 @@ class _CreateScreenState extends State<CreateScreen> {
       ))),
       const SizedBox(height: 12),
       const Text('الملفات تُرفع إلى مساحة خاصة، ويُسمح بمشاهدتها حسب خصوصية المنشور والحساب.',
-        style: TextStyle(color: Color(0xFFA1A1AA), height: 1.5)),
+        style: TextStyle(color: NexoraColors.textMuted, height: 1.5)),
     ]),
   );
 }
@@ -1433,7 +2014,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
   Future<List<Map<String, dynamic>>> _loadOwnPosts({int offset = 0}) async {
     final client = Supabase.instance.client;
-    final userId = client.auth.currentUser!.id;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) throw StateError('انتهت جلسة الدخول.');
     final rows = await client
         .from('posts')
         .select('id,user_id,content,visibility,created_at,profiles!posts_user_id_fkey(id,username,display_name,avatar_url)')
@@ -1595,7 +2177,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (p == null) return const _Empty(icon: Icons.person_off, title: 'الملف الشخصي غير موجود', subtitle: 'راجع إعداد إنشاء صف profiles عند تسجيل الحساب.');
     final u = Supabase.instance.client.auth.currentUser!;
     return ListView(padding: const EdgeInsets.all(18), children: [
-      Container(padding: const EdgeInsets.fromLTRB(16, 12, 16, 22), decoration: BoxDecoration(borderRadius: BorderRadius.circular(26), gradient: const LinearGradient(colors: [Color(0xFF171717), Color(0xFF050505)]), border: Border.all(color: const Color(0xFF292929))), child: Column(children: [
+      Container(padding: const EdgeInsets.fromLTRB(16, 12, 16, 22), decoration: BoxDecoration(borderRadius: BorderRadius.circular(26), gradient: const LinearGradient(colors: [NexoraColors.surfaceRaised, NexoraColors.surface]), border: Border.all(color: NexoraColors.hairline)), child: Column(children: [
         Stack(children: [
           _ProfileCover(path: p['cover_url']?.toString()),
           Positioned(left: 8, top: 8, child: IconButton.filledTonal(
@@ -1688,7 +2270,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         },
       ),
-      const SizedBox(height: 20), OutlinedButton.icon(onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج')),
+      const SizedBox(height: 20), OutlinedButton.icon(onPressed: _signOutNexora, icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج')),
     ]);
   }));
 }
@@ -1846,9 +2428,15 @@ class _PostCardState extends State<PostCard> {
 
   Future<void> _toggleSave() async {
     if (_saveBusy) return;
-    setState(() => _saveBusy = true);
     final db = Supabase.instance.client;
-    final uid = db.auth.currentUser!.id;
+    final uid = db.auth.currentUser?.id;
+    if (uid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('انتهت جلسة الدخول. سجّل الدخول مرة تانية.')),
+      );
+      return;
+    }
+    setState(() => _saveBusy = true);
     final postId = widget.post['id'] as String;
     try {
       if (_saved) {
@@ -1963,8 +2551,16 @@ class _PostCardState extends State<PostCard> {
 
   Future<void> _like() async {
     if (_busy || _liked == null) return;
+    final db = Supabase.instance.client;
+    final uid = db.auth.currentUser?.id;
+    if (uid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('انتهت جلسة الدخول. سجّل الدخول مرة تانية.')),
+      );
+      return;
+    }
     setState(() => _busy = true);
-    final db = Supabase.instance.client, uid = Supabase.instance.client.auth.currentUser!.id, pid = widget.post['id'] as String;
+    final pid = widget.post['id'] as String;
     try {
       if (_liked == false) { await db.from('likes').insert({'user_id': uid, 'post_id': pid}); if (mounted) setState(() => _liked = true); }
       else { await db.from('likes').delete().eq('user_id', uid).eq('post_id', pid); if (mounted) setState(() => _liked = false); }
@@ -1979,7 +2575,7 @@ class _PostCardState extends State<PostCard> {
     final d = DateTime.tryParse((widget.post['created_at'] ?? '').toString())?.toLocal();
     final stamp = d == null ? '' : d.day.toString() + '/' + d.month.toString() + ' • ' + d.hour.toString().padLeft(2, '0') + ':' + d.minute.toString().padLeft(2, '0');
     return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(children: [_ProfileAvatar(url: a is Map ? a['avatar_url']?.toString() : null), const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(fontWeight: FontWeight.w800)), Text('@' + handle + ' • ' + stamp, style: const TextStyle(fontSize: 11, color: Color(0xFF8390A4)))])), PopupMenuButton<String>(
+      Row(children: [_ProfileAvatar(url: a is Map ? a['avatar_url']?.toString() : null), const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(fontWeight: FontWeight.w800)), Text('@' + handle + ' • ' + stamp, style: const TextStyle(fontSize: 11, color: NexoraColors.textMuted))])), PopupMenuButton<String>(
         tooltip: 'خيارات المنشور',
         onSelected: (value) async {
           if (value == 'block_user') {
@@ -2014,7 +2610,7 @@ class _PostCardState extends State<PostCard> {
             ),
           ),
           if (widget.post['user_id'] !=
-              Supabase.instance.client.auth.currentUser!.id) ...[
+              Supabase.instance.client.auth.currentUser?.id) ...[
             const PopupMenuItem(
               value: 'block_user',
               child: Row(
@@ -2041,7 +2637,7 @@ class _PostCardState extends State<PostCard> {
       if ((widget.post['content'] ?? '').toString().isNotEmpty)
         Text((widget.post['content'] ?? '').toString(), style: const TextStyle(fontSize: 15, height: 1.65)),
       PostMediaGallery(postId: widget.post['id'] as String),
-      const Divider(height: 24, color: Color(0xFF292929)),
+      const Divider(height: 24, color: NexoraColors.hairline),
       Row(children: [
         TextButton.icon(
           onPressed: _busy || _liked == null ? null : _like,
@@ -2052,7 +2648,7 @@ class _PostCardState extends State<PostCard> {
           onPressed: widget.post['visibility'] == 'public' && !_repostBusy ? _toggleRepost : null,
           icon: _repostBusy
               ? const SizedBox.square(dimension: 14, child: CircularProgressIndicator(strokeWidth: 2))
-              : Icon(_reposted ? Icons.repeat_on : Icons.repeat, color: _reposted ? const Color(0xFFB8E986) : null),
+              : Icon(_reposted ? Icons.repeat_on : Icons.repeat, color: _reposted ? NexoraColors.success : null),
           label: Text(_reposted ? 'أعدت النشر' : 'إعادة نشر'),
         ),
         IconButton(
@@ -2076,9 +2672,10 @@ class _PostCardState extends State<PostCard> {
 }
 
 class PersonTile extends StatefulWidget {
-  const PersonTile({super.key, required this.profile, required this.follow});
+  const PersonTile({super.key, required this.profile, required this.follow, this.onUnfollow});
   final Map<String, dynamic> profile;
   final bool follow;
+  final VoidCallback? onUnfollow;
   @override
   State<PersonTile> createState() => _PersonTileState();
 }
@@ -2086,6 +2683,7 @@ class _PersonTileState extends State<PersonTile> {
   String? _followStatus;
   bool _busy = true;
   bool _blocked = false;
+  int _relationshipGeneration = 0;
 
   @override
   void initState() {
@@ -2093,11 +2691,31 @@ class _PersonTileState extends State<PersonTile> {
     _loadRelationshipState();
   }
 
+  @override
+  void didUpdateWidget(covariant PersonTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.profile['id'] != widget.profile['id'] ||
+        oldWidget.follow != widget.follow) {
+      _relationshipGeneration++;
+      _followStatus = null;
+      _blocked = false;
+      _busy = true;
+      _loadRelationshipState();
+    }
+  }
+
   Future<void> _loadRelationshipState() async {
+    final generation = ++_relationshipGeneration;
+    final client = Supabase.instance.client;
+    final me = client.auth.currentUser?.id;
+    final other = widget.profile['id']?.toString();
+    if (me == null || other == null) {
+      if (mounted && generation == _relationshipGeneration) {
+        setState(() => _busy = false);
+      }
+      return;
+    }
     try {
-      final client = Supabase.instance.client;
-      final me = client.auth.currentUser!.id;
-      final other = widget.profile['id'] as String;
       final block = await client
           .from('blocks')
           .select('blocked_id')
@@ -2113,7 +2731,12 @@ class _PersonTileState extends State<PersonTile> {
             .eq('following_id', other)
             .maybeSingle();
       }
-      if (!mounted) return;
+      if (!mounted ||
+          generation != _relationshipGeneration ||
+          widget.profile['id']?.toString() != other ||
+          client.auth.currentUser?.id != me) {
+        return;
+      }
       setState(() {
         _blocked = block != null;
         _followStatus = follow?['status'] as String?;
@@ -2121,28 +2744,37 @@ class _PersonTileState extends State<PersonTile> {
       });
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'load_person_relationship');
-      if (mounted) setState(() => _busy = false);
+      if (mounted && generation == _relationshipGeneration) {
+        setState(() => _busy = false);
+      }
     }
   }
 
   Future<void> _blockAccount() async {
+    final generation = _relationshipGeneration;
+    final targetId = widget.profile['id'] as String;
     try {
       final blocked = await BlockAccountService.confirmAndBlock(
         context,
-        targetUserId: widget.profile['id'] as String,
+        targetUserId: targetId,
         displayName: (widget.profile['display_name'] ??
                 widget.profile['username'] ??
                 'الحساب')
             .toString(),
       );
-      if (!mounted || !blocked) return;
+      if (!mounted ||
+          !blocked ||
+          generation != _relationshipGeneration ||
+          widget.profile['id']?.toString() != targetId) {
+        return;
+      }
       setState(() => _blocked = true);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('تم حظر الحساب')),
       );
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'block_account');
-      if (mounted) {
+      if (mounted && generation == _relationshipGeneration) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AppErrorService.message(error))),
         );
@@ -2152,31 +2784,44 @@ class _PersonTileState extends State<PersonTile> {
 
   Future<void> _toggle() async {
     if (_busy) return;
-    setState(() => _busy = true);
+    final generation = _relationshipGeneration;
     final other = widget.profile['id'] as String;
+    final wasAccepted = _followStatus == 'accepted';
+    setState(() => _busy = true);
     try {
       if (_followStatus == null) {
         final status = await Supabase.instance.client.rpc(
           'request_follow',
           params: {'p_target_user_id': other},
         );
-        if (mounted) setState(() => _followStatus = status.toString());
+        if (mounted &&
+            generation == _relationshipGeneration &&
+            widget.profile['id']?.toString() == other) {
+          setState(() => _followStatus = status.toString());
+        }
       } else {
         await Supabase.instance.client.rpc(
           'cancel_follow',
           params: {'p_target_user_id': other},
         );
-        if (mounted) setState(() => _followStatus = null);
+        if (mounted &&
+            generation == _relationshipGeneration &&
+            widget.profile['id']?.toString() == other) {
+          setState(() => _followStatus = null);
+          if (wasAccepted) widget.onUnfollow?.call();
+        }
       }
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'follow');
-      if (mounted) {
+      if (mounted && generation == _relationshipGeneration) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AppErrorService.message(error))),
         );
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted && generation == _relationshipGeneration) {
+        setState(() => _busy = false);
+      }
     }
   }
   @override
@@ -2185,11 +2830,11 @@ class _PersonTileState extends State<PersonTile> {
     return Card(child: Padding(padding: const EdgeInsets.all(13), child: Row(children: [
       _ProfileAvatar(url: p['avatar_url']?.toString(), size: 48), const SizedBox(width: 12),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [Flexible(child: Text((p['display_name'] ?? 'مستخدم').toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800))), if (p['is_verified'] == true) const Icon(Icons.verified, size: 16, color: Colors.lightBlueAccent)]),
-        Text('@' + (p['username'] ?? 'user').toString(), style: const TextStyle(color: Color(0xFF9AA7BA), fontSize: 12)),
-        if ((p['bio'] ?? '').toString().isNotEmpty) Text(p['bio'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF8996AA), fontSize: 12)),
+        Row(children: [Flexible(child: Text((p['display_name'] ?? 'مستخدم').toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800))), if (p['is_verified'] == true) const Icon(Icons.verified, size: 16, color: NexoraColors.cyan)]),
+        Text('@' + (p['username'] ?? 'user').toString(), style: const TextStyle(color: NexoraColors.textMuted, fontSize: 12)),
+        if ((p['bio'] ?? '').toString().isNotEmpty) Text(p['bio'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: NexoraColors.textMuted, fontSize: 12)),
       ])),
-      if (p['id'] != Supabase.instance.client.auth.currentUser!.id)
+      if (p['id'] != Supabase.instance.client.auth.currentUser?.id)
         PopupMenuButton<String>(
           tooltip: 'خيارات الحساب',
           onSelected: (value) async {
@@ -2246,7 +2891,7 @@ class _Brand extends StatelessWidget {
   const _Brand({this.size = 46});
   final double size;
   @override
-  Widget build(BuildContext context) => Container(width: size, height: size, decoration: BoxDecoration(borderRadius: BorderRadius.circular(size * .3), gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF8CEBFF), Color(0xFF6B83FF), Color(0xFFB17BFF)]), border: Border.all(color: const Color(0x99FFFFFF)), boxShadow: const [BoxShadow(color: Color(0x6654CFFF), blurRadius: 26, offset: Offset(0, 8))]), child: Icon(Icons.bolt_rounded, color: const Color(0xFF071321), size: size * .58));
+  Widget build(BuildContext context) => Container(width: size, height: size, decoration: BoxDecoration(borderRadius: BorderRadius.circular(size * .3), gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: NexoraColors.brandGradient), border: Border.all(color: const Color(0x99FFFFFF)), boxShadow: const [BoxShadow(color: Color(0x6654CFFF), blurRadius: 26, offset: Offset(0, 8))]), child: Icon(Icons.bolt_rounded, color: Colors.white, size: size * .58));
 }
 Future<String?> _resolvePrivateMediaUrl(String? value) async {
   final raw = (value ?? '').trim();
@@ -2283,7 +2928,7 @@ class _ProfileAvatarState extends State<_ProfileAvatar> {
   @override
   Widget build(BuildContext context) => Container(
     width: widget.size, height: widget.size, clipBehavior: Clip.antiAlias,
-    decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF243448), border: Border.all(color: const Color(0xFF40536A))),
+    decoration: BoxDecoration(shape: BoxShape.circle, color: NexoraColors.surfaceRaised, border: Border.all(color: NexoraColors.hairline)),
     child: FutureBuilder<String?>(
       future: _urlFuture,
       builder: (context, snapshot) => snapshot.data == null
@@ -2318,9 +2963,9 @@ class _ProfileCoverState extends State<_ProfileCover> {
       child: FutureBuilder<String?>(
         future: _urlFuture,
         builder: (context, snapshot) => snapshot.data == null
-          ? Container(color: const Color(0xFF202A36), child: const Center(child: Icon(Icons.landscape_outlined, size: 38, color: Color(0xFF8492A6))))
+          ? Container(color: NexoraColors.surfaceRaised, child: const Center(child: Icon(Icons.landscape_outlined, size: 38, color: NexoraColors.textMuted)))
           : Image.network(snapshot.data!, fit: BoxFit.cover, width: double.infinity,
-              errorBuilder: (_, __, ___) => Container(color: const Color(0xFF202A36), child: const Icon(Icons.broken_image_outlined))),
+              errorBuilder: (_, __, ___) => Container(color: NexoraColors.surfaceRaised, child: const Icon(Icons.broken_image_outlined, color: NexoraColors.textMuted))),
       ),
     ),
   );
@@ -2330,17 +2975,17 @@ class _Info extends StatelessWidget {
   const _Info({required this.icon, required this.title, required this.value});
   final IconData icon; final String title, value;
   @override
-  Widget build(BuildContext context) => Card(child: ListTile(leading: Icon(icon, color: const Color(0xFFFFFFFF)), title: Text(title, style: const TextStyle(fontSize: 12, color: Color(0xFF8F9CB0))), subtitle: Text(value)));
+  Widget build(BuildContext context) => Card(child: ListTile(leading: Icon(icon, color: NexoraColors.textMuted), title: Text(title, style: const TextStyle(fontSize: 12, color: NexoraColors.textMuted)), subtitle: Text(value)));
 }
 class _Notice extends StatelessWidget {
   const _Notice({required this.text, required this.error});
   final String text; final bool error;
   @override
-  Widget build(BuildContext context) => Container(margin: const EdgeInsets.only(top: 12), padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: error ? const Color(0x33FF7777) : const Color(0x333E7540), borderRadius: BorderRadius.circular(14)), child: Text(text, textAlign: TextAlign.center, style: TextStyle(color: error ? const Color(0xFFFFA0A0) : const Color(0xFFFFFFFF))));
+  Widget build(BuildContext context) => Container(margin: const EdgeInsets.only(top: 12), padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: error ? NexoraColors.danger.withValues(alpha: .12) : NexoraColors.success.withValues(alpha: .12), borderRadius: BorderRadius.circular(14)), child: Text(text, textAlign: TextAlign.center, style: TextStyle(color: error ? NexoraColors.danger : NexoraColors.text)));
 }
 class _Empty extends StatelessWidget {
   const _Empty({required this.icon, required this.title, required this.subtitle});
   final IconData icon; final String title, subtitle;
   @override
-  Widget build(BuildContext context) => Center(child: Padding(padding: const EdgeInsets.all(30), child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 54, color: const Color(0xFFFFFFFF)), const SizedBox(height: 18), Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)), const SizedBox(height: 8), Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF8E9BB0), height: 1.6))])));
+  Widget build(BuildContext context) => Center(child: Padding(padding: const EdgeInsets.all(30), child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 54, color: NexoraColors.text), const SizedBox(height: 18), Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)), const SizedBox(height: 8), Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(color: NexoraColors.textMuted, height: 1.6))])));
 }

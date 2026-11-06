@@ -4,11 +4,18 @@ import '../media/media_upload_service.dart';
 
 class MessageAttachmentService {
   final ImagePicker _picker = ImagePicker();
+
+  void _requireCurrentUser(String userId) {
+    if (Supabase.instance.client.auth.currentUser?.id != userId) {
+      throw StateError('انتهت جلسة الدخول أو تغير الحساب. سجّل الدخول مرة تانية.');
+    }
+  }
   Future<XFile?> pickImage() => _picker.pickImage(source: ImageSource.gallery, imageQuality: 88, maxWidth: 2048, maxHeight: 2048);
 
   Future<String> sendImage(String conversationId, XFile file) async {
     final client = Supabase.instance.client;
-    final uid = client.auth.currentUser!.id;
+    final uid = client.auth.currentUser?.id;
+    if (uid == null) throw StateError('يجب تسجيل الدخول لإرسال المرفقات.');
     final ext = file.name.split('.').last.toLowerCase();
     final type = switch (ext) { 'jpg' || 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', _ => null };
     if (type == null) throw const FormatException('صيغة الصورة غير مدعومة.');
@@ -17,33 +24,63 @@ class MessageAttachmentService {
       throw const FormatException('الصورة غير صالحة أو أكبر من 10 ميجابايت.');
     }
     final path = '$uid/$conversationId/messages/${DateTime.now().microsecondsSinceEpoch}.$ext';
+    _requireCurrentUser(uid);
     await client.storage.from('nexora-media').uploadBinary(path, bytes, fileOptions: FileOptions(contentType: type, upsert: false));
     String? messageId;
     try {
+      _requireCurrentUser(uid);
       final row = await client.from('messages').insert({'conversation_id': conversationId, 'sender_id': uid, 'message_type': 'image', 'body': null, 'encryption_mode': 'server_readable'}).select('id').single();
       messageId = row['id'] as String;
+      _requireCurrentUser(uid);
       await client.from('message_attachments').insert({'message_id': messageId, 'uploader_id': uid, 'storage_path': path, 'mime_type': type, 'size_bytes': bytes.length});
+      _requireCurrentUser(uid);
       return messageId;
     } catch (_) {
-      if (messageId != null) {
-        try {
-          await client.from('messages')
-              .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
-              .eq('id', messageId)
-              .eq('sender_id', uid);
-        } catch (_) {}
+      // Never issue rollback writes using a newly signed-in account.
+      if (client.auth.currentUser?.id == uid) {
+        if (messageId != null) {
+          try {
+            await client.from('messages')
+                .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+                .eq('id', messageId)
+                .eq('sender_id', uid);
+          } catch (_) {}
+        }
+        try { await client.storage.from('nexora-media').remove([path]); } catch (_) {}
       }
-      try { await client.storage.from('nexora-media').remove([path]); } catch (_) {}
       rethrow;
     }
   }
 
   Future<String?> signedImageUrl(String messageId) async {
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-    final row = await Supabase.instance.client.from('message_attachments').select('storage_path').eq('message_id', messageId).inFilter('mime_type', ['image/jpeg', 'image/png', 'image/webp']).maybeSingle();
-    final path = row?['storage_path'] as String?;
-    if (path == null) return null;
-    return Supabase.instance.client.storage.from('nexora-media').createSignedUrl(path, 3600);
+    final client = Supabase.instance.client;
+    final viewerId = client.auth.currentUser?.id;
+    if (viewerId == null) return null;
+
+    // The realtime message row can arrive before its attachment metadata.
+    // Retry briefly instead of relying on one arbitrary fixed delay.
+    for (var attempt = 0; attempt < 4; attempt++) {
+      if (client.auth.currentUser?.id != viewerId) return null;
+      if (attempt > 0) {
+        await Future<void>.delayed(
+          Duration(milliseconds: 200 * (1 << (attempt - 1))),
+        );
+      }
+      final row = await client
+          .from('message_attachments')
+          .select('storage_path')
+          .eq('message_id', messageId)
+          .inFilter('mime_type', ['image/jpeg', 'image/png', 'image/webp'])
+          .maybeSingle();
+      final path = row?['storage_path'] as String?;
+      if (path == null) continue;
+      if (client.auth.currentUser?.id != viewerId) return null;
+      final signedUrl =
+          await client.storage.from('nexora-media').createSignedUrl(path, 3600);
+      if (client.auth.currentUser?.id != viewerId) return null;
+      return signedUrl;
+    }
+    return null;
   }
 
   Future<void> deleteOwnAttachment(String messageId) async {
@@ -57,10 +94,12 @@ class MessageAttachmentService {
         .maybeSingle();
     final path = row?['storage_path'] as String?;
     if (path == null) return;
+    _requireCurrentUser(uid);
     await client.from('message_attachments')
         .delete()
         .eq('message_id', messageId)
         .eq('uploader_id', uid);
+    if (client.auth.currentUser?.id != uid) return;
     try { await client.storage.from('nexora-media').remove([path]); } catch (_) {}
   }
 }

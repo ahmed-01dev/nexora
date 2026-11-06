@@ -18,6 +18,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   static const int _pageSize = 50;
   bool _hasMore = true;
   bool _loadingMore = false;
+  int _nextOffset = 0;
+  int _generation = 0;
 
   @override
   void initState() {
@@ -25,21 +27,37 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     _future = _load();
   }
 
-  Future<List<Map<String, dynamic>>> _load({int offset = 0}) async {
-    final rows = await Supabase.instance.client.rpc(
+  Future<List<Map<String, dynamic>>> _load({int offset = 0, int? generation}) async {
+    final requestGeneration = generation ?? _generation;
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) {
+      throw StateError('انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
+    }
+    final response = await client.rpc(
       'get_my_notification_page',
       params: {'p_offset': offset, 'p_limit': _pageSize},
     );
-    if (mounted) setState(() => _hasMore = rows.length == _pageSize);
-    return List<Map<String, dynamic>>.from(rows as List);
+    if (client.auth.currentUser?.id != userId) {
+      throw StateError('تغير الحساب أثناء تحميل الإشعارات.');
+    }
+    final rows = response as List;
+    if (mounted && requestGeneration == _generation) {
+      setState(() {
+        _hasMore = rows.length == _pageSize;
+        _nextOffset = (offset + rows.length).toInt();
+      });
+    }
+    return List<Map<String, dynamic>>.from(rows);
   }
 
   Future<void> _loadMore(List<Map<String, dynamic>> current) async {
     if (_loadingMore || !_hasMore) return;
+    final generation = _generation;
     setState(() => _loadingMore = true);
     try {
-      final additions = await _load(offset: current.length);
-      if (!mounted) return;
+      final additions = await _load(offset: _nextOffset, generation: generation);
+      if (!mounted || generation != _generation) return;
       final known = current.map((row) => row['id']).toSet();
       final unique = additions.where((row) => !known.contains(row['id']));
       setState(() {
@@ -48,7 +66,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       });
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'load_more_notifications');
-      if (mounted) {
+      if (mounted && generation == _generation) {
         setState(() => _loadingMore = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AppErrorService.message(error))),
@@ -57,22 +75,39 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  Future<void> _markRead(String id) async {
-    await Supabase.instance.client
+  Future<void> _markRead(String id, String userId) async {
+    final client = Supabase.instance.client;
+    if (client.auth.currentUser?.id != userId) {
+      throw StateError('تغير الحساب قبل تحديث الإشعار.');
+    }
+    await client
         .from('notifications')
         .update({'read_at': DateTime.now().toUtc().toIso8601String()})
         .eq('id', id)
-        .eq('recipient_id', Supabase.instance.client.auth.currentUser!.id);
+        .eq('recipient_id', userId);
+    if (client.auth.currentUser?.id != userId) {
+      throw StateError('تغير الحساب أثناء تحديث الإشعار.');
+    }
   }
 
   Future<void> _markAllRead() async {
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('انتهت جلسة الدخول. سجّل الدخول مرة تانية.')),
+        );
+      }
+      return;
+    }
     try {
-      await Supabase.instance.client
+      await client
           .from('notifications')
           .update({'read_at': DateTime.now().toUtc().toIso8601String()})
-          .eq('recipient_id', Supabase.instance.client.auth.currentUser!.id)
+          .eq('recipient_id', userId)
           .isFilter('read_at', null);
-      if (mounted) setState(() { _hasMore = true; _future = _load(); });
+      if (mounted && client.auth.currentUser?.id == userId) await _refresh();
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'mark_all_notifications_read');
       if (mounted) {
@@ -82,10 +117,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _open(Map<String, dynamic> row) async {
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('انتهت جلسة الدخول. سجّل الدخول مرة تانية.')),
+        );
+      }
+      return;
+    }
     try {
-      await _markRead(row['id'] as String);
-      if (!mounted) return;
-      setState(() => _future = _load());
+      await _markRead(row['id'] as String, userId);
+      if (!mounted || client.auth.currentUser?.id != userId) return;
+      await _refresh();
+      if (!mounted || client.auth.currentUser?.id != userId) return;
       final type = row['notification_type'] as String? ?? '';
       final payload = row['payload'] is Map
           ? Map<String, dynamic>.from(row['payload'] as Map)
@@ -128,12 +174,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   };
 
   Future<void> _refresh() async {
+    if (!mounted) return;
+    final generation = ++_generation;
+    final next = _load(generation: generation);
     setState(() {
       _hasMore = true;
       _loadingMore = false;
-      _future = _load();
+      _nextOffset = 0;
+      _future = next;
     });
-    await _future;
+    try {
+      await next;
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'notifications_refresh');
+      // FutureBuilder owns the visible error state; resolve refresh safely.
+    }
   }
 
   @override

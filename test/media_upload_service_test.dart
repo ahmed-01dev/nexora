@@ -86,4 +86,34 @@ void main() {
       );
     });
   });
+
+  group('MediaUploadService.validateUploadOwner', () {
+    test('accepts only the currently authenticated owner', () {
+      expect(
+        () => MediaUploadService.validateUploadOwner(
+          authenticatedUserId: 'user-a',
+          requestedUserId: 'user-a',
+        ),
+        returnsNormally,
+      );
+    });
+
+    test('rejects another account and an absent session', () {
+      expect(
+        () => MediaUploadService.validateUploadOwner(
+          authenticatedUserId: 'user-a',
+          requestedUserId: 'user-b',
+        ),
+        throwsStateError,
+      );
+      expect(
+        () => MediaUploadService.validateUploadOwner(
+          authenticatedUserId: null,
+          requestedUserId: 'user-a',
+        ),
+        throwsStateError,
+      );
+    });
+  });
+
 }

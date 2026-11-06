@@ -8,6 +8,13 @@ final ValueNotifier<String> nexoraThemeNotifier = ValueNotifier<String>('amoled'
 final ValueNotifier<Color> nexoraAccentNotifier =
     ValueNotifier<Color>(NexoraColors.violet);
 
+const List<Color> nexoraAccentPalette = [
+  NexoraColors.violet,
+  NexoraColors.cyan,
+  NexoraColors.pink,
+  NexoraColors.amber,
+];
+
 String nexoraColorToHex(Color color) =>
     '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
 
@@ -35,17 +42,6 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
     'pink_amoled': 'AMOLED وردي',
     'custom': 'لون مخصص',
   };
-
-  static const List<Color> _accents = [
-    NexoraColors.violet,
-    NexoraColors.cyan,
-    NexoraColors.pink,
-    NexoraColors.amber,
-    Color(0xFF38E8A5),
-    Color(0xFF4F8CFF),
-    Color(0xFFFF7043),
-    Color(0xFFB388FF),
-  ];
 
   Future<void> _save({required String theme, required Color accent}) async {
     if (_saving) return;
@@ -124,8 +120,8 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
                       height: 34,
                       decoration: BoxDecoration(
                         color: entry.key == 'light'
-                            ? const Color(0xFFF7F7F8)
-                            : const Color(0xFF000000),
+                            ? const Color(0xFFF4F4F8)
+                            : NexoraColors.bg,
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: entry.key == 'pink_amoled'
@@ -133,8 +129,8 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
                               : entry.key == 'custom'
                                   ? nexoraAccentNotifier.value
                                   : entry.key == 'light'
-                                      ? const Color(0xFFBBBBBB)
-                                      : const Color(0xFF555555),
+                                      ? NexoraColors.textMuted
+                                      : NexoraColors.textFaint,
                           width: 3,
                         ),
                       ),
@@ -158,7 +154,7 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
                 spacing: 14,
                 runSpacing: 14,
                 children: [
-                  for (final color in _accents)
+                  for (final color in nexoraAccentPalette)
                     Semantics(
                       button: true,
                       label: 'اختيار اللون ${nexoraColorToHex(color)}',

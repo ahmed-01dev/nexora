@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/nexora_theme.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -25,7 +26,10 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
   bool _loading = true;
   bool _loadingMore = false;
   bool _hasMore = true;
+  int _nextOffset = 0;
+  int _requestGeneration = 0;
   String? _error;
+  String? _loadedUserId;
 
   @override
   void initState() {
@@ -33,9 +37,13 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
     _loadFirstPage();
   }
 
-  Future<List<Map<String, dynamic>>> _fetchPage(int offset) async {
+  Future<List<Map<String, dynamic>>> _fetchPage(
+    int offset, {
+    required int generation,
+  }) async {
     final db = Supabase.instance.client;
-    final uid = db.auth.currentUser!.id;
+    final uid = db.auth.currentUser?.id;
+    if (uid == null) throw StateError('يجب تسجيل الدخول لعرض المجتمعات.');
     final rows = await db
         .from('communities')
         .select('id,owner_id,name,slug,description,visibility,created_at')
@@ -43,8 +51,14 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
         .order('id', ascending: false)
         .range(offset, offset + _pageSize - 1);
 
+    if (db.auth.currentUser?.id != uid) {
+      throw StateError('تغير الحساب أثناء تحميل المجتمعات.');
+    }
     final page = List<Map<String, dynamic>>.from(rows);
-    if (page.isEmpty) return page;
+    if (page.isEmpty) {
+      _loadedUserId = uid;
+      return page;
+    }
 
     final ids = page.map((row) => row['id'] as String).toList();
     final memberships = await db
@@ -52,6 +66,12 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
         .select('community_id,role')
         .eq('user_id', uid)
         .inFilter('community_id', ids);
+
+    if (!mounted || generation != _requestGeneration) return page;
+    if (db.auth.currentUser?.id != uid) {
+      throw StateError('تغير الحساب أثناء تحميل عضويات المجتمعات.');
+    }
+    _loadedUserId = uid;
 
     for (final membership in memberships) {
       final id = membership['community_id'] as String;
@@ -70,10 +90,12 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
   }
 
   Future<void> _loadFirstPage() async {
+    final generation = ++_requestGeneration;
     setState(() {
       _loading = true;
       _loadingMore = false;
       _hasMore = true;
+      _nextOffset = 0;
       _error = null;
       _communities.clear();
       _joined.clear();
@@ -81,16 +103,17 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
     });
 
     try {
-      final page = await _fetchPage(0);
-      if (!mounted) return;
+      final page = await _fetchPage(0, generation: generation);
+      if (!mounted || generation != _requestGeneration) return;
       setState(() {
         _communities.addAll(page);
+        _nextOffset = page.length;
         _hasMore = page.length == _pageSize;
         _loading = false;
       });
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'communities_load');
-      if (mounted) {
+      if (mounted && generation == _requestGeneration) {
         setState(() {
           _error = AppErrorService.message(error);
           _loading = false;
@@ -100,19 +123,23 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
   }
 
   Future<void> _loadMore() async {
-    if (_loadingMore || !_hasMore) return;
+    if (_loading || _loadingMore || !_hasMore) return;
+    final generation = _requestGeneration;
     setState(() => _loadingMore = true);
     try {
-      final page = await _fetchPage(_communities.length);
-      if (!mounted) return;
+      final page = await _fetchPage(_nextOffset, generation: generation);
+      if (!mounted || generation != _requestGeneration) return;
+      final knownIds = _communities.map((row) => row['id']).toSet();
+      final additions = page.where((row) => !knownIds.contains(row['id']));
       setState(() {
-        _communities.addAll(page);
+        _communities.addAll(additions);
+        _nextOffset += page.length;
         _hasMore = page.length == _pageSize;
         _loadingMore = false;
       });
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'communities_load_more');
-      if (mounted) {
+      if (mounted && generation == _requestGeneration) {
         setState(() => _loadingMore = false);
         _showError(error);
       }
@@ -128,30 +155,32 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
 
   Future<void> _toggleMembership(Map<String, dynamic> community) async {
     final id = community['id'] as String;
-    final uid = Supabase.instance.client.auth.currentUser!.id;
-    if (_busyIds.contains(id) || community['owner_id'] == uid) return;
+    final db = Supabase.instance.client;
+    final uid = db.auth.currentUser?.id;
+    if (uid == null || uid != _loadedUserId ||
+        _busyIds.contains(id) || community['owner_id'] == uid) return;
 
     setState(() => _busyIds.add(id));
     try {
       if (_joined.contains(id)) {
-        await Supabase.instance.client
+        await db
             .from('community_members')
             .delete()
             .eq('community_id', id)
             .eq('user_id', uid);
-        if (mounted) {
+        if (mounted && db.auth.currentUser?.id == uid) {
           setState(() {
             _joined.remove(id);
             _roles.remove(id);
           });
         }
       } else {
-        await Supabase.instance.client.from('community_members').insert({
+        await db.from('community_members').insert({
           'community_id': id,
           'user_id': uid,
           'role': 'member',
         });
-        if (mounted) {
+        if (mounted && db.auth.currentUser?.id == uid) {
           setState(() {
             _joined.add(id);
             _roles[id] = 'member';
@@ -160,7 +189,7 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
       }
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'community_membership');
-      _showError(error);
+      if (db.auth.currentUser?.id == uid) _showError(error);
     } finally {
       if (mounted) setState(() => _busyIds.remove(id));
     }
@@ -194,6 +223,9 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
     );
     controller.dispose();
     if (code == null || !mounted) return;
+    final db = Supabase.instance.client;
+    final actorId = db.auth.currentUser?.id;
+    if (actorId == null || actorId != _loadedUserId) return;
 
     final validUuid = RegExp(
       r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
@@ -204,13 +236,14 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
     }
 
     try {
-      final response = await Supabase.instance.client.rpc(
+      final response = await db.rpc(
         'accept_community_invite',
         params: {'p_invite_code': code},
       );
+      if (db.auth.currentUser?.id != actorId) return;
       final rows = List<Map<String, dynamic>>.from(response as List);
       await _loadFirstPage();
-      if (!mounted) return;
+      if (!mounted || db.auth.currentUser?.id != actorId) return;
       final name = rows.isNotEmpty
           ? (rows.first['community_name'] ?? 'المجتمع').toString()
           : 'المجتمع';
@@ -224,8 +257,11 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
   }
 
   Future<void> _createInvite(Map<String, dynamic> community) async {
+    final db = Supabase.instance.client;
+    final actorId = db.auth.currentUser?.id;
+    if (actorId == null || actorId != _loadedUserId) return;
     try {
-      final response = await Supabase.instance.client.rpc(
+      final response = await db.rpc(
         'create_community_invite',
         params: {
           'p_community_id': community['id'],
@@ -233,10 +269,11 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
           'p_max_uses': 10,
         },
       );
+      if (db.auth.currentUser?.id != actorId) return;
       final rows = List<Map<String, dynamic>>.from(response as List);
       if (rows.isEmpty) throw StateError('لم يتم إنشاء رمز الدعوة.');
       final code = rows.first['invite_code'].toString();
-      if (!mounted) return;
+      if (!mounted || db.auth.currentUser?.id != actorId) return;
 
       await showDialog<void>(
         context: context,
@@ -278,7 +315,7 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
       );
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'community_invite_create');
-      _showError(error);
+      if (db.auth.currentUser?.id == actorId) _showError(error);
     }
   }
 
@@ -303,13 +340,16 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
       ),
     );
     if (confirmed != true || !mounted) return;
+    final db = Supabase.instance.client;
+    final actorId = db.auth.currentUser?.id;
+    if (actorId == null || actorId != _loadedUserId) return;
 
     try {
-      final count = await Supabase.instance.client.rpc(
+      final count = await db.rpc(
         'revoke_community_invites',
         params: {'p_community_id': community['id']},
       );
-      if (!mounted) return;
+      if (!mounted || db.auth.currentUser?.id != actorId) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('تم إلغاء ${count ?? 0} رمز دعوة')),
       );
@@ -378,13 +418,13 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
                       alignment: AlignmentDirectional.centerStart,
                       child: Text(
                         validation!,
-                        style: const TextStyle(color: Colors.redAccent),
+                        style: const TextStyle(color: NexoraColors.danger),
                       ),
                     ),
                   const SizedBox(height: 8),
                   const Text(
                     'المجتمعات الخاصة وغير المدرجة لا تظهر في الاستكشاف، ويمكن للمالك دعوة الأعضاء برمز محدود الاستخدام.',
-                    style: TextStyle(fontSize: 12, color: Colors.white70),
+                    style: TextStyle(fontSize: 12, color: NexoraColors.textMuted),
                   ),
                 ],
               ),
@@ -424,7 +464,11 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
     if (result == null || !mounted) return;
     try {
       final db = Supabase.instance.client;
-      final uid = db.auth.currentUser!.id;
+      final uid = db.auth.currentUser?.id;
+      if (uid == null || uid != _loadedUserId) {
+        _showError(StateError('تغير الحساب. أعد فتح المجتمعات قبل الإنشاء.'));
+        return;
+      }
       final created = await db.from('communities').insert({
         'owner_id': uid,
         'name': result['name'],
@@ -433,6 +477,7 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
         'visibility': result['visibility'],
       }).select('id').single();
 
+      if (db.auth.currentUser?.id != uid) return;
       final id = created['id'] as String;
       try {
         await db.from('community_members').insert({
@@ -441,12 +486,15 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
           'role': 'owner',
         });
       } catch (_) {
-        await db.from('communities').delete().eq('id', id);
+        if (db.auth.currentUser?.id == uid) {
+          await db.from('communities').delete().eq('id', id).eq('owner_id', uid);
+        }
         rethrow;
       }
 
+      if (db.auth.currentUser?.id != uid) return;
       await _loadFirstPage();
-      if (mounted) {
+      if (mounted && db.auth.currentUser?.id == uid) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('تم إنشاء المجتمع')),
         );
@@ -458,7 +506,11 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final viewerChanged = currentUserId == null ||
+        (_loadedUserId != null && currentUserId != _loadedUserId);
+    return Scaffold(
         appBar: AppBar(
           title: const Text('المجتمعات'),
           actions: [
@@ -479,7 +531,9 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
             ),
           ],
         ),
-        body: _loading
+        body: viewerChanged
+            ? Center(child: TextButton(onPressed: _loadFirstPage, child: const Text('تغير الحساب. أعد تحميل المجتمعات.')))
+            : _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
                 ? Center(
@@ -530,7 +584,7 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
                               final community = _communities[index];
                               final id = community['id'] as String;
                               final isOwner = community['owner_id'] ==
-                                  Supabase.instance.client.auth.currentUser!.id;
+                                  Supabase.instance.client.auth.currentUser?.id;
                               final joined = _joined.contains(id);
                               final role = _roles[id] ?? (isOwner ? 'owner' : 'member');
                               final canManageChannels = isOwner || role == 'moderator';
@@ -557,7 +611,7 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
                                                 ),
                                                 Text(
                                                   '/${community['slug']}',
-                                                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                                  style: const TextStyle(color: NexoraColors.textMuted, fontSize: 12),
                                                 ),
                                               ],
                                             ),
@@ -661,4 +715,5 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
                           ),
                   ),
       );
+  }
 }

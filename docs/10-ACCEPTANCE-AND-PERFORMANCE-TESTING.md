@@ -41,6 +41,17 @@ Severity:
 | SOC-006 | Search private/blocked account | Only permitted discovery fields returned | P0 |
 | SOC-007 | Nearby discovery disabled | No location stored or returned | P0 |
 | SOC-008 | Nearby discovery enabled | Coarse, consent-based results only | P1 |
+| SOC-018 | Nearby discovery on Android 13+ with location/notification permissions denied or granted | Generated release manifest declares INTERNET/network-state, coarse/fine location, and notification permissions; location consent remains opt-in; denied/denied-forever states show recovery guidance without writing coordinates | P1 |
+| SOC-009 | Recipient opens incoming follow-request inbox | Only pending requests addressed to the authenticated recipient are listed; private requester details remain hidden unless normal profile RLS permits them | P0 |
+| SOC-010 | Recipient accepts a follow request | Only the recipient may change their own incoming pending row to accepted; the status column is the only direct client-updatable field | P0 |
+| SOC-011 | Request is cancelled or either side blocks before acceptance | Acceptance affects zero rows or is denied; no relationship is created after the block | P0 |
+| SOC-014 | Refresh, load more, or accept in the follow-request inbox concurrently | Refresh is held while acceptance is in flight; acceptance and refresh are held while paging is in flight; stale pages cannot overwrite refreshed state; offsets count fetched rows and decrement when accepted rows leave the pending set | P1 |
+| SOC-015 | Unfollow an account from the accepted following list | Successful unfollow removes that account from the current following list; the followers list remains unchanged; any in-flight page is invalidated and the backend offset is adjusted; relationship tile state is not reused for a different profile | P1 |
+| SOC-016 | Accept/decline/cancel a friendship request repeatedly | Only one action per request ID is in flight; controls show a busy state; success reloads both request directions and failure leaves the row actionable | P1 |
+| SOC-017 | Refresh friendship requests from empty and populated states | Pull-to-refresh remains available with zero incoming/outgoing rows and after a failed refresh; no unhandled refresh future escapes the UI | P2 |
+| SOC-012 | Open accepted followers/following lists | Correct direction and accepted-only rows; no blocked relationship leaks; hidden private profile details and internal user-ID fragments remain hidden; deterministic 30-row pagination, load-more, and refresh | P1 |
+| SOC-013 | Measure follower/following page performance | Capture representative EXPLAIN ANALYZE and latency at realistic relationship counts; verify whether the explicit created_at/user-ID sort needs a reconciled composite index before proposing DDL | P1 |
+| SOC-019 | Load another followers/following page while new relationships change the ordered result set | Duplicate relationship IDs are not rendered twice; backend offset advances by rows fetched, not rows newly rendered | P2 |
 
 ## 4. Content and media tests
 | ID | Scenario | Expected result | Severity |
@@ -177,3 +188,69 @@ Retest result:
 
 ## 14. No-go conditions
 Do not release if any P0 authorization/privacy defect remains; a core flow silently loses data; secrets are in the client or repository; provider-dependent features are advertised without end-to-end proof; account deletion/privacy behavior is misleading; or a required P0/P1 test is failing or unexecuted without approved exclusion.
+
+
+### Follow-request inbox implementation note
+The client inbox currently supports accepting incoming pending follow requests only. Recipient-side decline is not part of the live backend contract; do not test or claim a decline action until a trusted, authorized server operation is added. SOC-009 through SOC-011 are acceptance criteria and remain NOT RUN until authenticated multi-user integration tests execute.
+
+### Client error privacy unit coverage
+
+`test/app_error_test.dart` verifies safe Arabic mappings for network, authentication, RLS, and unknown failures, and asserts raw email/token-like exception text is not written to debug logs. It does not test production telemetry or end-to-end recovery.
+
+| SOC-020 | Recycle a relationship tile to another profile while relationship reads or follow/block actions are pending | Old profile responses/actions cannot overwrite the new profile's relationship state or display a stale success state; only the original target receives the requested action | P1 |
+| SEC-021 | End a Supabase session outside the account-screen logout flow while FCM is registered | A `signedOut` event triggers owner-scoped device cleanup; the last known owner is retained after session clearing; no other account's device row is deleted | P1 |
+| APP-022 | Pull to refresh empty messages and stories screens; force a refresh network failure | Empty states remain scrollable and refreshable; refresh errors are captured by the owning FutureBuilder without an unhandled refresh-future exception | P2 |
+| APP-023 | Receive a realtime image message before attachment metadata is visible, then switch accounts during lookup | Signed URL lookup retries a bounded number of times for late metadata and stops immediately when the authenticated viewer changes | P1 |
+| APP-024 | Switch accounts during message-image upload, metadata insertion, or attachment deletion | No subsequent write or Storage cleanup is attempted under the new account; any ambiguous completed send is not blindly retried | P1 |
+| SOC-021 | Change the target profile while a friendship action is pending | The prior target's completion cannot clear busy state, reload the new target with stale data, or display an error/success against the wrong profile | P1 |
+
+| SEC-022 | A delayed FCM `onUnregistered` callback for account A arrives after account B registers the same FID | The queued callback is attributed to A, removes only A's device row, and does not clear B's in-memory registration; repeated unregister events preserve FIFO ownership | P1 |
+
+| MOD-001 | Submit a report with an unsupported target type, malformed target UUID, or reason outside the live `reports` CHECK constraints | Client rejects the invalid payload before network submission; PostgreSQL constraints and RLS remain authoritative for bypassed clients | P1 |
+
+| MOD-002 | Account changes while report submission is in flight | The client does not show success in the new session; it explains that the result may need reconciliation and does not blindly resubmit | P1 |
+
+| APP-025 | Start loading more comments, then refresh or submit a new comment before the older page returns | The stale page response cannot replace the refreshed list or overwrite the current offset/loading state | P1 |
+
+| APP-026 | Switch accounts while notification page loading, marking read, or opening a notification | Old-session data is not rendered into the new account and navigation to the old notification target is stopped | P1 |
+
+| APP-027 | Switch accounts while the followers/following list page is loading | A page fetched for the previous user is discarded and cannot populate the new session's list | P1 |
+
+| APP-028 | Sign out or switch accounts while loading or creating a community channel | Stale channel rows are cleared; follow-up membership/channel writes stop after owner change; rollback is attempted only under the original owner | P1 |
+
+| APP-029 | Switch accounts while viewing or managing community members | The previous account's member list is hidden; role/remove actions require the same viewer that loaded the list and stop after session change | P1 |
+
+| APP-030 | Switch accounts while the conversation list is visible | Previous account conversation previews are hidden until a fresh page loads for the new viewer; stale taps cannot open old conversations | P1 |
+
+| APP-031 | Switch accounts after confirming a block but before its database insert | Block creation stops when the confirmed viewer is no longer authenticated; it never retries as the new account | P1 |
+| APP-032 | Switch accounts while the blocked-account list is loading or before unblocking | Stale rows are hidden; unblock is allowed only for the viewer who loaded the list | P1 |
+| APP-033 | Switch accounts while privacy settings load or save | Settings from the previous viewer are not displayed or saved under the new session | P1 |
+| APP-034 | Switch accounts while friend/follow requests load or while an action completes | Old request lists are hidden and stale actions do not mutate the new viewer's UI | P1 |
+
+| APP-035 | Switch accounts while a profile friendship control is loading or an RPC is running | The control stops showing the previous viewer's state and disables actions for a mismatched session | P1 |
+
+| APP-036 | Switch accounts while nearby presence, location, or nearby messaging is in progress | Location/presence writes and conversation creation stop when the captured viewer changes; stale nearby results are discarded | P1 |
+| APP-037 | Switch accounts while notification preferences load, save, or request push permission | Previous account settings are hidden; preference writes are bound to the viewer who loaded them | P1 |
+| APP-038 | Switch accounts while viewing personal moderation history or submitting an appeal | The previous account's actions are hidden and appeal insertion is bound to the captured account | P1 |
+| APP-039 | Switch reviewer accounts while moderation appeals load or a decision dialog is open | Stale appeal rows are hidden and decisions are accepted only for the reviewer who loaded the queue | P1 |
+
+| APP-040 | Switch accounts while community discovery, membership, invite acceptance, invite management, or community creation is in progress | Previous-account community rows are hidden; membership/invite actions are bound to the loaded viewer and stale results are discarded | P1 |
+
+| APP-041 | Switch accounts while story feed queries or private media URLs are loading | Story rows and signed media URLs from the previous viewer are discarded; stale rows cannot be opened | P1 |
+| APP-042 | Open the story composer as one account, then switch accounts before publishing | The composer refuses to publish the prior account's draft/media under a different account | P1 |
+
+| APP-043 | Switch reviewer accounts while the moderation report queue loads, a target preview is open, or a report decision is submitted | Old reviewer data is hidden; assignment/dismissal/target preview is bound to the reviewer who loaded the queue | P1 |
+
+| APP-044 | Switch accounts while the block confirmation or report dialog is open | The action is bound to the account that opened the dialog; confirmation cannot execute under the next signed-in account | P1 |
+
+## Visual design and smoothness acceptance
+
+| UI-001 | Production shell has exactly five bottom destinations with centered Create action | Home, Explore, Create, Chat, Profile; Reels reachable from Explore | P1 |
+| UI-002 | Aurora Glass palette and surface hierarchy | AMOLED black/surfaces/text/accent tokens match `docs/DESIGN-AND-MOTION-SPEC.md` | P1 |
+| UI-003 | Glass restraint | Floating controls only; no default blur on feed cards/list rows; ≤2 nested layers and ≤3 simultaneous blurred surfaces | P1 |
+| UI-004 | Motion accessibility | Tab feedback uses shared motion tokens and respects reduced-motion preference | P1 |
+| UI-005 | Content safe area | Floating navigation never obscures the last actionable item on small screens or with system insets | P1 |
+| UI-006 | Performance | Physical-device scroll/tab/reel tests show stable 60 fps target with no sustained jank; record device and trace | P1 |
+| UI-007 | Font delivery | IBM Plex Sans Arabic and Cairo fallback are bundled and verified on Android, not merely named in ThemeData | P1 |
+| UI-008 | Visual consistency | Home, Explore, Create, Chat, Profile, auth, profile details, stories, and settings use shared tokens and RTL layout | P1 |
+

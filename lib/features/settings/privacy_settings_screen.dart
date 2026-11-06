@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/theme/nexora_theme.dart';
+
 import '../../core/app_error.dart';
 
 class PrivacySettingsScreen extends StatefulWidget {
@@ -17,6 +19,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
   bool _allowFriendRequests = true;
   String _messagesFrom = 'followers';
   String? _error;
+  String? _loadedUserId;
 
   @override
   void initState() {
@@ -28,19 +31,31 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final client = Supabase.instance.client;
-      final userId = client.auth.currentUser!.id;
+      final userId = client.auth.currentUser?.id;
+      if (userId == null) throw StateError('انتهت جلسة الدخول.');
       final profile = await client
           .from('profiles')
           .select('is_private')
           .eq('id', userId)
           .maybeSingle();
+      if (client.auth.currentUser?.id != userId) {
+        throw StateError('تغير الحساب أثناء تحميل إعدادات الخصوصية.');
+      }
       final settings = await client
           .from('user_private_settings')
           .select('allow_messages_from,allow_friend_requests')
           .eq('user_id', userId)
           .maybeSingle();
       if (!mounted) return;
+      if (client.auth.currentUser?.id != userId) {
+        setState(() {
+          _error = 'تغير الحساب أثناء تحميل إعدادات الخصوصية.';
+          _loading = false;
+        });
+        return;
+      }
       setState(() {
+        _loadedUserId = userId;
         _isPrivate = profile?['is_private'] as bool? ?? false;
         _messagesFrom = settings?['allow_messages_from'] as String? ?? 'followers';
         _allowFriendRequests = settings?['allow_friend_requests'] as bool? ?? true;
@@ -53,9 +68,15 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
   }
 
   Future<void> _save() async {
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null || userId != _loadedUserId) {
+      setState(() => _error = 'تغير الحساب. أعد تحميل إعدادات الخصوصية قبل الحفظ.');
+      return;
+    }
     setState(() { _saving = true; _error = null; });
     try {
-      await Supabase.instance.client.rpc(
+      await client.rpc(
         'update_privacy_settings',
         params: {
           'p_is_private': _isPrivate,
@@ -63,7 +84,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
           'p_allow_friend_requests': _allowFriendRequests,
         },
       );
-      if (!mounted) return;
+      if (!mounted || client.auth.currentUser?.id != userId) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('تم حفظ إعدادات الخصوصية')),
       );
@@ -77,9 +98,19 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final viewerChanged = currentUserId == null ||
+        (_loadedUserId != null && currentUserId != _loadedUserId);
     return Scaffold(
       appBar: AppBar(title: const Text('مركز الخصوصية')),
-      body: _loading
+      body: viewerChanged
+          ? Center(
+              child: TextButton(
+                onPressed: _load,
+                child: const Text('تغير الحساب. أعد تحميل إعدادات الخصوصية.'),
+              ),
+            )
+          : _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               padding: const EdgeInsets.all(18),
@@ -133,7 +164,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                         const SizedBox(height: 10),
                         const Text(
                           'الاختيار ده بيتطبق على إنشاء المحادثات الجديدة. الحظر المتبادل يمنع بدء محادثة في كل الحالات.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey, height: 1.5),
+                          style: TextStyle(fontSize: 12, color: NexoraColors.textMuted, height: 1.5),
                         ),
                       ],
                     ),
@@ -141,7 +172,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                  Text(_error!, style: const TextStyle(color: NexoraColors.danger)),
                 ],
                 const SizedBox(height: 20),
                 FilledButton(

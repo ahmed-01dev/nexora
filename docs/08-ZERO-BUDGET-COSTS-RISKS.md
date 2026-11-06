@@ -24,7 +24,7 @@ Financial rule: No paid dependency is required to build or test the MVP. Free ti
 | Image preparation | On-device compression and validation | No processing service | Required |
 | Maps | OpenStreetMap data with compliant tile/geocoding provider | Provider policies apply | Not required |
 | Email delivery | Existing Auth email/provider configuration | Limits and deliverability vary | Optional; verify |
-| SMS / WhatsApp OTP | Supported external delivery provider | Not guaranteed free | Disabled until configured and tested |
+| Email confirmation and recovery | Supabase Auth email service or configured SMTP provider | Provider-dependent; free-tier limits apply | Required for account activation and recovery; verify real delivery |
 | AI | Provider adapter only | External model APIs may be paid | Disabled |
 | Voice/video | WebRTC plus TURN/SFU infrastructure | Reliable relay/media infrastructure may cost money | Deferred |
 | Live streaming | Media ingest, transcoding, distribution | Operational cost expected | Deferred |
@@ -32,12 +32,12 @@ Financial rule: No paid dependency is required to build or test the MVP. Free ti
 | Ads | Ad network and policy review | Provider and operational constraints | Deferred |
 
 ## 3. Authentication decision
-The product vision prefers phone-first signup. The current repository has phone OTP UI and provider integration, but the Supabase project audit says Phone Auth is disabled and no working SMS delivery has been verified.
+The product uses email/password signup and sign-in. Email confirmation and password recovery depend on correctly configured email delivery and redirect URLs.
 
-- Do not claim phone signup is operational until provider setup and a real-device delivery test pass.
+- Do not claim email delivery is operational until real inbox delivery and end-to-end confirmation/recovery tests pass.
 - For a zero-budget development path, use Guest mode and/or Email only where delivery and recovery are verified.
-- Do not substitute a hard-coded OTP, fake success state, or client-only verification.
-- Keep phone flow unavailable or behind a disabled feature flag until configured.
+- Do not substitute a hard-coded code, fake success state, or client-only verification.
+- Phone-number, SMS OTP, and WhatsApp OTP authentication are excluded from the product.
 
 ## 4. Quota and capacity controls
 - Define per-user upload count and size limits on the server, not only in the client.
@@ -50,14 +50,14 @@ The product vision prefers phone-first signup. The current repository has phone 
 - Keep export and backup procedures independent of any one provider where feasible.
 
 ## 5. Deferred features
-SMS / WhatsApp OTP, external AI generation, TURN/SFU calling, live streaming, transcoding, CDN delivery, payments, payouts, ad billing, and large-scale media scanning are not MVP commitments. Do not show them as live until dependencies are funded, configured, secured, and tested.
+External AI generation, TURN/SFU calling, live streaming, transcoding, CDN delivery, payments, payouts, ad billing, and large-scale media scanning are not MVP commitments. Do not show them as live until dependencies are funded, configured, secured, and tested.
 
 ## 6. Risk register
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | Supabase free quota exhausted | Medium/high as usage grows | High | Usage limits, monitoring, graceful degradation, export plan |
 | Provider free tier changes | Medium | High | Provider adapters and periodic review |
-| SMS costs or delivery failure | High until configured | High | Disable phone OTP until verified |
+| Email delivery failure or poor deliverability | Medium until configured | High | Configure SMTP/domain and verify signup and recovery messages |
 | Storage abuse / oversized media | High | High | Server-side quotas, signature checks, cleanup |
 | Unauthorized access / RLS gap | Medium | Critical | Least privilege, RLS tests, security review |
 | Spam and automated abuse | High | High | Rate limits, reporting, throttles, moderation |
@@ -72,4 +72,4 @@ Every release identifies provider and plan, quotas, active/degraded/disabled fea
 No-go: if an MVP-critical workflow depends on a paid or unverified provider, replace it with a tested free path or exclude it.
 
 ## 8. Explicit non-promises
-NEXORA does not promise unlimited free hosting, guaranteed availability, zero cost at global scale, free SMS/WhatsApp, free AI inference, or million-user capacity on free tiers. Scaling requires measured demand and a separate cost decision.
+NEXORA does not promise unlimited free hosting, guaranteed availability, zero cost at global scale, free email delivery, free AI inference, or million-user capacity on free tiers. Scaling requires measured demand and a separate cost decision.

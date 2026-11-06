@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/theme/nexora_theme.dart';
+
 import '../../core/app_error.dart';
 import '../moderation/report_dialog.dart';
 import 'message_attachment_service.dart';
@@ -14,6 +16,7 @@ class MessagesScreen extends StatefulWidget {
 
 class _MessagesScreenState extends State<MessagesScreen> {
   late Future<List<Map<String, dynamic>>> _future;
+  String? _loadedUserId;
 
   @override
   void initState() {
@@ -22,9 +25,16 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Future<List<Map<String, dynamic>>> _load() async {
-    final rows = await Supabase.instance.client.rpc(
-      'get_my_conversation_previews',
-    );
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) {
+      throw StateError('انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
+    }
+    final rows = await client.rpc('get_my_conversation_previews');
+    if (client.auth.currentUser?.id != userId) {
+      throw StateError('تغير الحساب أثناء تحميل المحادثات.');
+    }
+    _loadedUserId = userId;
     return List<Map<String, dynamic>>.from(
       (rows as List).map((raw) {
         final row = Map<String, dynamic>.from(raw as Map);
@@ -59,27 +69,42 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = _load());
-    await _future;
+    if (!mounted) return;
+    final next = _load();
+    setState(() => _future = next);
+    try {
+      await next;
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'messages_refresh');
+      // FutureBuilder owns the error state; do not leak a failed refresh future.
+    }
   }
 
   Future<void> _newMessage() async {
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('انتهت جلسة الدخول. سجّل الدخول مرة تانية.')),
+      );
+      return;
+    }
     final profile = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (_) => const _NewConversationSheet(),
     );
-    if (!mounted || profile == null) return;
+    if (!mounted || profile == null || client.auth.currentUser?.id != userId) return;
 
     try {
-      final conversationId = await Supabase.instance.client.rpc(
+      final conversationId = await client.rpc(
         'create_direct_conversation',
         params: {'p_other_user_id': profile['id']},
       );
-      if (!mounted) return;
+      if (!mounted || client.auth.currentUser?.id != userId) return;
       await _refresh();
-      if (!mounted) return;
+      if (!mounted || client.auth.currentUser?.id != userId) return;
       Navigator.of(context).push(MaterialPageRoute<void>(
         builder: (_) => ChatScreen(
           conversationId: conversationId.toString(),
@@ -98,6 +123,14 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   void _open(Map<String, dynamic> item) {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+    if (_loadedUserId != userId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تغير الحساب. حدّث قائمة المحادثات أولًا.')),
+      );
+      return;
+    }
     final peer = item['peer'] as Map<String, dynamic>;
     final conversation = item['conversation'] as Map<String, dynamic>;
     final title = conversation['conversation_type'] == 'group'
@@ -132,6 +165,19 @@ class _MessagesScreenState extends State<MessagesScreen> {
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _future,
         builder: (context, snapshot) {
+          final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+          if (currentUserId == null ||
+              (_loadedUserId != null && _loadedUserId != currentUserId)) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('تغير الحساب. حدّث قائمة المحادثات.'),
+                  TextButton(onPressed: _refresh, child: const Text('تحديث')),
+                ],
+              ),
+            );
+          }
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -144,29 +190,36 @@ class _MessagesScreenState extends State<MessagesScreen> {
           }
           final items = snapshot.data ?? [];
           if (items.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(28),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.forum_outlined, size: 54),
-                    const SizedBox(height: 16),
-                    const Text('مساحتك الخاصة للكلام',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'ابدأ محادثة مع شخص تسمح إعدادات الخصوصية عنده باستقبال رسائلك.',
-                      textAlign: TextAlign.center,
+            return RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  const SizedBox(height: 100),
+                  Padding(
+                    padding: const EdgeInsets.all(28),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.forum_outlined, size: 54),
+                        const SizedBox(height: 16),
+                        const Text('مساحتك الخاصة للكلام',
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'ابدأ محادثة مع شخص تسمح إعدادات الخصوصية عنده باستقبال رسائلك.',
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 18),
+                        FilledButton.icon(
+                          onPressed: _newMessage,
+                          icon: const Icon(Icons.add_comment_outlined),
+                          label: const Text('رسالة جديدة'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 18),
-                    FilledButton.icon(
-                      onPressed: _newMessage,
-                      icon: const Icon(Icons.add_comment_outlined),
-                      label: const Text('رسالة جديدة'),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             );
           }
@@ -442,7 +495,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final myId = Supabase.instance.client.auth.currentUser!.id;
+    final myId = Supabase.instance.client.auth.currentUser?.id;
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -623,7 +676,7 @@ class _ChatScreenState extends State<ChatScreen> {
           if (_sendError != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(_sendError!, style: const TextStyle(color: Colors.redAccent)),
+              child: Text(_sendError!, style: const TextStyle(color: NexoraColors.danger)),
             ),
           SafeArea(
             top: false,
@@ -755,7 +808,7 @@ class _NewConversationSheetState extends State<_NewConversationSheet> {
               if (_error != null)
                 Padding(
                   padding: const EdgeInsets.all(8),
-                  child: Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                  child: Text(_error!, style: const TextStyle(color: NexoraColors.danger)),
                 ),
               if (_loading) const LinearProgressIndicator(),
               const SizedBox(height: 8),
@@ -778,7 +831,7 @@ class _NewConversationSheetState extends State<_NewConversationSheet> {
               ),
               const Text(
                 'إمكانية بدء المحادثة تخضع لخصوصية الطرف الآخر والحظر المتبادل.',
-                style: TextStyle(fontSize: 11, color: Colors.grey),
+                style: TextStyle(fontSize: 11, color: NexoraColors.textMuted),
                 textAlign: TextAlign.center,
               ),
             ],

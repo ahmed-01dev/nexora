@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/theme/nexora_theme.dart';
+
 import '../../core/app_error.dart';
 import 'nexora_push_service.dart';
 
@@ -24,14 +26,22 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
   bool loading = true;
   bool saving = false;
   String? error;
+  String? _loadedUserId;
 
   @override
   void initState() { super.initState(); load(); }
 
   Future<void> load() async {
     try {
-      final uid = Supabase.instance.client.auth.currentUser!.id;
-      final rows = await Supabase.instance.client.from('notification_preferences').select('category,in_app,push,email').eq('user_id', uid);
+      final client = Supabase.instance.client;
+      final uid = client.auth.currentUser?.id;
+      if (uid == null) throw StateError('انتهت جلسة الدخول.');
+      final rows = await client.from('notification_preferences').select('category,in_app,push,email').eq('user_id', uid);
+      if (client.auth.currentUser?.id != uid) {
+        if (mounted) setState(() { loading = false; error = 'تغير الحساب. أعد تحميل تفضيلات الإشعارات.'; });
+        return;
+      }
+      _loadedUserId = uid;
       values.clear();
       settings.clear();
       for (final row in rows) {
@@ -48,19 +58,24 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
 
   Future<void> save(String category, bool enabled) async {
     if (saving) return;
+    final client = Supabase.instance.client;
+    final uid = client.auth.currentUser?.id;
+    if (uid == null || uid != _loadedUserId) {
+      setState(() => error = 'تغير الحساب. أعد تحميل تفضيلات الإشعارات.');
+      return;
+    }
     setState(() { saving = true; error = null; });
     try {
-      final uid = Supabase.instance.client.auth.currentUser!.id;
       final previous = settings[category] ?? <String, dynamic>{'push': true, 'email': false};
       final updated = <String, dynamic>{
         'user_id': uid, 'category': category, 'in_app': enabled,
         'push': previous['push'] as bool? ?? true,
         'email': previous['email'] as bool? ?? false,
       };
-      await Supabase.instance.client.from('notification_preferences').upsert(
+      await client.from('notification_preferences').upsert(
         updated, onConflict: 'user_id,category',
       );
-      if (mounted) setState(() {
+      if (mounted && client.auth.currentUser?.id == uid) setState(() {
         values[category] = enabled;
         settings[category] = updated;
       });
@@ -71,11 +86,17 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
     finally { if (mounted) setState(() => saving = false); }
   }
 
-
   Future<void> savePush(String category, bool enabled) async {
     if (saving) return;
+    final client = Supabase.instance.client;
+    final uid = client.auth.currentUser?.id;
+    if (uid == null || uid != _loadedUserId) {
+      setState(() => error = 'تغير الحساب. أعد تحميل تفضيلات الإشعارات.');
+      return;
+    }
     if (enabled) {
       final granted = await NexoraPushService.instance.requestPermission();
+      if (!mounted || client.auth.currentUser?.id != uid) return;
       if (!granted) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -87,7 +108,7 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
     }
     setState(() { saving = true; error = null; });
     try {
-      final uid = Supabase.instance.client.auth.currentUser!.id;
+      if (client.auth.currentUser?.id != uid) return;
       final previous = settings[category] ??
           <String, dynamic>{'in_app': true, 'email': false};
       final updated = <String, dynamic>{
@@ -97,10 +118,12 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
         'push': enabled,
         'email': previous['email'] as bool? ?? false,
       };
-      await Supabase.instance.client.from('notification_preferences').upsert(
+      await client.from('notification_preferences').upsert(
         updated, onConflict: 'user_id,category',
       );
-      if (mounted) setState(() => settings[category] = updated);
+      if (mounted && client.auth.currentUser?.id == uid) {
+        setState(() => settings[category] = updated);
+      }
     } catch (e, stack) {
       AppErrorService.report(e, stack, source: 'notification_push_preference_save');
       if (mounted) setState(() => error = AppErrorService.message(e));
@@ -120,9 +143,15 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final viewerChanged = currentUserId == null ||
+        (_loadedUserId != null && currentUserId != _loadedUserId);
+    return Scaffold(
     appBar: AppBar(title: const Text('تفضيلات الإشعارات')),
-    body: loading ? const Center(child: CircularProgressIndicator()) : ListView(
+    body: viewerChanged
+        ? Center(child: TextButton(onPressed: load, child: const Text('تغير الحساب. أعد تحميل تفضيلات الإشعارات.')))
+        : loading ? const Center(child: CircularProgressIndicator()) : ListView(
       padding: const EdgeInsets.all(16),
       children: [
         Card(
@@ -159,7 +188,7 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
           padding: EdgeInsets.all(16),
           child: Text('تحكم في الإشعارات داخل التطبيق وإشعارات الهاتف لكل نوع.'),
         )),
-        if (error != null) Text(error!, style: const TextStyle(color: Colors.redAccent)),
+        if (error != null) Text(error!, style: const TextStyle(color: NexoraColors.danger)),
         for (final item in categories.entries) Card(
           child: Column(
             children: [
@@ -181,4 +210,5 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
       ],
     ),
   );
+  }
 }

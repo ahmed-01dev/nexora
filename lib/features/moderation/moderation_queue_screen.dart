@@ -20,6 +20,7 @@ class _ModerationQueueScreenState extends State<ModerationQueueScreen> {
   bool _loadingMore = false;
   bool _hasMore = true;
   String? _error;
+  String? _loadedReviewerId;
   String _filter = 'active';
   final Set<String> _busyIds = {};
 
@@ -47,7 +48,10 @@ class _ModerationQueueScreenState extends State<ModerationQueueScreen> {
   }
 
   Future<List<Map<String, dynamic>>> _fetchPage(int offset) async {
-    var query = Supabase.instance.client
+    final client = Supabase.instance.client;
+    final reviewerId = client.auth.currentUser?.id;
+    if (reviewerId == null) throw StateError('انتهت جلسة المراجعة.');
+    var query = client
         .from('reports')
         .select(
           'id,reporter_id,target_type,target_id,reason,details,status,created_at,assigned_to,profiles!reports_reporter_id_fkey(username,display_name)',
@@ -59,6 +63,10 @@ class _ModerationQueueScreenState extends State<ModerationQueueScreen> {
         .order('created_at', ascending: false)
         .order('id', ascending: false)
         .range(offset, offset + _pageSize - 1);
+    if (client.auth.currentUser?.id != reviewerId) {
+      throw StateError('تغير حساب المراجع أثناء تحميل البلاغات.');
+    }
+    _loadedReviewerId = reviewerId;
     return List<Map<String, dynamic>>.from(rows);
   }
 
@@ -152,13 +160,16 @@ class _ModerationQueueScreenState extends State<ModerationQueueScreen> {
         return;
     }
 
+    final client = Supabase.instance.client;
+    final reviewerId = client.auth.currentUser?.id;
+    if (reviewerId == null || reviewerId != _loadedReviewerId) return;
     try {
-      final row = await Supabase.instance.client
+      final row = await client
           .from(table)
           .select(columns)
           .eq('id', id)
           .maybeSingle();
-      if (!mounted) return;
+      if (!mounted || client.auth.currentUser?.id != reviewerId) return;
       if (row == null) {
         await showDialog<void>(
           context: context,
@@ -253,32 +264,38 @@ class _ModerationQueueScreenState extends State<ModerationQueueScreen> {
       );
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'moderation_target_preview');
-      _showError(error);
+      if (client.auth.currentUser?.id == reviewerId) _showError(error);
     }
   }
 
   Future<void> _assignToMe(Map<String, dynamic> report) async {
     final id = report['id'] as String;
-    if (!_canReview || _busyIds.contains(id)) return;
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser?.id;
+    if (!_canReview || userId == null || userId != _loadedReviewerId ||
+        _busyIds.contains(id)) return;
     setState(() => _busyIds.add(id));
     try {
-      await Supabase.instance.client
+      await client
           .from('reports')
           .update({
-            'assigned_to': Supabase.instance.client.auth.currentUser!.id,
+            'assigned_to': userId,
             'status': 'reviewing',
           })
           .eq('id', id);
-      await _loadFirstPage();
+      if (client.auth.currentUser?.id == userId) await _loadFirstPage();
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'moderation_assign');
-      _showError(error);
+      if (client.auth.currentUser?.id == userId) _showError(error);
     } finally {
       if (mounted) setState(() => _busyIds.remove(id));
     }
   }
 
   Future<void> _dismiss(Map<String, dynamic> report) async {
+    final client = Supabase.instance.client;
+    final reviewerId = client.auth.currentUser?.id;
+    if (!_canReview || reviewerId == null || reviewerId != _loadedReviewerId) return;
     final note = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
@@ -307,12 +324,16 @@ class _ModerationQueueScreenState extends State<ModerationQueueScreen> {
     final resolution = note.text.trim();
     note.dispose();
     if (confirmed != true || !mounted) return;
+    if (!_canReview || client.auth.currentUser?.id != reviewerId) {
+      _showError(StateError('تغير حساب المراجع أو انتهت صلاحية المراجعة.'));
+      return;
+    }
 
     final id = report['id'] as String;
     if (_busyIds.contains(id)) return;
     setState(() => _busyIds.add(id));
     try {
-      await Supabase.instance.client
+      await client
           .from('reports')
           .update({
             'status': 'dismissed',
@@ -320,17 +341,21 @@ class _ModerationQueueScreenState extends State<ModerationQueueScreen> {
             'resolution_note': resolution,
           })
           .eq('id', id);
-      await _loadFirstPage();
+      if (client.auth.currentUser?.id == reviewerId) await _loadFirstPage();
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'moderation_dismiss');
-      _showError(error);
+      if (client.auth.currentUser?.id == reviewerId) _showError(error);
     } finally {
       if (mounted) setState(() => _busyIds.remove(id));
     }
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final reviewerChanged = currentUserId == null ||
+        (_loadedReviewerId != null && currentUserId != _loadedReviewerId);
+    return Scaffold(
         appBar: AppBar(
           title: const Text('مركز مراجعة البلاغات'),
           actions: [
@@ -351,7 +376,9 @@ class _ModerationQueueScreenState extends State<ModerationQueueScreen> {
             ),
           ],
         ),
-        body: Column(
+        body: reviewerChanged
+            ? Center(child: TextButton(onPressed: _loadFirstPage, child: const Text('تغير حساب المراجع. أعد تحميل البلاغات.')))
+            : Column(
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -442,7 +469,7 @@ class _ModerationQueueScreenState extends State<ModerationQueueScreen> {
                                         (report['status'] ?? 'open').toString();
                                     final assigned =
                                         report['assigned_to'] == Supabase
-                                            .instance.client.auth.currentUser!.id;
+                                            .instance.client.auth.currentUser?.id;
                                     final busy = _busyIds.contains(id);
                                     return Card(
                                       child: Padding(
@@ -545,4 +572,5 @@ class _ModerationQueueScreenState extends State<ModerationQueueScreen> {
           ],
         ),
       );
+  }
 }

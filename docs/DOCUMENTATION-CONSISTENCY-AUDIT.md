@@ -1,0 +1,338 @@
+# NEXORA — Documentation Consistency Audit
+**Audit date:** 2026-11-06  
+**Scope:** repository documentation currently present on `main`, plus new design specification `02-DETAILED-SPECS-I-J-K.md`.  
+**Purpose:** identify contradictions before implementation expansion. This is a documentation audit only: no app build, APK, migration, or runtime change.
+
+## Executive result
+The repository has useful architecture, API, ERD, security, implementation-status, provider-setup, and roadmap material, but it is not yet a single internally consistent master specification. Several documents describe different implementation snapshots. Treat the dated, feature-by-feature `IMPLEMENTATION_STATUS.md` and `IMPLEMENTATION_AUDIT_2026-11-05.md` as the best current implementation evidence, and treat architecture/API/ERD documents as needing synchronization. Do not infer that a table means a complete user workflow.
+
+## Findings requiring correction
+
+### DOC-001 — Authentication implementation conflict
+- `README.md` describes phone-first signup/login using SMS OTP, with email/password as alternative.
+- `IMPLEMENTATION_STATUS.md` says phone OTP is the default UI path, but SMS provider delivery, cost, and real-device verification remain external/unverified; email/password is an alternative.
+- `API.md` lists only email/password as current implemented Auth operation.
+- `ARCHITECTURE.md` says the current Flutter app has email/password auth.
+**Resolution:** distinguish *UI path*, *configured provider*, and *verified end-to-end delivery*. Canonical wording: phone-first OTP UI exists; SMS delivery is not production-verified; email/password path exists as alternative; account linking, recovery hardening, MFA and OAuth remain pending. Do not claim phone auth is fully operational until real-device delivery and account lifecycle tests pass.
+
+### DOC-002 — Current feature scope conflict
+- `ARCHITECTURE.md` describes only basic profiles, text posts, basic follows and simple feed as current.
+- `IMPLEMENTATION_STATUS.md` documents substantially more: comments, media, reposts, bookmarks, stories, messaging, communities, notifications, search, nearby, moderation and themes, each with different completion states.
+**Resolution:** use `IMPLEMENTATION_STATUS.md` as the feature-level status source, updated with an audit date. Rewrite Architecture's “Current implementation boundary” as a short summary and link to the status document. Do not label all listed features complete; retain Partial/Foundation/Pending distinctions.
+
+### DOC-003 — API contract inventory is stale/incomplete
+- `API.md` calls email/password, profiles, text posts, follows, friendships, privacy and likes the current operations, but omits many implemented operations described in the status document.
+- It also lists messaging, stories, communities, notifications and reports as database-backed contracts with client integration pending, while the status document now marks some of those workflows Partial or implemented in parts.
+**Resolution:** split API documentation into three explicit groups: (1) verified client-used contracts, (2) database foundation with incomplete client integration, (3) planned trusted endpoints. For every item record source file/function, DB object, auth boundary, and test evidence. Never list a planned endpoint as deployed.
+
+### DOC-004 — ERD is not a complete schema inventory
+- `ERD.md` presents a useful core diagram but omits objects described in implementation status, including reposts, hashtags/post_hashtags, user devices, moderation actions/appeals, nearby-location storage, and other supporting tables.
+- It does not state the exact migration version that produced each table.
+**Resolution:** label current ERD as a partial conceptual diagram until generated/verified against the live schema. Add a table inventory with schema/table, migration source, RLS status, client grants, owner, and feature status. Do not run migration push/reset/replay while remote migration history is out of sync.
+
+### DOC-005 — Security documentation and product status need a shared release checklist
+- `SECURITY.md` documents strong RLS/grant hardening and still lists critical gaps: independent penetration test, authenticated RLS integration tests, media scanning/transcoding, E2EE, WebRTC/TURN, admin RBAC/dashboard, monitoring, backup/restore.
+- `IMPLEMENTATION_STATUS.md` has detailed partial feature status but the release gate should map each security gap to an owner/test.
+**Resolution:** preserve all known gaps; add explicit release-blocker IDs and test IDs. Do not claim production readiness because table-level RLS is enabled.
+
+### DOC-006 — Phone-first vision vs zero-budget dependency
+- SMS OTP delivery is a provider-dependent external service and may incur charges or have quota limits. It is not guaranteed free.
+**Resolution:** keep the phone-first UI only if the actual provider configuration is approved and tested. If SMS is unavailable, show an honest unavailable state or use a separately verified email/guest path. No fake OTP and no silent paid service activation.
+
+### DOC-007 — Document 02 coverage is incomplete in repository
+- The current `docs/` directory did not contain the original 118-system catalog or a complete detailed specification for all systems.
+- New `02-DETAILED-SPECS-I-J-K.md` covers slots 63–90 based on the handoff allocation, and explicitly marks titles/numbering for reconciliation.
+**Resolution:** restore/add canonical Document 01 and the missing detailed sections; verify all 118 IDs and names before calling Document 02 complete. Do not silently rename or renumber systems.
+
+### DOC-008 — Release/build language can mislead
+- GitHub workflows can run analysis/tests or create debug/release artifacts, but source CI does not prove APK installation, store signing, real-device behavior, SMS, push, or RLS integration.
+- Android package ID is documented as `com.example.nexora`, requiring final unique ID and matching Firebase registration before public release.
+**Resolution:** each workflow and README statement must state artifact type, signing status, environment and what it does not verify. Debug APK is test-only. No APK build is to be initiated while the user’s current instruction is to complete code/files before building the application.
+
+### DOC-009 — Migration history is a hard operational blocker
+- `IMPLEMENTATION_STATUS.md` reports 43 remote migration records and 42 local SQL migration files, with version/name alignment incomplete.
+**Resolution:** do not use `supabase db push`, reset, or replay. First obtain exact remote migration SQL/history, map each remote version to repository source, create and verify recoverable backups, then plan a non-destructive reconciliation. This is not a documentation-only cleanup; it requires explicit operational review.
+
+### DOC-010 — Cost/availability claims need a provider inventory
+- Free-tier availability, quotas, backup retention, SMS delivery, push delivery and worker execution are distinct dependencies.
+**Resolution:** every integration must have provider, current plan, quota, credentials owner, data shared, cost trigger, fallback, test evidence, and disable switch. No assumption that “free SDK” means free hosting or unlimited use.
+
+## Canonical source-of-truth hierarchy
+1. **Actual deployed schema and grants** verified read-only against the connected Supabase project, with migration provenance.
+2. **Implementation status and audit evidence** for whether code paths exist and what tests actually ran.
+3. **Feature-specific API contracts** for operation names and server/client boundaries.
+4. **Architecture/security specifications** for intended design and mandatory constraints.
+5. **Roadmap and catalog** for intended scope and priority.
+6. **UI text/README marketing copy** must never override technical evidence.
+
+If sources disagree, mark the item **CONFLICT / NOT VERIFIED** until reconciled. Never choose the more optimistic claim.
+
+## Required reconciliation sequence
+1. Restore canonical Document 01 (all 118 exact IDs and titles).
+2. Reconcile Document 02 sections A–M, including the new I–K section, and mark missing details explicitly.
+3. Generate a live schema/table/RLS/grant inventory and map each table to its migration source.
+4. Reconcile API.md against actual Dart calls, SQL RPC definitions, and Edge Function deployments.
+5. Update Architecture's current-state description to link to the dated implementation status.
+6. Map Security release blockers to acceptance test IDs and test evidence.
+7. Reconcile remote migration history before any schema-changing operation.
+8. Review provider inventory, quotas, secrets ownership, and Zero Budget fallbacks.
+9. Only after all documentation and source files are complete, reviewed and tested should an application build be considered.
+
+## Current non-build commitment
+Until the complete source/code/file set is prepared and reviewed, do not dispatch APK/AAB/Web packaging workflows or call a debug artifact an application delivery. Source-only checks may be used only when needed to validate source changes and must be described as such.
+
+
+## Addendum — CNT-017 documentation pass (2026-11-06)
+
+The following artifacts now exist on the documentation branch:
+
+- `02-CONTENT-SYSTEM-017.md`: functional working specification.
+- `02-CONTENT-SYSTEM-017-ACCEPTANCE.md`: 30-case verification matrix; test plan only, not pass evidence.
+- `02-CONTENT-SYSTEM-017-PUBLISH-CONTRACT.md`: client state machine, authority boundaries, error classes, invariants, and implementation gates.
+- `README.md`: links the three CNT-017 artifacts and explicitly pauses APK/AAB/Web build workflows during source/specification completion.
+
+### CNT-017 evidence reconciliation
+
+| Topic | Current documented evidence | Required disposition |
+|---|---|---|
+| Text-only creation | API and implementation status list text-post insertion as implemented | Keep as implemented in status, but require authenticated integration evidence before release sign-off |
+| Media selection/upload | Flutter-side media selection/upload and rollback are documented | Do not equate client validation/rollback with server-side inspection |
+| File limits | 10 files / 50 MiB each / 100 MiB aggregate appear as client limits | Do not claim server enforcement until verified at the trusted boundary |
+| Private media | Private bucket and audience-aware policies are described | Verify actual deployed policies and signed URL behavior read-only |
+| Processing/scanning | Media process endpoint is listed as planned; scanning/transcoding/thumbnails remain pending | Keep pending; do not create UI claims that imply these services exist |
+| Idempotency | No deployed idempotent publish contract is established in API/status evidence | Treat ambiguous timeout as unknown and reconcile before retry; implement/test server deduplication before claiming retry safety |
+| Orphan cleanup | Client rollback is documented for failed multi-file upload | Verify database/storage outcomes; do not claim a durable background cleanup queue without evidence |
+
+### Next implementation evidence gates
+
+1. Locate the exact Flutter composer source file and call chain; record file paths and function names in a traceability table.
+2. Locate the exact post insert and media upload calls; compare their payloads with the actual schema and Storage policies.
+3. Verify author identity is derived from the authenticated session and cannot be overridden by client payload.
+4. Verify cross-user Storage attachment attempts with two synthetic authenticated accounts.
+5. Verify private/friends-only post media access matches post-row visibility, including blocks and soft deletion.
+6. Verify the timeout-after-commit case; until a server-enforced idempotency mechanism exists, do not label publish retries safe.
+7. Attach reproducible test evidence before changing any status from Partial/Pending to Implemented.
+
+### Scope guardrails
+
+- The original 118-system catalog and complete Document 02 remain absent from the repository snapshot reviewed for this branch. Do not fabricate systems 18–27 or claim 63–90 titles are canonical.
+- The older 1–50 master prompt numbering is a separate catalog and must not be merged with Document 02's 1–118 numbering.
+- Migration history reconciliation remains a hard stop for schema writes.
+- This addendum authorizes no Supabase mutation, migration, provider activation, application build, or artifact release.
+
+
+## Addendum — API, architecture and ERD reconciliation (2026-11-06)
+
+Three documentation corrections were committed on this branch after comparing the files with the dated implementation-status record:
+
+- `API.md` now separates documented client-used operations, database foundations, and proposed endpoints. It explicitly marks planned endpoints as not deployed and adds a contract-change evidence checklist.
+- `ARCHITECTURE.md` no longer describes the current Flutter implementation as only email/password + basic profiles + text posts + follows + simple feed. It points to the dated implementation status and records the verified partial-feature boundaries and provider limitations.
+- `ERD.md` now explicitly identifies itself as a partial conceptual diagram and defines the fields required for a future read-only live-schema inventory.
+
+### Remaining verification work
+
+These edits reconcile documentation wording only. They do **not** establish source-level traceability or runtime correctness. Still outstanding:
+
+1. Inspect the Flutter source tree and map each API operation to exact Dart file/method and request shape.
+2. Read-only inspect deployed PostgreSQL tables, columns, functions, grants, RLS policies and Storage policies.
+3. Map every remote migration record to the exact local SQL file; current history mismatch remains a hard stop.
+4. Generate a complete ERD and inventory from the verified live schema, not from this conceptual document.
+5. Run authenticated integration tests with separate synthetic users only after test identities/environment are safely prepared and without weakening production policies.
+6. Reconcile remaining implementation-status claims against code and test artifacts.
+
+No Supabase writes, migrations, builds, provider activation, or release actions were performed as part of this documentation pass.
+
+
+## Addendum — static source traceability pass (2026-11-06)
+
+A new `SOURCE-TO-CONTRACT-TRACEABILITY.md` records inspected source locations and observed client operations for authentication, feed/follows, hashtags, comments, friendships, communities, media, messaging, nearby discovery, notifications/push, privacy and moderation.
+
+### Scope and limits
+
+- The source snapshot inspected was the default `main` branch; this is a static source audit, not a claim that those source files were modified in this documentation PR.
+- Concrete client call sites and RPC/table names are recorded where observed. No unverified SQL signatures, return schemas or deployed-state claims were invented.
+- The push Edge Function source reads service secrets at runtime and sends through FCM HTTP v1; deployment secrets and actual delivery remain unverified.
+- Nearby client code sends coordinates to a trusted RPC. The returned result shape and SQL implementation still require inspection to confirm approximate-only disclosure.
+- Media signature checks and upload size limits exist in client code; they do not replace server-side scanning or server-enforced quotas.
+
+The traceability file is linked from README. The next gate remains read-only inspection of SQL function definitions, grants, RLS/Storage policies and migration history. No database writes, migrations, provider activation, builds or packaging were performed.
+
+
+## Addendum — focused SQL contract trace (2026-11-06)
+
+Added `SQL-CONTRACT-TRACEABILITY.md` after static inspection of the feed paging, nearby discovery, community invite, and push-notification migrations plus the corresponding client/Edge Function files.
+
+Confirmed from the local `main` migration directory listing: **42 SQL files**. The previously recorded remote migration history count is **43**. The mismatch therefore remains; this pass does not identify or repair the missing mapping.
+
+Notable contract evidence:
+- Feed paging is a SECURITY INVOKER RPC with bounded page size and authenticated-only execute.
+- Nearby discovery persists rounded coordinates in a private table and returns coarse distance bands; public wrappers are SECURITY INVOKER.
+- Community invite direct table access is revoked; trusted functions enforce owner, expiry and use limits.
+- Push dispatch is trigger → Vault webhook secret → Edge Function → FCM HTTP v1; successful real-device delivery remains unverified.
+
+These are local-source findings only. No live database catalog query, schema write, migration, secret change, provider activation or build was performed.
+
+## Addendum — live Supabase and migration-source reconciliation (2026-11-06)
+
+### Media authorization: live state versus local source
+
+A read-only catalog query against the connected NEXORA Supabase project confirmed that the live `private.can_read_media_path(text)` definition contains friend-only post access, private-account story gating, soft-deleted-post denial for non-owners, block checks, and non-deleted-message/conversation-membership checks.
+
+The local GitHub migration `20261105225000_hide_deleted_message_attachments.sql` contains an older/different replacement that omits some of those checks. Therefore this is **local migration source/history drift**, not a demonstrated current live Storage vulnerability. The temporary manually drafted migration was removed from this branch; no new migration should be created until source history is reconciled using the proper local Supabase CLI workflow.
+
+The live helper is owned by `postgres`, is `SECURITY DEFINER`, uses an empty `search_path`, and its ACL lists `postgres` and `authenticated`. Archived/expired story filtering occurs before the owner/viewer branch, so such media is denied to everyone, including the owner.
+
+### Block helper and private schema exposure
+
+The live database contains `private.is_blocked_between(a uuid, b uuid)`. It is owned by `postgres`, `SECURITY DEFINER`, uses an empty `search_path`, and checks `public.blocks` in both directions. Its ACL grants EXECUTE to `authenticated`.
+
+The local foundation migration grants authenticated USAGE on schema `private`, while RLS policies call this helper. This is expected only if the `private` schema is not exposed through PostgREST. A read-only `current_setting('pgrst.db_schemas', true)` query returned NULL, so the configured exposed-schema list was not verified. Confirm in Supabase Data API settings that `private` is excluded. Do not revoke EXECUTE blindly because policy evaluation depends on it.
+
+### Remote/local migration inventory
+
+Read-only listings returned **43 remote migration records** and **42 SQL files on GitHub main**. Name/version comparison found:
+
+- 21 exact version-and-name matches.
+- 14 same-name migrations with different timestamps.
+- 8 remote-only names.
+- 7 local-only names.
+
+The full names and 14 timestamp mappings are recorded in `docs/SQL-CONTRACT-TRACEABILITY.md`. Remote-only foundation/security migrations may contain the original source for helpers missing from the local source tree, but that is not yet proven. Do not run `db push`, reset, replay, repair migration history or apply new migrations until exact SQL source and version mapping are recovered and a recoverable backup is verified.
+
+### Supabase advisors
+
+Read-only advisors returned:
+
+- **Security warning:** Leaked Password Protection is disabled in Supabase Auth. Review and enable it in Auth password security settings. [Remediation guide](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). No Auth setting was changed.
+- **Performance info:** 43 indexes were reported unused at the observation time. This is not a deletion recommendation; measure query plans under realistic workload before considering removal. [Unused-index guidance](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
+
+### CI/build workflow guard
+
+Static inspection found only `.github/workflows/flutter-ci.yml` and `.github/workflows/android-preview.yml`; no AAB/Web release workflow was present. The work branch removes the preview workflow's automatic push trigger and adds a required `confirm_source_complete` boolean input. It also sets `permissions: contents: read` on Flutter CI. No workflow was dispatched and no build was run.
+
+All Supabase checks in this addendum were read-only. No database mutation, migration, secret change, Auth setting change, provider activation, CI dispatch or APK/AAB/Web build was performed.
+
+### Live object-presence cross-check
+
+Read-only catalog checks also confirmed that `public.community_channels`, `public.community_invites`, the community-invite RPC family, `get_my_conversation_previews`, `get_feed_page`, `get_my_notification_page`, `reposts_user_post_unique_idx`, and `profiles_username_lower_key` exist in the live database. This shows that some local-only/timestamp-mismatched migration names correspond to objects already present remotely; it does not prove exact source-file provenance. Do not apply them again based on filenames alone.
+
+### Live RLS and Storage baseline
+
+Read-only catalog checks found RLS enabled on all 38 ordinary `public` tables and the 1 ordinary `private` table. The `nexora-media` bucket is private, has a 50 MiB object limit, and allows a wider MIME set than the restrictive message-attachment policy. Selected live policies enforce post visibility/block checks, story visibility, non-deleted message attachment reads, image-only message attachment inserts up to 10 MiB, denied direct invite-table access, and owner-only nearby-location rows. This is a policy-definition review, not authenticated integration testing.
+
+### Live push Edge Function parity
+
+Supabase reports `send-push-notification` as ACTIVE version 6 with `verify_jwt = false`. The deployed `index.ts` content was fetched read-only and compared with `main/supabase/functions/send-push-notification/index.ts`; the files match exactly (7,677 characters). The function performs its own authentication: trusted webhook-secret path or bearer-token `auth.getUser` path, with the user path restricted to notifications where the caller is the actor. Flutter uses Firebase Messaging `onRegistered` to obtain a Firebase Installation ID (FID), stores it in `user_devices.push_token`, and the Edge Function sends with FCM HTTP v1 `message.fid`, which matches the FID registration model. Secret values and actual device delivery were not tested.
+
+### Nearby-location expiry worker verification
+
+The live `cron.job` catalog contains active job `nexora-cleanup-expired-nearby-locations`, scheduled every 15 minutes. The five most recent entries in `cron.job_run_details` were all `succeeded` (each returned `DELETE 0` at the time inspected). This confirms the scheduled cleanup is active and executing; it does not prove a stale-row fixture was deleted in this audit.
+
+### Push delivery runtime evidence (read-only, 2026-11-06)
+
+Further live inspection confirms:
+
+- The `public.notifications` AFTER INSERT trigger `notify_nexora_push_after_insert` is enabled and invokes `private.notify_nexora_push()`.
+- The Vault metadata contains a secret named `nexora_push_webhook_secret`. Only its existence metadata was checked; the secret value was never read or exposed.
+- The deployed `send-push-notification` Edge Function is ACTIVE version 6 with `verify_jwt=false`; the function implements its own webhook-secret or authenticated-user validation.
+- The deployed function source matches `main/supabase/functions/send-push-notification/index.ts` byte-for-byte in the comparison performed earlier.
+- `user_devices` currently contains one Android device row.
+- `net._http_response` contains one historical HTTP 200 result with `{sent:1,failed:0,total:1}`. Several later calls returned HTTP 200 with `skipped:no_registered_devices`.
+
+This is stronger evidence than source presence alone: the database trigger reached the Edge Function, and at least one FCM send request was accepted by FCM. It still does **not** prove notification display on a physical Android device, tap/deep-link behavior, background handling, or current device-token health. The Edge Function's `sent` count means FCM returned a successful HTTP response, not that a human device displayed the notification.
+
+Client code registers a Firebase Installation ID (FID), stores it in `user_devices.push_token`, and the Edge Function sends using the FCM HTTP v1 `message.fid` field. This matches Firebase's current REST schema, which supports FID as a message target. [Firebase Message resource](https://firebase.google.com/docs/reference/fcm/rest/v1/projects.messages).
+
+Operational follow-up: add bounded retries/observability for transient FCM failures and verify real-device foreground/background delivery. Do not log device identifiers or notification bodies.
+### SECURITY DEFINER function inventory and search_path review
+
+A read-only catalog inventory returned 32 SECURITY DEFINER functions (2 in `public`, 30 in `private`), all owned by `postgres`. Function settings show 24 with an empty `search_path`, four with `pg_catalog, public, private`, three with `pg_catalog, public, private, auth`, and one with `pg_catalog` only. The full signature/owner/settings/EXECUTE-grant inventory is in `docs/SECURITY-DEFINER-INVENTORY.md`; each body and caller still requires review.
+
+Read-only schema privilege checks confirmed that `authenticated`, `anon`, and `PUBLIC` have no CREATE privilege on `public`, `private`, `auth`, or `pg_catalog`. This reduces object-shadowing risk for those explicit paths. It does not replace a function-by-function review of qualified object references, `auth.uid()` checks, grants, and intended direct-call exposure.
+
+Notable follow-up: verify the Supabase Data API exposed-schema list in project settings. The database-side `current_setting('pgrst.db_schemas', true)` query returned NULL, so this audit cannot conclude whether `private` is excluded from PostgREST. Do not revoke helper EXECUTE grants blindly: RLS policies call several of these helpers.
+
+No function definition, grant, schema privilege, or API setting was changed.
+### Push device ownership lifecycle — logout call-site fix
+
+Static source review found that the account screen called `Supabase.auth.signOut()` directly even though `_signOutNexora()` already existed to remove the current user's FID row from `user_devices` and unregister Firebase Messaging before signing out. That bypass could leave an old account's device row behind when the same installation changes accounts.
+
+The work branch now routes the account-screen logout button through `_signOutNexora`. A source re-read confirmed the direct logout call was removed from that screen and the helper is now referenced by the UI. The device service's deletion is still best-effort (it catches network/database errors), so offline logout and rapid multi-account switching need an explicit product policy and authenticated integration test. No database change was made.
+
+### Follow graph UI and live authorization review — 2026-11-06
+
+- Added a paged incoming follow-request inbox and a directional accepted-followers/following list. The lists use the existing `follows` foreign keys and keep embedded profile reads subject to ordinary profile RLS; hidden private profiles are represented without exposing their details.
+- Read-only live policy inspection confirmed the `follows` SELECT policy exposes edges only to their two participants and excludes mutual blocks. The UPDATE policy permits only the recipient to transition their own incoming row from pending to accepted and rechecks block state. Authenticated has column-level UPDATE on `status`, not table-wide UPDATE or UPDATE on either ownership column.
+- The friend-request UI's dynamic dispatcher was checked against live RPCs. `public.decline_friend_request(uuid)` exists as an authenticated-only SECURITY INVOKER wrapper; its private SECURITY DEFINER helper checks `auth.uid()` against the pending request addressee, uses an empty search path, and denies anon/PUBLIC execution.
+- The current follow-request backend has no recipient-side decline operation; the follow inbox intentionally offers accept only and does not issue an unauthorized delete or fabricate a decline RPC.
+- Static Flutter-to-live-schema review is recorded in `docs/API.md`: 18 distinct RPC names across 20 call sites (19 literal plus one dynamic dispatcher), 31 literal table names, and no mismatches in the reviewed select projections, write keys, or filter/order column references. These checks do not replace authenticated integration tests.
+
+### Android preview Firebase configuration and platform inventory — 2026-11-06
+
+- The Android preview workflow generates the Flutter 3.47.9 Kotlin-DSL Android platform when absent and copies `firebase/android/google-services.json` into the app module. It now also declares Google Services Gradle plugin 4.5.0 in settings and applies it in the app module, then verifies the generated `applicationId` matches the Firebase config package.
+- The workflow change was checked against the official Flutter 3.47.9 template and Firebase Android setup documentation; the script logic was simulated. No Android project was generated and no Gradle/APK build was run.
+- The checked-in Firebase package remains `com.example.nexora`, which is placeholder-style and must be replaced with the final unique package plus matching Firebase registration before public release.
+- Repository-tree review confirms no committed `android/` or `web/` platform directory and no Web release workflow. Documentation was corrected to describe Android scaffold generation and the missing Web scaffold accurately. No workflow was dispatched and no APK/AAB/Web artifact was produced.
+
+### Full live table-security inventory — 2026-11-06
+
+A second read-only catalog pass extended the ERD inventory:
+
+- All 39 ordinary tables (38 `public`, 1 `private`) have RLS enabled; none has FORCE RLS.
+- Catalog counts: 254 columns (250 public, 4 private), 39 primary keys, 67 foreign keys, 9 unique constraints, 51 check constraints, and 106 indexes.
+- Policy catalog: 111 public policies and one private policy. This is a policy count only, not a proof of correctness.
+- No `anon` or `PUBLIC` table-level grants were returned for these tables. Authenticated has SELECT on 37 public tables; `community_invites` has no direct authenticated SELECT grant and `private.profile_discovery_locations` has no direct authenticated SELECT grant.
+- Every public table has at least one policy. The private discovery-location table has one policy. `community_invites` has one policy but no direct authenticated SELECT grant; invitation reads/actions must use the existing trusted server-side workflow.
+- Because RLS is enabled but not forced, owner/BYPASSRLS behavior remains a separate trust boundary. These findings do not validate every policy expression or every SECURITY DEFINER call path.
+- Full structural totals and exact public/private table names are recorded in `docs/ERD.md`. No DDL, grant, or policy changes were made.
+
+### Follower list paging hardening
+
+- The accepted follower/following UI now loads 30 rows per page and has explicit load-more and pull-to-refresh behavior.
+- A request-generation guard prevents a response from an older direction or pre-refresh request from being appended to the current list.
+- Source CI run `42222087355` passed analysis and tests on the implementation commit. No device-level scrolling, large-account load, or multi-user RLS test has been performed.
+- Both directional query plans use the existing composite filter index and then sort by `created_at DESC` plus the opposite user ID. This warrants representative performance testing; no index DDL was applied.
+
+### Follow-request inbox offset correction
+
+The incoming follow-request list now advances its backend offset by rows fetched, not by the number of visible deduplicated rows. When a pending row is accepted and leaves the filtered result set, the offset is decremented so the next page does not skip the row shifted into that position. A generation guard blocks stale page responses after refresh, and accept actions are disabled during refresh to prevent stale pending rows reappearing. Source CI run `42222964161` passed analysis and tests on the implementation commit; concurrent authenticated integration testing remains NOT RUN.
+
+### Complete read-only PostgreSQL and Storage snapshots
+
+The ERD evidence set now includes:
+
+- `ERD-LIVE-COLUMNS.md`: 254 deployed columns across 39 ordinary tables (38 public, one private), including types, nullability, and defaults.
+- `ERD-LIVE-CONSTRAINTS.md`: 166 deployed constraints (39 PK, 67 FK, 9 unique, 51 check).
+- `ERD-LIVE-INDEXES.md`: all 106 deployed index definitions.
+- `ERD-LIVE-POLICIES.md`: all 112 public/private RLS policy definitions.
+- `STORAGE-SECURITY-INVENTORY.md`: the private 50 MiB `nexora-media` bucket, allowed MIME list, and all three `storage.objects` policies.
+
+These are snapshots of live metadata, not migration source. RLS is enabled but not forced on all 39 tables; no anon/PUBLIC table grants were returned. Authenticated SELECT is not granted directly on `community_invites` or `private.profile_discovery_locations`. The current app uses trusted invite workflows and private location storage. No DDL, grants, policies, bucket settings, or runtime services were changed.
+
+### PostgREST exposed-schema setting remains unverified
+
+The database-side `current_setting('pgrst.db_schemas', true)` inspection returned NULL. This does not establish which schemas are exposed by the hosted Data API. Confirm the project's API > Exposed schemas setting directly before release and ensure `private` is not exposed. The `private` schema currently has no direct authenticated table SELECT grant on its discovery-location table, but function/schema exposure and function EXECUTE grants must be evaluated together. No API exposure setting was changed.
+
+### Private schema exposure is a release-critical configuration check
+
+A fresh privilege query confirms `authenticated` has `USAGE` on schema `private` (but not `CREATE`); `anon` and `PUBLIC` have no `USAGE`. Authenticated also has EXECUTE on several SECURITY DEFINER helpers in that schema, including block, staff, conversation/community, media, and nearby-discovery helpers. This is intentional for RLS policies and trusted public wrapper functions, so revoking EXECUTE blindly could break authorization. However, if `private` is included in PostgREST's exposed schemas, those helpers may become directly callable RPCs. The database setting query returned NULL and cannot confirm the hosted API configuration. **Verify Dashboard → API → Exposed schemas excludes `private` before release.** No grants or API settings were changed.
+
+### Trigger inventory snapshot
+
+`docs/ERD-LIVE-TRIGGERS.md` records 21 non-internal triggers across `auth`, `public`, and `storage` (including 9 public application triggers, the auth user profile-creation trigger, and 11 Supabase Storage platform triggers). This records definitions only; it does not prove runtime success or complete side-effect behavior.
+
+### Cross-feature session-continuity and CI follow-up — 2026-11-06
+
+A source-only review added or tightened account/session binding in these client flows:
+
+- FCM installation registration/unregistration: pending unregister callbacks retain per-FID FIFO owner identity; a delayed callback cannot clear a newer account's registration for the same FID.
+- Profile, post, story, and message media: owner checks surround asynchronous Storage/database operations; rollback is not attempted using a different account's session. Orphan cleanup after a session switch remains a server-side gap.
+- Comments, notifications, friends/followers, community channels, community members, conversation previews, and report submission: stale results/actions are rejected or hidden when the authenticated viewer changes.
+- Report input now mirrors the live `reports` target-type and reason CHECK constraints and validates UUID-shaped target IDs before insert.
+- Flutter framework errors no longer invoke `FlutterError.presentError`, which could print raw exception details; privacy-safe logging has regression coverage.
+
+The CNT-017 acceptance matrix now contains 30 test cases, including a media-upload account-switch case. New cross-feature acceptance cases cover FCM, comments, messages, notifications, reports, followers, and community session changes. These are acceptance criteria, not device-test evidence.
+
+**CI evidence:** run `42233234987` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on commit `2708e0fc59f58682f9a212eb3268b21c9c26c23e`. This is source-only verification. No APK/AAB/Web build, database migration, DDL, grant change, or production-provider change was performed.
+
+**Canonical scope remains blocked:** the original Document 01 catalog of 118 exact IDs/titles and Document 02 Section C systems 18–27 are still not recoverable from the current repository or retrieved prior context. System 17 is documented as CNT-017; do not infer or invent the missing names/specifications. The working I–K systems 63–90 remain unverified against the canonical catalog.

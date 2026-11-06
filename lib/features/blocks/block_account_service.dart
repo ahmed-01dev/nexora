@@ -7,6 +7,14 @@ class BlockAccountService {
     required String targetUserId,
     required String displayName,
   }) async {
+    final client = Supabase.instance.client;
+    final me = client.auth.currentUser?.id;
+    if (me == null) {
+      throw StateError('انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
+    }
+    if (targetUserId.isEmpty || targetUserId == me) {
+      throw ArgumentError('لا يمكن حظر الحساب الحالي أو حساب غير صالح.');
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -27,20 +35,27 @@ class BlockAccountService {
       ),
     );
     if (confirmed != true || !context.mounted) return false;
+    if (client.auth.currentUser?.id != me) {
+      throw StateError('تغير الحساب أثناء تأكيد الحظر. أعد المحاولة من الحساب الحالي.');
+    }
 
-    final client = Supabase.instance.client;
-    final me = client.auth.currentUser!.id;
     final existing = await client
         .from('blocks')
         .select('blocked_id')
         .eq('blocker_id', me)
         .eq('blocked_id', targetUserId)
         .maybeSingle();
+    if (client.auth.currentUser?.id != me) {
+      throw StateError('تغير الحساب أثناء تنفيذ الحظر. حاول مرة تانية.');
+    }
     if (existing == null) {
       await client.from('blocks').insert({
         'blocker_id': me,
         'blocked_id': targetUserId,
       });
+      if (client.auth.currentUser?.id != me) {
+        throw StateError('تغير الحساب أثناء تنفيذ الحظر. راجع قائمة الحظر قبل إعادة المحاولة.');
+      }
     }
     return true;
   }

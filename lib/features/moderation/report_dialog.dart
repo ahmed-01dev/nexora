@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
+import '../../core/theme/nexora_theme.dart';
+import 'report_submission_validation.dart';
 
 class ReportDialog extends StatefulWidget {
   const ReportDialog({
@@ -51,6 +53,13 @@ class _ReportDialogState extends State<ReportDialog> {
   String _reason = 'spam';
   bool _sending = false;
   String? _error;
+  late final String? _reporterId;
+
+  @override
+  void initState() {
+    super.initState();
+    _reporterId = Supabase.instance.client.auth.currentUser?.id;
+  }
 
   @override
   void dispose() {
@@ -60,20 +69,42 @@ class _ReportDialogState extends State<ReportDialog> {
 
   Future<void> _submit() async {
     if (_sending) return;
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid == null || uid != _reporterId) {
+      setState(() => _error = 'تغير الحساب. أغلق نافذة البلاغ وافتحها من الحساب الحالي.');
+      return;
+    }
+    if (!ReportSubmissionValidation.isValidTarget(
+          type: widget.targetType,
+          id: widget.targetId,
+        ) ||
+        !ReportSubmissionValidation.isValidReason(_reason)) {
+      setState(() => _error = 'عنصر البلاغ أو سبب البلاغ غير صالح.');
+      return;
+    }
     setState(() {
       _sending = true;
       _error = null;
     });
 
     try {
-      final uid = Supabase.instance.client.auth.currentUser!.id;
-      await Supabase.instance.client.from('reports').insert({
+      final client = Supabase.instance.client;
+      await client.from('reports').insert({
         'reporter_id': uid,
         'target_type': widget.targetType,
         'target_id': widget.targetId,
         'reason': _reason,
         'details': _details.text.trim(),
       });
+      if (client.auth.currentUser?.id != uid) {
+        if (mounted) {
+          setState(() {
+            _error = 'تغير الحساب أثناء إرسال البلاغ. تحقق من حالة البلاغ قبل إعادة المحاولة.';
+            _sending = false;
+          });
+        }
+        return;
+      }
       if (mounted) Navigator.pop(context, true);
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'submit_report');
@@ -87,7 +118,10 @@ class _ReportDialogState extends State<ReportDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
+  Widget build(BuildContext context) {
+    final viewerMatches = Supabase.instance.client.auth.currentUser?.id != null &&
+        Supabase.instance.client.auth.currentUser?.id == _reporterId;
+    return AlertDialog(
         title: Text(switch (widget.targetType) {
           'user' => 'الإبلاغ عن الحساب',
           'comment' => 'الإبلاغ عن التعليق',
@@ -140,8 +174,10 @@ class _ReportDialogState extends State<ReportDialog> {
                   alignLabelWithHint: true,
                 ),
               ),
-              if (_error != null)
-                Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+              if (!viewerMatches)
+                const Text('تغير الحساب. لن يتم إرسال البلاغ من الحساب الجديد.', style: TextStyle(color: NexoraColors.danger))
+              else if (_error != null)
+                Text(_error!, style: const TextStyle(color: NexoraColors.danger)),
             ],
           ),
         ),
@@ -151,7 +187,7 @@ class _ReportDialogState extends State<ReportDialog> {
             child: const Text('إلغاء'),
           ),
           FilledButton(
-            onPressed: _sending ? null : _submit,
+            onPressed: _sending || !viewerMatches ? null : _submit,
             child: _sending
                 ? const SizedBox.square(
                     dimension: 18,
@@ -161,4 +197,5 @@ class _ReportDialogState extends State<ReportDialog> {
           ),
         ],
       );
+  }
 }
