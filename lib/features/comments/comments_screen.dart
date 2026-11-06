@@ -20,6 +20,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
   bool _sending = false;
   bool _hasMore = true;
   bool _loadingMore = false;
+  int _nextOffset = 0;
   static const int _pageSize = 100;
 
   SupabaseClient get _db => Supabase.instance.client;
@@ -36,15 +37,20 @@ class _CommentsScreenState extends State<CommentsScreen> {
     super.dispose();
   }
 
-  Future<List<Map<String, dynamic>>> _load() async {
+  Future<List<Map<String, dynamic>>> _load({int offset = 0}) async {
     final rows = await _db
         .from('comments')
         .select('id,post_id,user_id,content,parent_id,created_at,edited_at,deleted_at,profiles!comments_user_id_fkey(id,username,display_name,avatar_url)')
         .eq('post_id', widget.postId)
         .order('created_at', ascending: false)
         .order('id', ascending: false)
-        .range(0, _pageSize - 1);
-    if (mounted) setState(() => _hasMore = rows.length == _pageSize);
+        .range(offset, offset + _pageSize - 1);
+    if (mounted) {
+      setState(() {
+        _hasMore = rows.length == _pageSize;
+        _nextOffset = offset + rows.length;
+      });
+    }
     return List<Map<String, dynamic>>.from(rows);
   }
 
@@ -58,7 +64,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
           .eq('post_id', widget.postId)
           .order('created_at', ascending: false)
           .order('id', ascending: false)
-          .range(current.length, current.length + _pageSize - 1);
+          .range(_nextOffset, _nextOffset + _pageSize - 1);
       if (!mounted) return;
       final knownIds = current.map((comment) => comment['id']).toSet();
       final additions = List<Map<String, dynamic>>.from(rows)
@@ -66,6 +72,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
           .toList();
       setState(() {
         _future = Future.value([...current, ...additions]);
+        _nextOffset += rows.length;
         _hasMore = rows.length == _pageSize;
         _loadingMore = false;
       });
@@ -80,7 +87,10 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
   Future<void> _refresh() async {
     final next = _load();
-    setState(() => _future = next);
+    setState(() {
+      _nextOffset = 0;
+      _future = next;
+    });
     try {
       await next;
     } catch (error, stack) {
