@@ -124,6 +124,35 @@ jobs:
           print("Location and Android 13+ notification permissions are declared.")
           PY
 
+      - name: Configure NEXORA authentication deep link
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          source = manifest.read_text()
+          activity = re.search(r'<activity\b(?=[^>]*android:name="[^"]*MainActivity")[^>]*>.*?</activity>', source, re.S)
+          if not activity:
+              raise SystemExit("Could not locate the generated MainActivity manifest entry.")
+          block = activity.group(0)
+          if 'android:launchMode="singleTop"' not in block:
+              block = re.sub(r'<activity\b', '<activity android:launchMode="singleTop"', block, count=1)
+          if 'android:scheme="nexora"' not in block:
+              intent_filter = '''
+                  <intent-filter>
+                      <action android:name="android.intent.action.VIEW" />
+                      <category android:name="android.intent.category.DEFAULT" />
+                      <category android:name="android.intent.category.BROWSABLE" />
+                      <data android:scheme="nexora" android:host="auth-callback" />
+                  </intent-filter>'''
+              block = block.replace('</activity>', intent_filter + '\\n            </activity>')
+          source = source[:activity.start()] + block + source[activity.end():]
+          manifest.write_text(source)
+          print("Registered nexora://auth-callback/ for Supabase email confirmation and recovery.")
+          PY
+
       - name: Install dependencies
         run: flutter pub get
 
