@@ -129,3 +129,5 @@ The global `FlutterError.onError` handler must not call `FlutterError.presentErr
 ### Report target validation
 
 The report dialog validates target type and reason against the live `reports` CHECK constraint values and requires a canonical UUID-shaped target ID before insert. This is input hygiene only; the deployed PostgreSQL constraints, RLS, and server-side ownership rules remain authoritative. Validation logic has dedicated unit coverage.
+
+Report submission also checks that the same authenticated user remains active after the insert returns. If the account changed during the request, the dialog does not report success in the new session and warns against an immediate blind retry. This is a client-side stale-result guard; it does not replace database RLS or an idempotent server endpoint.
