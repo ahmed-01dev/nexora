@@ -217,3 +217,5 @@ The client inbox currently supports accepting incoming pending follow requests o
 | APP-027 | Switch accounts while the followers/following list page is loading | A page fetched for the previous user is discarded and cannot populate the new session's list | P1 |
 
 | APP-028 | Sign out or switch accounts while loading or creating a community channel | Stale channel rows are cleared; follow-up membership/channel writes stop after owner change; rollback is attempted only under the original owner | P1 |
+
+| APP-029 | Switch accounts while viewing or managing community members | The previous account's member list is hidden; role/remove actions require the same viewer that loaded the list and stop after session change | P1 |
