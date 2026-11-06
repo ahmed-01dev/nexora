@@ -10,7 +10,8 @@ class AppErrorService {
 
   static void install() {
     FlutterError.onError = (details) {
-      FlutterError.presentError(details);
+      // Do not call FlutterError.presentError here: it prints the raw
+      // exception message, which may contain user or backend data.
       report(details.exception, details.stack, source: 'flutter');
     };
     PlatformDispatcher.instance.onError = (error, stack) {
