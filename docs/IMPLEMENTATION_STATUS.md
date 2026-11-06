@@ -201,3 +201,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Friendship inbox hardening: accept/decline/cancel buttons now prevent duplicate actions per request ID, show a busy state while the RPC is running, and hide profile details when profile RLS returns no visible profile. SOC-016 added; latest source CI result is pending.
 
 - FCM unregister callback ownership: the account ID is captured before sign-out and retained until the asynchronous Firebase `onUnregistered` event can delete the matching `user_devices` row. This closes the callback-after-session-clear ownership gap in source; no guarantee is made when the database request itself fails.
+
+- Followers/following pagination now deduplicates relationship IDs when new relationships alter the ordered result set between page requests, while advancing the offset by the number of backend rows fetched. Added acceptance case SOC-017; authenticated concurrent-change integration testing remains pending.
