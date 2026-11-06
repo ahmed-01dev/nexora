@@ -246,7 +246,7 @@ Client code registers a Firebase Installation ID (FID), stores it in `user_devic
 Operational follow-up: add bounded retries/observability for transient FCM failures and verify real-device foreground/background delivery. Do not log device identifiers or notification bodies.
 ### SECURITY DEFINER function inventory and search_path review
 
-A read-only catalog inventory returned 31 SECURITY DEFINER functions across `public` and `private`. All inspected functions are owned by `postgres`. Most `private` functions use an empty `search_path`; six helper/trigger functions use an explicit `pg_catalog, public, private` or `pg_catalog, public, private, auth` path instead.
+A read-only catalog inventory returned 32 SECURITY DEFINER functions (2 in `public`, 30 in `private`), all owned by `postgres`. Function settings show 24 with an empty `search_path`, four with `pg_catalog, public, private`, three with `pg_catalog, public, private, auth`, and one with `pg_catalog` only. The full signature/owner/settings/EXECUTE-grant inventory is in `docs/SECURITY-DEFINER-INVENTORY.md`; each body and caller still requires review.
 
 Read-only schema privilege checks confirmed that `authenticated`, `anon`, and `PUBLIC` have no CREATE privilege on `public`, `private`, `auth`, or `pg_catalog`. This reduces object-shadowing risk for those explicit paths. It does not replace a function-by-function review of qualified object references, `auth.uid()` checks, grants, and intended direct-call exposure.
 
