@@ -447,7 +447,7 @@ class _ModerationQueueScreenState extends State<ModerationQueueScreen> {
                                         (report['status'] ?? 'open').toString();
                                     final assigned =
                                         report['assigned_to'] == Supabase
-                                            .instance.client.auth.currentUser!.id;
+                                            .instance.client.auth.currentUser?.id;
                                     final busy = _busyIds.contains(id);
                                     return Card(
                                       child: Padding(
