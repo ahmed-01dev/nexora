@@ -193,3 +193,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - FCM auth-event hardening: registration is suspended before logout, stale in-flight upserts are reconciled against the original account, and registration resumes only on initial/new sign-in events. Permission prompts recheck session/suspension state before registering. Source CI validation for this latest auth-event change is pending.
 
 - Sign-out failure recovery: if Supabase rejects sign-out after device cleanup, the app resumes FCM registration for the still-authenticated account before surfacing the error. This path is covered by source logic only; network-failure behavior still needs a device test.
+
+- Added `docs/ERD-LIVE-TRIGGERS.md` with 21 live non-internal trigger definitions, including auth profile creation, follow-status enforcement, community synchronization, notification/FCM hooks, moderation audit, and Supabase Storage platform triggers.
