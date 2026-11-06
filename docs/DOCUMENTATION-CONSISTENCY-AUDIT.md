@@ -185,3 +185,11 @@ Verification is limited to source comparison and checking that the proposed SQL 
 ### Migration-count clarification
 
 The 42 local SQL files were counted on `main` before the proposed correction was added. The work branch now has 43 SQL files because it adds the new proposed `20261106003000` migration. That additional file is not evidence that the previously observed remote-history mismatch is reconciled; the original 42 local migrations still require exact version-to-source mapping against the 43 remote records.
+
+## Addendum — unresolved block-helper source dependency (2026-11-06)
+
+Static inspection found repeated references to `private.is_blocked_between(...)` in local policies and security functions, but no matching `CREATE FUNCTION` definition was located in the inspected local migration sources; the foundation migration's function inventory also does not define it.
+
+This does not prove the live database lacks the function. It may be present in the remote schema or in the unmatched remote migration record. The missing source provenance could be related to the 43-remote/42-main-local migration discrepancy, but that relationship is not yet established.
+
+Do not create a guessed replacement. Recover the exact live function definition, owner, SECURITY mode, `search_path`, ACL and source migration through read-only catalog inspection, then map it to the remote migration history. This is a hard stop before migration replay or policy changes.
