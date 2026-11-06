@@ -87,9 +87,9 @@ Do not run `supabase db push`, reset, replay, repair migration history, or apply
 ## 6. Not covered by this SQL pass
 
 - Full inspection of every migration and every deployed object.
-- Live catalog comparison of function definitions, ownership, SECURITY mode, search_path, grants, RLS and Storage policies.
+- Full live catalog comparison of all function definitions, ownership, SECURITY mode, search_path, grants, RLS and Storage policies (only the media helper, block helper and conversation-membership helper were inspected in this pass).
 - Independent authenticated tests for owner, non-owner, blocked, private and deleted-content cases.
-- Confirmation that the current remote database has all 42 local migrations in the expected order.
+- Full proof that every remote migration has an equivalent local SQL source in the expected order; the exact mismatch inventory is recorded in section 9.
 - Any database mutation or migration repair.
 
 This document is a focused contract trace, not a complete database security certification.
