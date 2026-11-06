@@ -44,7 +44,7 @@ Severity:
 | SOC-009 | Recipient opens incoming follow-request inbox | Only pending requests addressed to the authenticated recipient are listed; private requester details remain hidden unless normal profile RLS permits them | P0 |
 | SOC-010 | Recipient accepts a follow request | Only the recipient may change their own incoming pending row to accepted; the status column is the only direct client-updatable field | P0 |
 | SOC-011 | Request is cancelled or either side blocks before acceptance | Acceptance affects zero rows or is denied; no relationship is created after the block | P0 |
-| SOC-014 | Refresh or switch follow-request inbox while a page is loading or an acceptance is in flight | Stale pages cannot overwrite the refreshed list; offsets count fetched rows rather than visible rows, decrement after accepted rows leave the pending set, and accept/refresh cannot race into showing an already accepted request as pending | P1 |
+| SOC-014 | Refresh, load more, or accept in the follow-request inbox concurrently | Stale pages cannot overwrite the refreshed list; offsets count fetched rows rather than visible rows, decrement after accepted rows leave the pending set, and accept/refresh cannot race into showing an already accepted request as pending | P1 |
 | SOC-012 | Open accepted followers/following lists | Correct direction and accepted-only rows; no blocked relationship leaks; hidden private profile details remain hidden; deterministic 30-row pagination, load-more, and refresh | P1 |
 | SOC-013 | Measure follower/following page performance | Capture representative EXPLAIN ANALYZE and latency at realistic relationship counts; verify whether the explicit created_at/user-ID sort needs a reconciled composite index before proposing DDL | P1 |
 
