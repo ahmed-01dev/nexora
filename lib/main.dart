@@ -975,7 +975,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
     int offset = 0,
   }) async {
     final client = Supabase.instance.client;
-    final me = client.auth.currentUser!.id;
+    final me = client.auth.currentUser?.id;
+    if (me == null) throw StateError('يجب تسجيل الدخول لعرض المحتوى.');
     late final List<Map<String, dynamic>> rows;
     if (_searchPosts && term.startsWith('#') && term.length > 1) {
       final tag = term.substring(1).toLowerCase();
@@ -1286,8 +1287,9 @@ class _FriendsScreenState extends State<FriendsScreen> {
 
   Future<List<Map<String, dynamic>>> _fetchPage(int offset) async {
     final client = Supabase.instance.client;
-    final id = client.auth.currentUser!.id;
-    final profileRelation = _showFollowers
+    final id = client.auth.currentUser?.id;
+    if (id == null) throw StateError('يجب تسجيل الدخول لعرض القائمة.');
+    final profileRelation = _showFollowers;
         ? 'profiles!follows_follower_id_fkey'
         : 'profiles!follows_following_id_fkey';
     final profileFields =
@@ -1552,9 +1554,13 @@ class _CreateScreenState extends State<CreateScreen> {
       setState(() => _error = value.length > 5000 ? 'الحد الأقصى 5000 حرف.' : 'اكتب محتوى أو أضف صورة/فيديو.');
       return;
     }
-    setState(() { _busy = true; _error = null; });
     final client = Supabase.instance.client;
-    final userId = client.auth.currentUser!.id;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) {
+      setState(() => _error = 'انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
+      return;
+    }
+    setState(() { _busy = true; _error = null; });
     String? postId;
     List<String> uploadedPaths = [];
     try {
@@ -1689,7 +1695,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
   Future<List<Map<String, dynamic>>> _loadOwnPosts({int offset = 0}) async {
     final client = Supabase.instance.client;
-    final userId = client.auth.currentUser!.id;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) throw StateError('انتهت جلسة الدخول.');
     final rows = await client
         .from('posts')
         .select('id,user_id,content,visibility,created_at,profiles!posts_user_id_fkey(id,username,display_name,avatar_url)')
@@ -2102,9 +2109,15 @@ class _PostCardState extends State<PostCard> {
 
   Future<void> _toggleSave() async {
     if (_saveBusy) return;
-    setState(() => _saveBusy = true);
     final db = Supabase.instance.client;
-    final uid = db.auth.currentUser!.id;
+    final uid = db.auth.currentUser?.id;
+    if (uid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('انتهت جلسة الدخول. سجّل الدخول مرة تانية.')),
+      );
+      return;
+    }
+    setState(() => _saveBusy = true);
     final postId = widget.post['id'] as String;
     try {
       if (_saved) {
@@ -2219,8 +2232,16 @@ class _PostCardState extends State<PostCard> {
 
   Future<void> _like() async {
     if (_busy || _liked == null) return;
+    final db = Supabase.instance.client;
+    final uid = db.auth.currentUser?.id;
+    if (uid == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('انتهت جلسة الدخول. سجّل الدخول مرة تانية.')),
+      );
+      return;
+    }
     setState(() => _busy = true);
-    final db = Supabase.instance.client, uid = Supabase.instance.client.auth.currentUser!.id, pid = widget.post['id'] as String;
+    final pid = widget.post['id'] as String;
     try {
       if (_liked == false) { await db.from('likes').insert({'user_id': uid, 'post_id': pid}); if (mounted) setState(() => _liked = true); }
       else { await db.from('likes').delete().eq('user_id', uid).eq('post_id', pid); if (mounted) setState(() => _liked = false); }
@@ -2270,7 +2291,7 @@ class _PostCardState extends State<PostCard> {
             ),
           ),
           if (widget.post['user_id'] !=
-              Supabase.instance.client.auth.currentUser!.id) ...[
+              Supabase.instance.client.auth.currentUser?.id) ...[
             const PopupMenuItem(
               value: 'block_user',
               child: Row(
@@ -2494,7 +2515,7 @@ class _PersonTileState extends State<PersonTile> {
         Text('@' + (p['username'] ?? 'user').toString(), style: const TextStyle(color: Color(0xFF9AA7BA), fontSize: 12)),
         if ((p['bio'] ?? '').toString().isNotEmpty) Text(p['bio'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF8996AA), fontSize: 12)),
       ])),
-      if (p['id'] != Supabase.instance.client.auth.currentUser!.id)
+      if (p['id'] != Supabase.instance.client.auth.currentUser?.id)
         PopupMenuButton<String>(
           tooltip: 'خيارات الحساب',
           onSelected: (value) async {
