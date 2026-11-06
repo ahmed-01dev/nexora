@@ -88,3 +88,5 @@
 - Production crash monitoring, backup/restore drill, penetration test or store readiness.
 
 No source code, database schema, deployed function, provider configuration, or build workflow was changed by this traceability document.
+
+| Startup failure presentation | `lib/main.dart`; `lib/core/app_error.dart` | Supabase initialization failures are reported centrally and the setup screen receives a generic Arabic message | Provider configuration and retry/recovery behavior still require device validation |
