@@ -73,3 +73,31 @@ Before changing or adding an operation:
 - No endpoint is considered available because it appears in a roadmap.
 - No SMS, media worker, TURN, push, or other paid/provider-dependent service is assumed free or activated by documentation.
 - Application packaging remains paused until source/code/file completion and explicit build approval.
+
+## 6. Verified Flutter RPC call-site inventory (read-only snapshot)
+
+The following client calls were extracted from the current Flutter source on branch `docs/specs-i-j-k` and compared with the live PostgreSQL function catalog. Function names, identity arguments, and return types below are live database evidence; parameter keys and call-site paths are source evidence. This is a contract-parity inventory, not proof that every authorization path or end-to-end workflow has passed tests.
+
+| RPC | Flutter call site | Client parameter keys | Live signature / return |
+|---|---|---|---|
+| `get_feed_page` | `lib/main.dart` | `p_mode`, `p_limit`, `p_offset` | `(p_mode text, p_limit integer, p_offset integer) → TABLE` |
+| `request_follow` | `lib/main.dart` | `p_target_user_id` | `(p_target_user_id uuid) → text` |
+| `cancel_follow` | `lib/main.dart` | `p_target_user_id` | `(p_target_user_id uuid) → boolean` |
+| `accept_community_invite` | `lib/features/communities/communities_screen.dart` | `p_invite_code` | `(p_invite_code uuid) → TABLE` |
+| `create_community_invite` | `lib/features/communities/communities_screen.dart` | `p_community_id`, `p_expires_in_hours`, `p_max_uses` | `(p_community_id uuid, p_expires_in_hours integer, p_max_uses integer) → TABLE` |
+| `revoke_community_invites` | `lib/features/communities/communities_screen.dart` | `p_community_id` | `(p_community_id uuid) → integer` |
+| `request_friend` | `lib/features/friends/friend_requests_screen.dart` | `p_addressee_id` | `(p_addressee_id uuid) → text` |
+| `remove_friend` | `lib/features/friends/friend_requests_screen.dart` | `p_other_user_id` | `(p_other_user_id uuid) → boolean` |
+| `cancel_friend_request` | `lib/features/friends/friend_requests_screen.dart` | `p_request_id` | `(p_request_id uuid) → boolean` |
+| `accept_friend_request` | `lib/features/friends/friend_requests_screen.dart` | `p_request_id` | `(p_request_id uuid) → boolean` |
+| `get_my_conversation_previews` | `lib/features/messaging/messages_screen.dart` | none | `() → TABLE` |
+| `create_direct_conversation` | `lib/features/messaging/messages_screen.dart`; `lib/features/nearby/nearby_discovery_screen.dart` | `p_other_user_id` | `(p_other_user_id uuid) → uuid` |
+| `my_nearby_presence_enabled` | `lib/features/nearby/nearby_discovery_screen.dart` | none | `() → boolean` |
+| `find_nearby_people` | `lib/features/nearby/nearby_discovery_screen.dart` | `p_limit` | `(p_limit integer) → TABLE` |
+| `update_my_nearby_presence` | `lib/features/nearby/nearby_discovery_screen.dart` | `p_latitude`, `p_longitude`, `p_enabled` | `(p_latitude double precision, p_longitude double precision, p_enabled boolean) → void` |
+| `get_my_notification_page` | `lib/features/notifications/notifications_screen.dart` | `p_offset`, `p_limit` | `(p_offset integer, p_limit integer) → TABLE` |
+| `update_privacy_settings` | `lib/features/settings/privacy_settings_screen.dart` | `p_is_private`, `p_allow_messages_from`, `p_allow_friend_requests` | `(p_is_private boolean, p_allow_messages_from text, p_allow_friend_requests boolean) → void` |
+
+**Result of this snapshot:** 18 distinct RPC names and 19 call sites were found in the reviewed feature screens and app entry point. Each listed name has a matching live public function with the listed identity-argument types; no missing-function or parameter-key mismatch was found in these call sites. This does not validate runtime grants, RLS outcomes, business rules, returned row decoding, or error handling. Re-run this comparison whenever a client RPC or database function changes.
+
+**Safety boundary:** this was read-only inspection. No function, grant, schema, migration, or database object was changed. No app build or test suite was run.
