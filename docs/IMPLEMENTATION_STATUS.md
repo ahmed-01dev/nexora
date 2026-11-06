@@ -285,3 +285,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Community creation and owner badges now tolerate an expired session without force-unwrapping `currentUser`; creation stops with a safe sign-in message and list rendering no longer crashes.
 
 - Main feed/post UI now uses explicit session guards for feed/follower queries, post publishing, saving, and liking; owner-only menus compare against a nullable session ID instead of force-unwrapping it. This prevents a signed-out screen from crashing while its async state is still mounted.
+
+- Notifications screen now captures the authenticated viewer for page reads, mark-read, mark-all-read, and notification navigation. It rejects stale page results after account changes and does not navigate to a prior account's conversation/friend-request target after a session switch. Multi-user device testing remains pending.
