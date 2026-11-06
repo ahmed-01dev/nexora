@@ -21,7 +21,7 @@ Detailed design: [Systems 63–90 — Ads & Commerce, Trust & Safety, Operations
 
 CNT-017 (Post Creation & Publishing): [functional specification](docs/02-CONTENT-SYSTEM-017.md), [publish-flow contract](docs/02-CONTENT-SYSTEM-017-PUBLISH-CONTRACT.md), and [29-case acceptance matrix](docs/02-CONTENT-SYSTEM-017-ACCEPTANCE.md). These are specifications and test plans, not proof that all cases passed.
 
-Documentation review: [Consistency audit and reconciliation plan](docs/DOCUMENTATION-CONSISTENCY-AUDIT.md). [Source-to-contract traceability](docs/SOURCE-TO-CONTRACT-TRACEABILITY.md). [SQL contract traceability](docs/SQL-CONTRACT-TRACEABILITY.md). Implemented code does not mean every workflow has passed end-to-end testing with real users/devices.
+Documentation review: [Consistency audit and reconciliation plan](docs/DOCUMENTATION-CONSISTENCY-AUDIT.md). [Source-to-contract traceability](docs/SOURCE-TO-CONTRACT-TRACEABILITY.md). [SQL contract traceability](docs/SQL-CONTRACT-TRACEABILITY.md). [SQL media authorization regression matrix](docs/SQL-SECURITY-REGRESSION-MATRIX.md). Implemented code does not mean every workflow has passed end-to-end testing with real users/devices.
 
 ## Known production gaps
 
@@ -48,6 +48,8 @@ Never commit or expose:
 Store server-side credentials in Supabase Edge Function secrets or a dedicated secret manager. The Firebase Android `google-services.json` contains app configuration, not an Admin SDK private key; keep it in the intended project configuration path and do not confuse it with the service-account JSON.
 
 ## Database
+
+A proposed media-authorization correction is under review at `supabase/migrations/20261106003000_restore_media_visibility_invariants.sql`. It is not applied; do not run migrations until remote/local history is reconciled.
 
 The `supabase/migrations/` directory contains the schema and security changes applied during development. Public tables have RLS enabled; verify grants and policies after every schema change. Nearby discovery is opt-in, stores rounded coordinates in a private schema, returns coarse distance bands, and expires stale presence after 24 hours.
 
