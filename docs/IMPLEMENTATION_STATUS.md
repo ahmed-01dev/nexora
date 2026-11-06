@@ -195,3 +195,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Sign-out failure recovery: if Supabase rejects sign-out after device cleanup, the app resumes FCM registration for the still-authenticated account before surfacing the error. This path is covered by source logic only; network-failure behavior still needs a device test.
 
 - Added `docs/ERD-LIVE-TRIGGERS.md` with 21 live non-internal trigger definitions, including auth profile creation, follow-status enforcement, community synchronization, notification/FCM hooks, moderation audit, and Supabase Storage platform triggers.
+
+- Latest Flutter source CI run `42226031696` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on commit `7dfb822afec111d532f93c96f2598507c7fa2fc8`. This includes the FCM sign-out suspension/recovery changes and the current social graph UI. The workflow did not build an APK/AAB/Web artifact.
