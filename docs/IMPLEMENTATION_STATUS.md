@@ -228,3 +228,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Flutter CI run `42228718941` passed on commit `6c03db5a5e116e609ce3738579e3bfe08a4274a7`, covering the current FCM signed-out cleanup, privacy-safe error handling/tests, and friendship inbox refresh behavior. No Android APK/AAB/Web build was run.
 
 - Media upload ownership hardening: profile, post, and story uploads now require the supplied owner ID to match the authenticated Supabase user; bulk cleanup rejects paths outside the current user's storage prefix. Added deterministic unit coverage for matching, mismatched, and missing sessions. This complements Storage RLS and does not replace server-side media scanning.
+
+- RPC audit follow-up: included the friendship inbox's dynamically selected `decline_friend_request(p_request_id uuid)` call. Live public wrapper is authenticated-only and delegates to a SECURITY DEFINER helper that checks `auth.uid()` and recipient ownership of the pending request.
