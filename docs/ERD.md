@@ -59,7 +59,7 @@ This list is an audit reminder, not a claim that every object has been freshly r
 
 ## Live table inventory snapshot — 2026-11-06
 
-A read-only query of `information_schema.tables` returned **38 ordinary tables in `public` and one ordinary table in `private`**. The same query returned no views or materialized views in those two schemas.
+Read-only catalog queries returned **38 ordinary tables in `public` and one ordinary table in `private`**; a separate `pg_class` check returned no views or materialized views in those schemas. All 39 ordinary tables were previously verified to have RLS enabled.
 
 ### Public tables (38)
 
