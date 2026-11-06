@@ -200,10 +200,15 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
                           final profile = request['profiles'] is Map
                               ? Map<String, dynamic>.from(request['profiles'] as Map)
                               : <String, dynamic>{};
-                          final username = (profile['username'] ?? 'user').toString();
-                          final displayName =
-                              (profile['display_name'] ?? username).toString();
                           final followerId = request['follower_id']?.toString() ?? '';
+                          final profileHidden = profile.isEmpty;
+                          final username = (profile['username'] ?? 'user').toString();
+                          final displayName = profileHidden
+                              ? 'حساب خاص'
+                              : (profile['display_name'] ?? username).toString();
+                          final followerLabel = followerId.length > 6
+                              ? followerId.substring(0, 6)
+                              : followerId;
 
                           return Card(
                             child: ListTile(
@@ -220,7 +225,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(fontWeight: FontWeight.w800),
                               ),
-                              subtitle: Text('@$username'),
+                              subtitle: Text(profileHidden ? 'الملف الشخصي غير متاح · $followerLabel' : '@$username'),
                               trailing: FilledButton.tonalIcon(
                                 onPressed: _accepting.contains(followerId)
                                     ? null
