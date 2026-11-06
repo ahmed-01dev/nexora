@@ -87,7 +87,16 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
           final incoming = snapshot.data?['incoming'] ?? [];
           final outgoing = snapshot.data?['outgoing'] ?? [];
           if (incoming.isEmpty && outgoing.isEmpty) {
-            return const Center(child: Text('مفيش طلبات صداقة حاليًا.'));
+            return RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 140),
+                  Center(child: Text('مفيش طلبات صداقة حاليًا.')),
+                ],
+              ),
+            );
           }
           return RefreshIndicator(
             onRefresh: _refresh,
