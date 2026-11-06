@@ -129,6 +129,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
         'content': content,
         'parent_id': _replyTo,
       });
+      if (!mounted) return;
       _composer.clear();
       setState(() {
         _replyTo = null;
