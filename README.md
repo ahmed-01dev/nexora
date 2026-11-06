@@ -45,6 +45,13 @@ Store server-side credentials in Supabase Edge Function secrets or a dedicated s
 
 The `supabase/migrations/` directory contains the schema and security changes applied during development. Public tables have RLS enabled; verify grants and policies after every schema change. Nearby discovery is opt-in, stores rounded coordinates in a private schema, returns coarse distance bands, and expires stale presence after 24 hours.
 
+## Android preview APK
+
+- The Android platform folder is generated during the preview build if it is not committed.
+- The workflow uses Flutter 3.47.9 and Java 17, runs analysis and tests, then builds a **debug-only APK**.
+- Open **Actions → NEXORA Android Preview APK** and download the artifact named `nexora-debug-apk`.
+- This artifact is for installation/testing only. It is not signed for Google Play and does not make provider-dependent features production-ready.
+
 ## CI and release builds
 
 - `.github/workflows/flutter-ci.yml` runs Flutter dependency installation, static analysis, and tests on pushes and pull requests.
