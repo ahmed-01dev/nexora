@@ -251,3 +251,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Story flow hardening: publishing now handles an expired session before entering the busy state, rechecks account identity before inserting story metadata, and avoids null-session crashes when marking views or rendering owner-only actions. Video initialization errors now show a recoverable message instead of attempting to render an uninitialized player. Real-device media playback remains unverified.
 
 - Story list loading now signs private media URLs in bounded batches of eight and isolates per-story signing failures, avoiding up to 100 sequential Storage round-trips and preventing one inaccessible media object from failing the entire story list.
+
+- Flutter framework error handler no longer calls `FlutterError.presentError`, which could print raw backend/plugin exception text. Framework errors use the privacy-conscious central reporter; a regression test checks that sample email/token-like exception values are absent from debug logs. This is local debug-log protection, not a substitute for reviewed production crash telemetry.
