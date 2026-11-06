@@ -317,3 +317,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Story feed queries and signed media URL generation now verify the original viewer across fetch batches; stale feed rows cannot be opened after account changes. Story composer publishing is bound to the account that opened the composer. Signed URLs may remain usable until expiry; device-level session-switch tests remain pending.
 
 - Moderation report queue reads, target previews, assignment, and dismissal are now bound to the reviewer ID that loaded the queue; stale data/actions are suppressed after reviewer account changes. Moderator-role/RLS integration tests remain pending.
+
+- Latest completed Flutter CI run `42256045554` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on source commit `91a12b822e2a547ec44320c6f7713d9c98dea257`. This run includes the block/privacy/friend/follow, nearby, notification preferences, stories, communities, and moderation session-continuity changes. No APK/AAB/Web build was run.
