@@ -227,3 +227,20 @@ Supabase reports `send-push-notification` as ACTIVE version 6 with `verify_jwt =
 ### Nearby-location expiry worker verification
 
 The live `cron.job` catalog contains active job `nexora-cleanup-expired-nearby-locations`, scheduled every 15 minutes. The five most recent entries in `cron.job_run_details` were all `succeeded` (each returned `DELETE 0` at the time inspected). This confirms the scheduled cleanup is active and executing; it does not prove a stale-row fixture was deleted in this audit.
+
+### Push delivery runtime evidence (read-only, 2026-11-06)
+
+Further live inspection confirms:
+
+- The `public.notifications` AFTER INSERT trigger `notify_nexora_push_after_insert` is enabled and invokes `private.notify_nexora_push()`.
+- The Vault metadata contains a secret named `nexora_push_webhook_secret`. Only its existence metadata was checked; the secret value was never read or exposed.
+- The deployed `send-push-notification` Edge Function is ACTIVE version 6 with `verify_jwt=false`; the function implements its own webhook-secret or authenticated-user validation.
+- The deployed function source matches `main/supabase/functions/send-push-notification/index.ts` byte-for-byte in the comparison performed earlier.
+- `user_devices` currently contains one Android device row.
+- `net._http_response` contains one historical HTTP 200 result with `{sent:1,failed:0,total:1}`. Several later calls returned HTTP 200 with `skipped:no_registered_devices`.
+
+This is stronger evidence than source presence alone: the database trigger reached the Edge Function, and at least one FCM send request was accepted by FCM. It still does **not** prove notification display on a physical Android device, tap/deep-link behavior, background handling, or current device-token health. The Edge Function's `sent` count means FCM returned a successful HTTP response, not that a human device displayed the notification.
+
+Client code registers a Firebase Installation ID (FID), stores it in `user_devices.push_token`, and the Edge Function sends using the FCM HTTP v1 `message.fid` field. This matches Firebase's current REST schema, which supports FID as a message target. [Firebase Message resource](https://firebase.google.com/docs/reference/fcm/rest/v1/projects.messages).
+
+Operational follow-up: add bounded retries/observability for transient FCM failures and verify real-device foreground/background delivery. Do not log device identifiers or notification bodies.
