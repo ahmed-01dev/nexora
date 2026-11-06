@@ -151,3 +151,5 @@ The conversation list is associated with the authenticated viewer ID that loaded
 ### Block, privacy, and relationship-request session binding
 
 Block creation rechecks the authenticated actor after its existing-block lookup and after insertion. The blocked-account screen associates its rows with the viewer who loaded them and refuses stale unblocks. Privacy settings reads verify the viewer between profile/settings queries and bind the save RPC to the viewer whose settings were loaded. Friend and follow request lists/actions similarly reject stale viewer state. These are client-side session-race protections only; database RLS and RPC authorization remain authoritative. Real-device multi-account tests and partial-write reconciliation remain pending.
+
+Profile-level friendship controls now capture the viewer ID for both relationship reads and request/accept/cancel/remove RPCs. A session mismatch disables the control and suppresses stale results or action feedback. This remains client-side race protection; the friendship RPCs and RLS policies must enforce actor/target authorization server-side.
