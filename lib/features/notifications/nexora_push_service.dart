@@ -32,7 +32,7 @@ class NexoraPushService {
           Supabase.instance.client.auth.currentUser?.id;
       saveInstallationId(fid);
     }, onError: (Object error) {
-      debugPrint('NEXORA FCM registration failed: $error');
+      debugPrint('NEXORA FCM registration failed: ${error.runtimeType}');
     });
     _unregistrationSubscription = messaging.onUnregistered.listen((fid) {
       final ownerId = _installationOwnerUserId ??
@@ -102,7 +102,7 @@ class NexoraPushService {
         await _deleteInstallationId(fid, ownerId: userId);
       }
     } catch (error) {
-      debugPrint('NEXORA FCM installation registration failed: $error');
+      debugPrint('NEXORA FCM installation registration failed: ${error.runtimeType}');
     }
   }
 
@@ -118,7 +118,7 @@ class NexoraPushService {
           .eq('user_id', userId)
           .eq('push_token', fid);
     } catch (error) {
-      debugPrint('NEXORA FCM installation cleanup failed: $error');
+      debugPrint('NEXORA FCM installation cleanup failed: ${error.runtimeType}');
     }
   }
 
@@ -138,7 +138,7 @@ class NexoraPushService {
     try {
       await FirebaseMessaging.instance.unregister();
     } catch (error) {
-      debugPrint('NEXORA FCM unregister failed: $error');
+      debugPrint('NEXORA FCM unregister failed: ${error.runtimeType}');
     }
   }
 
