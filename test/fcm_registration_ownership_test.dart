@@ -40,6 +40,20 @@ void main() {
       );
     });
 
+    test('does not clear a known owner when callback ownership is unknown', () {
+      final ownership = FcmRegistrationOwnership();
+
+      expect(
+        ownership.shouldClearTrackedRegistration(
+          trackedFid: 'fid-1',
+          trackedOwnerId: 'user-a',
+          callbackFid: 'fid-1',
+          callbackOwnerId: null,
+        ),
+        isFalse,
+      );
+    });
+
     test('clears the tracked registration when callback owner matches', () {
       final ownership = FcmRegistrationOwnership();
 
