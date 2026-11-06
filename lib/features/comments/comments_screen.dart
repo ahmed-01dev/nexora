@@ -23,7 +23,6 @@ class _CommentsScreenState extends State<CommentsScreen> {
   static const int _pageSize = 100;
 
   SupabaseClient get _db => Supabase.instance.client;
-  String get _myId => _db.auth.currentUser!.id;
 
   @override
   void initState() {
@@ -57,8 +56,8 @@ class _CommentsScreenState extends State<CommentsScreen> {
           .from('comments')
           .select('id,post_id,user_id,content,parent_id,created_at,edited_at,deleted_at,profiles!comments_user_id_fkey(id,username,display_name,avatar_url)')
           .eq('post_id', widget.postId)
-          .order('created_at', ascending: true)
-          .order('id', ascending: true)
+          .order('created_at', ascending: false)
+          .order('id', ascending: false)
           .range(current.length, current.length + _pageSize - 1);
       if (!mounted) return;
       final knownIds = current.map((comment) => comment['id']).toSet();
@@ -80,8 +79,14 @@ class _CommentsScreenState extends State<CommentsScreen> {
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = _load());
-    await _future;
+    final next = _load();
+    setState(() => _future = next);
+    try {
+      await next;
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'comments_refresh');
+      // FutureBuilder owns the visible error state; resolve pull-to-refresh.
+    }
   }
 
   Future<void> _send() async {
@@ -91,11 +96,16 @@ class _CommentsScreenState extends State<CommentsScreen> {
       _notice('التعليق لازم يكون أقل من 2000 حرف.');
       return;
     }
+    final userId = _db.auth.currentUser?.id;
+    if (userId == null) {
+      _notice('انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
+      return;
+    }
     setState(() => _sending = true);
     try {
       await _db.from('comments').insert({
         'post_id': widget.postId,
-        'user_id': _myId,
+        'user_id': userId,
         'content': content,
         'parent_id': _replyTo,
       });
@@ -149,6 +159,11 @@ class _CommentsScreenState extends State<CommentsScreen> {
       _notice('التعليق لازم يكون من حرف إلى 2000 حرف.');
       return;
     }
+    final userId = _db.auth.currentUser?.id;
+    if (userId == null) {
+      _notice('انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
+      return;
+    }
     try {
       await _db
           .from('comments')
@@ -157,7 +172,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
             'edited_at': DateTime.now().toUtc().toIso8601String(),
           })
           .eq('id', comment['id'] as String)
-          .eq('user_id', _myId);
+          .eq('user_id', userId);
       await _refresh();
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'edit_comment');
@@ -186,9 +201,14 @@ class _CommentsScreenState extends State<CommentsScreen> {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
+    final userId = _db.auth.currentUser?.id;
+    if (userId == null) {
+      _notice('انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
+      return;
+    }
     try {
-      await _db.from('comments').update({'deleted_at': DateTime.now().toUtc().toIso8601String()}).eq('id', comment['id'] as String).eq('user_id', _myId);
+      await _db.from('comments').update({'deleted_at': DateTime.now().toUtc().toIso8601String()}).eq('id', comment['id'] as String).eq('user_id', userId);
       await _refresh();
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'delete_comment');
@@ -397,10 +417,12 @@ class _CommentTileState extends State<_CommentTile> {
 
   Future<void> _loadLike() async {
     try {
+      final userId = _db.auth.currentUser?.id;
+      if (userId == null) return;
       final row = await _db
           .from('comment_likes')
           .select('comment_id')
-          .eq('user_id', _db.auth.currentUser!.id)
+          .eq('user_id', userId)
           .eq('comment_id', widget.comment['id'] as String)
           .maybeSingle();
       if (mounted) setState(() => _liked = row != null);
@@ -411,8 +433,14 @@ class _CommentTileState extends State<_CommentTile> {
 
   Future<void> _toggleLike() async {
     if (_likeBusy || widget.comment['deleted_at'] != null) return;
+    final userId = _db.auth.currentUser?.id;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('انتهت جلسة الدخول. سجّل الدخول مرة تانية.')),
+      );
+      return;
+    }
     setState(() => _likeBusy = true);
-    final userId = _db.auth.currentUser!.id;
     final commentId = widget.comment['id'] as String;
     try {
       if (_liked) {
