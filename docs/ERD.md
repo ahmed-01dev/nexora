@@ -31,14 +31,16 @@ erDiagram
 ```
 
 ## Table groups
-- Identity: profiles, user_private_settings, user_preferences.
-- Social graph: follows, friendships, blocks.
-- Publishing: posts, media, likes, comments, saves, stories, story_views.
-- Messaging: conversations, conversation_members, messages, message_attachments, message_reactions.
-- Communities: communities, community_members.
-- Safety: reports.
-- Realtime call foundation: call_sessions, call_participants.
-- Notifications: notifications.
+
+- Identity and preferences: `profiles`, `user_private_settings`, `user_preferences`.
+- Social graph: `follows`, `friendships`, `blocks`.
+- Publishing and discovery: `posts`, `media`, `likes`, `reposts`, `saves`, `comments`, `comment_likes`, `hashtags`, `post_hashtags`, `collections`, `collection_items`, `stories`, `story_views`.
+- Messaging: `conversations`, `conversation_members`, `messages`, `message_attachments`, `message_reactions`.
+- Communities: `communities`, `community_members`, `community_channels`, `community_invites`.
+- Safety and moderation: `reports`, `moderation_actions`, `moderation_appeals`, `staff_members`, `audit_logs`.
+- Realtime call foundation: `call_sessions`, `call_participants`.
+- Notifications and devices: `notifications`, `notification_preferences`, `user_devices`.
+- Private discovery storage: `private.profile_discovery_locations`.
 
 ## Security model
 All newly added public tables have RLS enabled. Anonymous SELECT is revoked. User-scoped data is filtered by auth.uid() or a narrowly scoped membership helper. Column-level update grants are used on sensitive membership, conversation, message, notification, and call fields.
