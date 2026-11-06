@@ -38,13 +38,18 @@ class _CommunityChannelsScreenState extends State<CommunityChannelsScreen> {
       _error = null;
     });
     try {
-      final rows = await Supabase.instance.client
+      final client = Supabase.instance.client;
+      final userId = client.auth.currentUser?.id;
+      if (userId == null) {
+        throw StateError('انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
+      }
+      final rows = await client
           .from('community_channels')
           .select('id,conversation_id,name,slug,created_at')
           .eq('community_id', widget.communityId)
           .order('created_at')
           .order('id');
-      if (!mounted) return;
+      if (!mounted || client.auth.currentUser?.id != userId) return;
       setState(() {
         _channels = List<Map<String, dynamic>>.from(rows);
         _loading = false;
@@ -125,7 +130,9 @@ class _CommunityChannelsScreenState extends State<CommunityChannelsScreen> {
     final db = Supabase.instance.client;
     final uid = db.auth.currentUser?.id;
     if (uid == null) {
-      _showError(StateError('انتهت جلسة الدخول. سجّل الدخول مرة تانية.'));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('انتهت جلسة الدخول. سجّل الدخول مرة تانية.')),
+      );
       return;
     }
     setState(() => _creating = true);
@@ -137,11 +144,17 @@ class _CommunityChannelsScreenState extends State<CommunityChannelsScreen> {
         'title': '${widget.communityName} · ${result['name']}',
       }).select('id').single();
       conversationId = conversation['id'] as String;
+      if (db.auth.currentUser?.id != uid) {
+        throw StateError('تغير الحساب أثناء إنشاء القناة.');
+      }
       await db.from('conversation_members').insert({
         'conversation_id': conversationId,
         'user_id': uid,
         'role': 'owner',
       });
+      if (db.auth.currentUser?.id != uid) {
+        throw StateError('تغير الحساب أثناء إنشاء القناة.');
+      }
       await db.from('community_channels').insert({
         'community_id': widget.communityId,
         'conversation_id': conversationId,
@@ -149,10 +162,13 @@ class _CommunityChannelsScreenState extends State<CommunityChannelsScreen> {
         'slug': result['slug'],
         'created_by': uid,
       });
+      if (db.auth.currentUser?.id != uid) {
+        throw StateError('تغير الحساب أثناء إنشاء القناة.');
+      }
       await _load();
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'community_channel_create');
-      if (conversationId != null) {
+      if (conversationId != null && db.auth.currentUser?.id == uid) {
         try {
           await db.from('conversations').delete().eq('id', conversationId);
         } catch (cleanupError, cleanupStack) {
