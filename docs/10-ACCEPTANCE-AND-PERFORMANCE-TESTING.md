@@ -195,7 +195,7 @@ The client inbox currently supports accepting incoming pending follow requests o
 
 ### Client error privacy unit coverage
 
-`test/app_error_test.dart` verifies safe Arabic mappings for network, authentication, RLS, and unknown failures. It does not test log sinks, production telemetry, or end-to-end recovery.
+`test/app_error_test.dart` verifies safe Arabic mappings for network, authentication, RLS, and unknown failures, and asserts raw email/token-like exception text is not written to debug logs. It does not test production telemetry or end-to-end recovery.
 
 | SOC-020 | Recycle a relationship tile to another profile while relationship reads or follow/block actions are pending | Old profile responses/actions cannot overwrite the new profile's relationship state or display a stale success state; only the original target receives the requested action | P1 |
 | SEC-021 | End a Supabase session outside the account-screen logout flow while FCM is registered | A `signedOut` event triggers owner-scoped device cleanup; the last known owner is retained after session clearing; no other account's device row is deleted | P1 |
