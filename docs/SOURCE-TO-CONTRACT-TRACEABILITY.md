@@ -112,3 +112,5 @@ No source code, database schema, deployed function, provider configuration, or b
 | Followers/following session continuity | `lib/main.dart` (`FriendsScreen._fetchPage`) | Page query captures the viewer ID and rejects results if the authenticated user changes before completion | Device-level account-switch and authenticated RLS integration tests remain pending |
 
 | Community channel account-switch safety | `lib/features/communities/community_channels_screen.dart` | Reads are bound to the captured viewer; creation rechecks owner before follow-up writes and limits rollback to original session | Partial insert orphan reconciliation and authenticated device tests remain pending |
+
+| Community member viewer binding | `lib/features/communities/community_members_screen.dart` | Loaded list and role/removal actions are bound to the original viewer ID; stale UI is hidden after session changes | Real-device session-switch and role-policy integration tests remain pending |
