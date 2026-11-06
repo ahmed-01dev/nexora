@@ -2413,35 +2413,44 @@ class _PersonTileState extends State<PersonTile> {
 
   Future<void> _toggle() async {
     if (_busy) return;
-    setState(() => _busy = true);
+    final generation = _relationshipGeneration;
     final other = widget.profile['id'] as String;
+    final wasAccepted = _followStatus == 'accepted';
+    setState(() => _busy = true);
     try {
       if (_followStatus == null) {
         final status = await Supabase.instance.client.rpc(
           'request_follow',
           params: {'p_target_user_id': other},
         );
-        if (mounted) setState(() => _followStatus = status.toString());
+        if (mounted &&
+            generation == _relationshipGeneration &&
+            widget.profile['id']?.toString() == other) {
+          setState(() => _followStatus = status.toString());
+        }
       } else {
-        final wasAccepted = _followStatus == 'accepted';
         await Supabase.instance.client.rpc(
           'cancel_follow',
           params: {'p_target_user_id': other},
         );
-        if (mounted) {
+        if (mounted &&
+            generation == _relationshipGeneration &&
+            widget.profile['id']?.toString() == other) {
           setState(() => _followStatus = null);
           if (wasAccepted) widget.onUnfollow?.call();
         }
       }
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'follow');
-      if (mounted) {
+      if (mounted && generation == _relationshipGeneration) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AppErrorService.message(error))),
         );
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted && generation == _relationshipGeneration) {
+        setState(() => _busy = false);
+      }
     }
   }
   @override
