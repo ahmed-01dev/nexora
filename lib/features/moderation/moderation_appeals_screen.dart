@@ -21,6 +21,7 @@ class _ModerationAppealsScreenState extends State<ModerationAppealsScreen> {
   bool _hasMore = true;
   bool _allStatuses = false;
   String? _error;
+  String? _loadedReviewerId;
 
   @override
   void initState() {
@@ -29,7 +30,10 @@ class _ModerationAppealsScreenState extends State<ModerationAppealsScreen> {
   }
 
   Future<List<Map<String, dynamic>>> _fetchPage(int offset) async {
-    var query = Supabase.instance.client
+    final client = Supabase.instance.client;
+    final reviewerId = client.auth.currentUser?.id;
+    if (reviewerId == null) throw StateError('انتهت جلسة المراجعة.');
+    var query = client
         .from('moderation_appeals')
         .select(
           'id,action_id,user_id,message,status,created_at,resolved_at,moderation_actions!moderation_appeals_action_id_fkey(action,reason,target_type,target_id)',
@@ -39,6 +43,9 @@ class _ModerationAppealsScreenState extends State<ModerationAppealsScreen> {
         .order('created_at', ascending: false)
         .order('id', ascending: false)
         .range(offset, offset + _pageSize - 1);
+    if (client.auth.currentUser?.id != reviewerId) {
+      throw StateError('تغير حساب المراجع أثناء تحميل الاستئنافات.');
+    }
     final page = List<Map<String, dynamic>>.from(rows);
 
     final userIds = page
@@ -46,15 +53,22 @@ class _ModerationAppealsScreenState extends State<ModerationAppealsScreen> {
         .toSet()
         .toList();
     if (userIds.isNotEmpty) {
-      final profiles = await Supabase.instance.client
+      final profiles = await client
           .from('profiles')
           .select('id,username,display_name')
           .inFilter('id', userIds);
+      if (client.auth.currentUser?.id != reviewerId) {
+        throw StateError('تغير حساب المراجع أثناء تحميل ملفات المستخدمين.');
+      }
       for (final profile in profiles) {
         _profiles[profile['id'] as String] =
             Map<String, dynamic>.from(profile);
       }
     }
+    if (client.auth.currentUser?.id != reviewerId) {
+      throw StateError('تغير حساب المراجع أثناء تحميل الاستئنافات.');
+    }
+    _loadedReviewerId = reviewerId;
     return page;
   }
 
@@ -115,7 +129,10 @@ class _ModerationAppealsScreenState extends State<ModerationAppealsScreen> {
 
   Future<void> _decide(Map<String, dynamic> appeal, String decision) async {
     final id = appeal['id'] as String;
-    if (_busyIds.contains(id)) return;
+    final client = Supabase.instance.client;
+    final reviewerId = client.auth.currentUser?.id;
+    if (reviewerId == null || reviewerId != _loadedReviewerId ||
+        _busyIds.contains(id)) return;
     final isOverturn = decision == 'overturned';
     final confirmed = await showDialog<bool>(
       context: context,
@@ -138,19 +155,22 @@ class _ModerationAppealsScreenState extends State<ModerationAppealsScreen> {
         ],
       ),
     );
-    if (confirmed != true || !mounted) return;
+    if (confirmed != true || !mounted ||
+        client.auth.currentUser?.id != reviewerId) return;
 
     setState(() => _busyIds.add(id));
     try {
-      await Supabase.instance.client
+      await client
           .from('moderation_appeals')
           .update({
             'status': decision,
-            'reviewer_id': Supabase.instance.client.auth.currentUser!.id,
+            'reviewer_id': reviewerId,
             'resolved_at': DateTime.now().toUtc().toIso8601String(),
           })
           .eq('id', id);
-      await _loadFirstPage();
+      if (client.auth.currentUser?.id == reviewerId) {
+        await _loadFirstPage();
+      }
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'moderation_appeal_decision');
       _showError(error);
@@ -160,7 +180,11 @@ class _ModerationAppealsScreenState extends State<ModerationAppealsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final reviewerChanged = currentUserId == null ||
+        (_loadedReviewerId != null && currentUserId != _loadedReviewerId);
+    return Scaffold(
         appBar: AppBar(
           title: const Text('مراجعة الاستئنافات'),
           actions: [
@@ -171,7 +195,9 @@ class _ModerationAppealsScreenState extends State<ModerationAppealsScreen> {
             ),
           ],
         ),
-        body: Column(
+        body: reviewerChanged
+            ? Center(child: TextButton(onPressed: _loadFirstPage, child: const Text('تغير حساب المراجع. أعد تحميل الاستئنافات.')))
+            : Column(
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -350,4 +376,6 @@ class _ModerationAppealsScreenState extends State<ModerationAppealsScreen> {
           ],
         ),
       );
+  }
+};
 }
