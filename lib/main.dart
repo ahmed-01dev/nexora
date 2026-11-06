@@ -1323,6 +1323,16 @@ class _FriendsScreenState extends State<FriendsScreen> {
     }
   }
 
+  void _removeFollowing(String userId) {
+    final previousLength = _rows.length;
+    _requestGeneration++;
+    setState(() {
+      _rows.removeWhere((row) => row['following_id'] == userId);
+      if (_rows.length < previousLength && _offset > 0) _offset--;
+      _loadingMore = false;
+    });
+  }
+
   void _switchList(bool showFollowers) {
     if (_showFollowers == showFollowers) return;
     setState(() => _showFollowers = showFollowers);
@@ -1347,13 +1357,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
       follow: true,
       onUnfollow: _showFollowers
           ? null
-          : () {
-              setState(() {
-                _rows.removeWhere(
-                  (item) => item['following_id'] == profileMap['id'],
-                );
-              });
-            },
+          : () => _removeFollowing(profileMap['id'].toString()),
     );
   }
 
