@@ -94,6 +94,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
   }
 
   Future<void> _refresh() async {
+    if (!mounted) return;
     final next = _load();
     setState(() {
       _nextOffset = 0;
