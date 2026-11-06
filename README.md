@@ -48,8 +48,8 @@ The `supabase/migrations/` directory contains the schema and security changes ap
 ## CI and release builds
 
 - `.github/workflows/flutter-ci.yml` runs Flutter dependency installation, static analysis, and tests on pushes and pull requests.
-- `.github/workflows/android-web-build.yml` is a manual release workflow. It builds Android APK/AAB and Flutter Web only when explicitly dispatched.
-- Do not run the release workflow until the source/configuration audit is complete and release is explicitly approved.
+- `.github/workflows/android-debug-apk.yml` creates an Android debug APK for testing; it can be run manually and validates on its dedicated setup branch.
+- The debug APK is not a Play Store release artifact and uses no production signing key. A signed production release workflow is not yet configured.
 
 ## Project engineering documents
 
