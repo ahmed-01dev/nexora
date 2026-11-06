@@ -13,6 +13,7 @@ class NexoraPushService {
   bool _started = false;
   String? _lastInstallationId;
   String? _installationOwnerUserId;
+  final Map<String, List<String>> _pendingUnregistrationOwners = {};
   int _registrationGeneration = 0;
   bool _registrationSuspended = false;
   StreamSubscription<String>? _registrationSubscription;
@@ -27,23 +28,35 @@ class NexoraPushService {
     _started = true;
     final messaging = FirebaseMessaging.instance;
     _registrationSubscription = messaging.onRegistered.listen((fid) {
-      _lastInstallationId = fid;
       final currentUserId =
           Supabase.instance.client.auth.currentUser?.id;
       // A late Firebase registration callback can arrive after sign-out.
-      // Preserve the previous owner for the pending unregister callback and
-      // never associate a signed-out installation with an unknown account.
+      // Do not overwrite the previous FID/owner until a live session exists.
       if (currentUserId == null || _registrationSuspended) return;
+      _lastInstallationId = fid;
       _installationOwnerUserId = currentUserId;
       saveInstallationId(fid);
     }, onError: (Object error) {
       debugPrint('NEXORA FCM registration failed: ${error.runtimeType}');
     });
     _unregistrationSubscription = messaging.onUnregistered.listen((fid) {
-      final ownerId = _installationOwnerUserId ??
-          Supabase.instance.client.auth.currentUser?.id;
-      if (_lastInstallationId == fid) _lastInstallationId = null;
-      _installationOwnerUserId = null;
+      final pendingOwners = _pendingUnregistrationOwners[fid];
+      final ownerId = pendingOwners != null && pendingOwners.isNotEmpty
+          ? pendingOwners.removeAt(0)
+          : _installationOwnerUserId ??
+              Supabase.instance.client.auth.currentUser?.id;
+      if (pendingOwners != null && pendingOwners.isEmpty) {
+        _pendingUnregistrationOwners.remove(fid);
+      }
+
+      // An old account's delayed unregister event must not clear a newer
+      // account's registration, even when Firebase reuses the same FID.
+      if (_lastInstallationId == fid &&
+          (_installationOwnerUserId == null ||
+              _installationOwnerUserId == ownerId)) {
+        _lastInstallationId = null;
+        _installationOwnerUserId = null;
+      }
       _deleteInstallationId(fid, ownerId: ownerId);
     });
     await registerIfAllowed();
@@ -140,13 +153,22 @@ class NexoraPushService {
         _installationOwnerUserId;
     final fid = _lastInstallationId;
     _lastInstallationId = null;
-    _installationOwnerUserId = ownerId;
-    if (fid != null) {
+    if (fid != null && ownerId != null) {
+      (_pendingUnregistrationOwners[fid] ??= <String>[]).add(ownerId);
       await _deleteInstallationId(fid, ownerId: ownerId);
     }
     try {
       await FirebaseMessaging.instance.unregister();
     } catch (error) {
+      // If Firebase did not accept unregister, remove the queued owner unless
+      // the asynchronous callback already consumed it.
+      if (fid != null && ownerId != null) {
+        final pendingOwners = _pendingUnregistrationOwners[fid];
+        pendingOwners?.remove(ownerId);
+        if (pendingOwners != null && pendingOwners.isEmpty) {
+          _pendingUnregistrationOwners.remove(fid);
+        }
+      }
       debugPrint('NEXORA FCM unregister failed: ${error.runtimeType}');
     }
   }
