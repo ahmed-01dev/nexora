@@ -1,8 +1,9 @@
 import 'package:flutter/foundation.dart';
-import '../../core/theme/nexora_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../core/theme/nexora_theme.dart';
 
 import '../../core/app_error.dart';
 import '../messaging/messages_screen.dart';
