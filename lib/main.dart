@@ -1030,8 +1030,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
         .order('created_at', ascending: false)
         .order('id', ascending: false)
         .range(offset, offset + _pageSize - 1);
-    if (client.auth.currentUser?.id != id) {
-      throw StateError('تغير الحساب أثناء تحميل قائمة الأصدقاء.');
+    if (client.auth.currentUser?.id != me) {
+      throw StateError('تغير الحساب أثناء تحميل الأشخاص.');
     }
     return List<Map<String, dynamic>>.from(rows);
   }
@@ -1305,6 +1305,9 @@ class _FriendsScreenState extends State<FriendsScreen> {
         .order('created_at', ascending: false)
         .order(_showFollowers ? 'follower_id' : 'following_id', ascending: true)
         .range(offset, offset + _pageSize - 1);
+    if (client.auth.currentUser?.id != id) {
+      throw StateError('تغير الحساب أثناء تحميل قائمة الأصدقاء.');
+    }
     return List<Map<String, dynamic>>.from(rows);
   }
 
