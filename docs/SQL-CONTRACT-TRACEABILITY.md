@@ -93,3 +93,20 @@ Do not run `supabase db push`, reset, replay, repair migration history, or apply
 - Any database mutation or migration repair.
 
 This document is a focused contract trace, not a complete database security certification.
+
+## 7. Newly identified media authorization regression
+
+Static comparison of migration `20261105225000_hide_deleted_message_attachments.sql` against the prior complete definition in `20261105184333_hide_deleted_post_media_from_non_owners.sql` found that the later replacement of `private.can_read_media_path(text)` dropped three checks:
+
+- accepted-friend access for posts with `visibility = 'friends'`;
+- private-account eligibility for story media;
+- `posts.deleted_at IS NULL` for non-owner access to post media.
+
+The later helper still checks direct-block relationships for its post/story/profile branches and requires non-deleted messages plus conversation membership for message attachments, but that does not compensate for the three missing checks.
+
+A proposed corrective migration is now present on this documentation/work branch:
+`supabase/migrations/20261106003000_restore_media_visibility_invariants.sql`.
+
+Regression cases are specified in `docs/SQL-SECURITY-REGRESSION-MATRIX.md`. The correction has been statically checked for all five required predicates: friend visibility, private-story gate, deleted-post gate, deleted-message gate and block check.
+
+**Do not apply this migration yet.** The remote/local migration-history mismatch remains unresolved; inspect the live function definition and reconcile all versions first. The file is a proposed source correction, not evidence of a deployed fix.
