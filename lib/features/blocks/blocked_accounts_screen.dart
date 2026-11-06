@@ -21,7 +21,8 @@ class _BlockedAccountsScreenState extends State<BlockedAccountsScreen> {
 
   Future<List<Map<String, dynamic>>> _load() async {
     final client = Supabase.instance.client;
-    final uid = client.auth.currentUser!.id;
+    final uid = client.auth.currentUser?.id;
+    if (uid == null) throw StateError('انتهت جلسة الدخول.');
     final rows = await client
         .from('blocks')
         .select(
@@ -58,10 +59,12 @@ class _BlockedAccountsScreenState extends State<BlockedAccountsScreen> {
     if (confirmed != true || !mounted) return;
 
     try {
+      final uid = Supabase.instance.client.auth.currentUser?.id;
+      if (uid == null) throw StateError('انتهت جلسة الدخول.');
       await Supabase.instance.client
           .from('blocks')
           .delete()
-          .eq('blocker_id', Supabase.instance.client.auth.currentUser!.id)
+          .eq('blocker_id', uid)
           .eq('blocked_id', row['blocked_id'] as String);
       if (!mounted) return;
       setState(() => _future = _load());
