@@ -161,3 +161,7 @@ Nearby presence/discovery reads and writes capture the viewer ID and discard sta
 ### Community discovery and management session binding
 
 Community discovery now checks the authenticated viewer after the community query and membership query, including empty-page results. Membership changes, invite acceptance/creation/revocation, and community creation capture the viewer and suppress stale UI updates after a session change. Community creation still has a partial-insert orphan risk if the session changes after the community row is inserted but before owner membership is committed; this requires server-side transactional creation/reconciliation. RLS remains authoritative and device-level multi-account tests are pending.
+
+### Story feed and composer session binding
+
+Story feed queries and bounded signed-URL batches are bound to the viewer that initiated the load; results are discarded after a session change. Opening a story from a stale feed is blocked. The story composer also records the account that opened it and refuses to publish its draft/media under a different account. Story-view tracking uses the viewer captured at viewer initialization. Signed URLs already issued may remain valid until expiry, so revocation/short-lived URL behavior remains a separate Storage concern.
