@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/nexora_theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
@@ -674,7 +675,7 @@ class _ChatScreenState extends State<ChatScreen> {
           if (_sendError != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(_sendError!, style: const TextStyle(color: Colors.redAccent)),
+              child: Text(_sendError!, style: const TextStyle(color: NexoraColors.danger)),
             ),
           SafeArea(
             top: false,
@@ -806,7 +807,7 @@ class _NewConversationSheetState extends State<_NewConversationSheet> {
               if (_error != null)
                 Padding(
                   padding: const EdgeInsets.all(8),
-                  child: Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                  child: Text(_error!, style: const TextStyle(color: NexoraColors.danger)),
                 ),
               if (_loading) const LinearProgressIndicator(),
               const SizedBox(height: 8),
@@ -829,7 +830,7 @@ class _NewConversationSheetState extends State<_NewConversationSheet> {
               ),
               const Text(
                 'إمكانية بدء المحادثة تخضع لخصوصية الطرف الآخر والحظر المتبادل.',
-                style: TextStyle(fontSize: 11, color: Colors.grey),
+                style: TextStyle(fontSize: 11, color: NexoraColors.textMuted),
                 textAlign: TextAlign.center,
               ),
             ],
