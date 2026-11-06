@@ -102,3 +102,11 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Main-branch Flutter CI run 470 passed: dependency installation, `flutter analyze --no-fatal-infos`, and all 29 unit/widget tests.
 - This is source CI only. No Android APK/AAB release build, real-device test, live SMS delivery test, push delivery test, or authenticated multi-user RLS integration test was performed by this run.
 - Added Documents 08–10: zero-budget costs/risks, implementation roadmap, and acceptance/performance testing.
+
+
+## Supabase read-only verification — 2026-11-06
+
+- Security Advisor still reports one warning: leaked-password protection is disabled. Remediation reference: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+- Performance Advisor reports 43 unused-index informational findings. The project is newly active; do not remove indexes solely from this signal without workload evidence and query-plan review.
+- Production migration history currently contains 43 records while the repository contains 42 SQL migration files. Version/name alignment remains incomplete. Do not run bulk migration push, reset, or replay. Reconcile each remote migration to its exact SQL and take a verified backup before any history repair.
+- No production database schema or data was modified during this read-only verification.
