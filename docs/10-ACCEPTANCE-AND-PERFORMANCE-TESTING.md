@@ -235,3 +235,6 @@ The client inbox currently supports accepting incoming pending follow requests o
 | APP-039 | Switch reviewer accounts while moderation appeals load or a decision dialog is open | Stale appeal rows are hidden and decisions are accepted only for the reviewer who loaded the queue | P1 |
 
 | APP-040 | Switch accounts while community discovery, membership, invite acceptance, invite management, or community creation is in progress | Previous-account community rows are hidden; membership/invite actions are bound to the loaded viewer and stale results are discarded | P1 |
+
+| APP-041 | Switch accounts while story feed queries or private media URLs are loading | Story rows and signed media URLs from the previous viewer are discarded; stale rows cannot be opened | P1 |
+| APP-042 | Open the story composer as one account, then switch accounts before publishing | The composer refuses to publish the prior account's draft/media under a different account | P1 |
