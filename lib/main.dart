@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_error.dart';
 import 'core/theme/nexora_theme.dart';
+import 'core/widgets/nexora_glass.dart';
 import 'features/design_gallery/design_gallery_screen.dart';
 import 'features/preview/nexora_preview_screen.dart';
 import 'features/auth/phone_number.dart';
@@ -662,54 +663,245 @@ class MainShell extends StatefulWidget {
   @override
   State<MainShell> createState() => _MainShellState();
 }
+
 class _MainShellState extends State<MainShell> {
   int _tab = 0, _feedVersion = 0;
-  void _posted() => setState(() { _tab = 0; _feedVersion++; });
+
+  void _posted() => setState(() {
+    _tab = 0;
+    _feedVersion++;
+  });
+
   @override
   Widget build(BuildContext context) {
-    final pages = <Widget>[HomeScreen(key: ValueKey(_feedVersion)), const ExploreScreen(), CreateScreen(onPosted: _posted), const ReelsScreen(), const MessagesScreen(), const ProfileScreen()];
+    final pages = <Widget>[
+      HomeScreen(key: ValueKey(_feedVersion)),
+      const ExploreScreen(),
+      CreateScreen(onPosted: _posted),
+      const MessagesScreen(),
+      const ProfileScreen(),
+    ];
     return Scaffold(
       extendBody: true,
-      body: Stack(children: [
-        const Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(
-          gradient: RadialGradient(center: Alignment(-.85, -.9), radius: 1.25,
-            colors: [Color(0xFF193A62), Color(0xFF0A1427), Color(0xFF070B16)],
-            stops: [0, .42, 1]),
-        ))),
-        IndexedStack(index: _tab, children: pages),
-      ]),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(25),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xD914223A),
-                borderRadius: BorderRadius.circular(25),
-                border: Border.all(color: const Color(0x447BD8FF)),
-                boxShadow: const [BoxShadow(color: Color(0x3315BCEB), blurRadius: 28, offset: Offset(0, 8))],
+      body: Stack(
+        children: [
+          const Positioned.fill(child: _NexoraAuroraBackdrop()),
+          IndexedStack(index: _tab, children: pages),
+          Positioned(
+            left: 14,
+            right: 14,
+            bottom: 8,
+            child: SafeArea(
+              top: false,
+              child: NexoraGlass(
+                radius: NexoraRadius.sheet,
+                blur: 30,
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
+                child: Row(
+                  children: [
+                    _NexoraNavItem(
+                      icon: Icons.home_rounded,
+                      label: 'الرئيسية',
+                      selected: _tab == 0,
+                      onTap: () => setState(() => _tab = 0),
+                    ),
+                    _NexoraNavItem(
+                      icon: Icons.explore_rounded,
+                      label: 'استكشف',
+                      selected: _tab == 1,
+                      onTap: () => setState(() => _tab = 1),
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: Semantics(
+                          button: true,
+                          label: 'إنشاء محتوى',
+                          child: GestureDetector(
+                            onTap: () => setState(() => _tab = 2),
+                            child: AnimatedScale(
+                              scale: _tab == 2 ? 1.06 : 1,
+                              duration: MediaQuery.of(context).disableAnimations
+                                  ? Duration.zero
+                                  : const Duration(milliseconds: 220),
+                              curve: Curves.easeOutBack,
+                              child: Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: NexoraColors.brandGradient,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: NexoraColors.violet.withValues(alpha: .30),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 5),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.add_rounded,
+                                  color: Colors.white,
+                                  size: 29,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    _NexoraNavItem(
+                      icon: Icons.forum_rounded,
+                      label: 'الدردشة',
+                      selected: _tab == 3,
+                      onTap: () => setState(() => _tab = 3),
+                    ),
+                    _NexoraNavItem(
+                      icon: Icons.person_rounded,
+                      label: 'حسابي',
+                      selected: _tab == 4,
+                      onTap: () => setState(() => _tab = 4),
+                    ),
+                  ],
+                ),
               ),
-              child: NavigationBar(
-                selectedIndex: _tab,
-                onDestinationSelected: (v) => setState(() => _tab = v),
-                backgroundColor: Colors.transparent,
-                destinations: const [
-                  NavigationDestination(icon: Icon(Icons.home_rounded), label: 'الرئيسية'),
-                  NavigationDestination(icon: Icon(Icons.explore_rounded), label: 'استكشاف'),
-                  NavigationDestination(icon: Icon(Icons.add_circle_rounded), label: 'إنشاء'),
-                  NavigationDestination(icon: Icon(Icons.play_circle_rounded), label: 'ريلز'),
-                  NavigationDestination(icon: Icon(Icons.forum_rounded), label: 'الرسائل'),
-                  NavigationDestination(icon: Icon(Icons.person_rounded), label: 'حسابي'),
-                ],
-              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NexoraNavItem extends StatelessWidget {
+  const _NexoraNavItem({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
+    return Expanded(
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: label,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(NexoraRadius.pill),
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: reduceMotion
+                ? Duration.zero
+                : const Duration(milliseconds: 240),
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            decoration: BoxDecoration(
+              color: selected
+                  ? NexoraColors.violet.withValues(alpha: .13)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(NexoraRadius.pill),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedScale(
+                  scale: selected ? 1.08 : 1,
+                  duration: reduceMotion
+                      ? Duration.zero
+                      : const Duration(milliseconds: 220),
+                  curve: Curves.easeOutBack,
+                  child: Icon(
+                    icon,
+                    size: 22,
+                    color: selected
+                        ? NexoraColors.cyan
+                        : NexoraColors.textMuted,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 10,
+                    height: 1.1,
+                    fontWeight:
+                        selected ? FontWeight.w700 : FontWeight.w500,
+                    color: selected
+                        ? NexoraColors.text
+                        : NexoraColors.textMuted,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       ),
     );
   }
+}
+
+class _NexoraAuroraBackdrop extends StatelessWidget {
+  const _NexoraAuroraBackdrop();
+
+  @override
+  Widget build(BuildContext context) => const ColoredBox(
+    color: NexoraColors.bg,
+    child: Stack(
+      children: [
+        Positioned(
+          top: -170,
+          right: -150,
+          child: _NexoraGlow(color: NexoraColors.violet, size: 330),
+        ),
+        Positioned(
+          top: 300,
+          left: -210,
+          child: _NexoraGlow(color: NexoraColors.cyan, size: 310),
+        ),
+        Positioned(
+          bottom: -220,
+          right: 10,
+          child: _NexoraGlow(color: NexoraColors.pink, size: 320),
+        ),
+      ],
+    ),
+  );
+}
+
+class _NexoraGlow extends StatelessWidget {
+  const _NexoraGlow({required this.color, required this.size});
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+    child: Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: .11),
+            blurRadius: 110,
+            spreadRadius: 24,
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class HomeScreen extends StatefulWidget {
