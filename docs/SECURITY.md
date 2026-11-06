@@ -103,3 +103,7 @@ Before unregistering Firebase Messaging, the service captures the authenticated 
 ### Client diagnostic logging
 
 The shared Flutter error reporter logs the source and exception runtime type rather than the raw exception string, because backend/plugin errors can contain phone numbers, email addresses, identifiers, or server response details. Stack traces remain available in debug logs; production crash/telemetry export is not configured or claimed.
+
+### Startup error disclosure
+
+The startup fallback screen now receives a generic Arabic error message from `AppErrorService.message` rather than rendering the raw Supabase initialization exception. Detailed exception values are not displayed to the user; the central reporter logs the error type and stack for local diagnostics. Provider-side configuration and startup recovery still require device validation.
