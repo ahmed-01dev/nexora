@@ -2319,6 +2319,7 @@ class _PersonTileState extends State<PersonTile> {
   String? _followStatus;
   bool _busy = true;
   bool _blocked = false;
+  int _relationshipGeneration = 0;
 
   @override
   void initState() {
@@ -2326,11 +2327,31 @@ class _PersonTileState extends State<PersonTile> {
     _loadRelationshipState();
   }
 
+  @override
+  void didUpdateWidget(covariant PersonTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.profile['id'] != widget.profile['id'] ||
+        oldWidget.follow != widget.follow) {
+      _relationshipGeneration++;
+      _followStatus = null;
+      _blocked = false;
+      _busy = true;
+      _loadRelationshipState();
+    }
+  }
+
   Future<void> _loadRelationshipState() async {
+    final generation = ++_relationshipGeneration;
+    final client = Supabase.instance.client;
+    final me = client.auth.currentUser?.id;
+    final other = widget.profile['id']?.toString();
+    if (me == null || other == null) {
+      if (mounted && generation == _relationshipGeneration) {
+        setState(() => _busy = false);
+      }
+      return;
+    }
     try {
-      final client = Supabase.instance.client;
-      final me = client.auth.currentUser!.id;
-      final other = widget.profile['id'] as String;
       final block = await client
           .from('blocks')
           .select('blocked_id')
@@ -2346,7 +2367,12 @@ class _PersonTileState extends State<PersonTile> {
             .eq('following_id', other)
             .maybeSingle();
       }
-      if (!mounted) return;
+      if (!mounted ||
+          generation != _relationshipGeneration ||
+          widget.profile['id']?.toString() != other ||
+          client.auth.currentUser?.id != me) {
+        return;
+      }
       setState(() {
         _blocked = block != null;
         _followStatus = follow?['status'] as String?;
@@ -2354,7 +2380,9 @@ class _PersonTileState extends State<PersonTile> {
       });
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'load_person_relationship');
-      if (mounted) setState(() => _busy = false);
+      if (mounted && generation == _relationshipGeneration) {
+        setState(() => _busy = false);
+      }
     }
   }
 
