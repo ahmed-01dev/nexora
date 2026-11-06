@@ -87,7 +87,7 @@ Until the complete source/code/file set is prepared and reviewed, do not dispatc
 The following artifacts now exist on the documentation branch:
 
 - `02-CONTENT-SYSTEM-017.md`: functional working specification.
-- `02-CONTENT-SYSTEM-017-ACCEPTANCE.md`: 29-case verification matrix; test plan only, not pass evidence.
+- `02-CONTENT-SYSTEM-017-ACCEPTANCE.md`: 30-case verification matrix; test plan only, not pass evidence.
 - `02-CONTENT-SYSTEM-017-PUBLISH-CONTRACT.md`: client state machine, authority boundaries, error classes, invariants, and implementation gates.
 - `README.md`: links the three CNT-017 artifacts and explicitly pauses APK/AAB/Web build workflows during source/specification completion.
 
