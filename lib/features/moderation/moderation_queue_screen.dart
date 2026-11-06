@@ -573,5 +573,4 @@ class _ModerationQueueScreenState extends State<ModerationQueueScreen> {
         ),
       );
   }
-};
 }
