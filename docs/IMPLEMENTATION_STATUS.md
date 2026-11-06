@@ -307,3 +307,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Latest successful CI run `42233761616` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test`. The current `lib/` and `test/` trees are identical to the passing commit `cd3f9ff072384676a7cb0dd5592ce1309ddf83e9`; later commits only update documentation. No APK/AAB/Web build was run.
 
 - Block creation, blocked-account listing/unblock, privacy settings load/save, and friend/follow request lists/actions now verify the captured authenticated viewer across asynchronous operations. Stale lists are hidden after account changes; stale actions cannot be replayed as the next signed-in account. Server RLS remains the authority; device-level account-switch tests remain pending.
+
+- Profile friendship controls now bind relationship reads and all friendship RPCs to the captured viewer session; stale relationship state is hidden and the control is disabled after an account switch.
