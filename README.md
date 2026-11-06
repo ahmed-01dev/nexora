@@ -15,7 +15,9 @@ The repository contains a working Flutter Android/Web codebase and a Supabase Po
 - Firebase Cloud Messaging integration code, deployed Supabase Edge Function, and database webhook trigger. Real-device push delivery still requires valid Firebase/Supabase Edge Function secrets and an Android device registered for push.
 - AMOLED, light, and pink theme options.
 
-See [implementation status](docs/IMPLEMENTATION_STATUS.md) for the feature-by-feature state and remaining work. Implemented code does not mean every workflow has passed end-to-end testing with real users/devices.
+See [implementation status](docs/IMPLEMENTATION_STATUS.md) for the feature-by-feature state and remaining work.
+
+Detailed design: [Systems 63–90 — Ads & Commerce, Trust & Safety, Operations & Administration](docs/02-DETAILED-SPECS-I-J-K.md). This is a design specification, not a claim that every listed capability is implemented. Implemented code does not mean every workflow has passed end-to-end testing with real users/devices.
 
 ## Known production gaps
 
