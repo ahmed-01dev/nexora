@@ -371,7 +371,7 @@ class _FriendRequestActionState extends State<FriendRequestAction> {
   Widget build(BuildContext context) {
     final viewerMatches = Supabase.instance.client.auth.currentUser?.id != null &&
         Supabase.instance.client.auth.currentUser?.id == _myId;
-    final status = viewerMatches ? _request?['status'] as String? : null;
+    final status = viewerMatches ? (_request?['status'] as String?) : null;
     final incoming = status == 'pending' && _request?['requester_id'] != _myId;
     final tooltip = !viewerMatches
         ? 'تغيرت جلسة الدخول'
