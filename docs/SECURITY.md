@@ -125,3 +125,7 @@ Pending unregister operations now retain their account owner in a per-FID FIFO q
 ### Flutter framework error logging
 
 The global `FlutterError.onError` handler must not call `FlutterError.presentError`, because that default presenter writes the raw exception message to debug output. NEXORA now routes framework exceptions through `AppErrorService.report`, which logs only the exception runtime type and stack trace. Unit coverage asserts that sample email/token-like values are not emitted. Re-check this boundary if crash telemetry or a third-party reporter is introduced.
+
+### Report target validation
+
+The report dialog validates target type and reason against the live `reports` CHECK constraint values and requires a canonical UUID-shaped target ID before insert. This is input hygiene only; the deployed PostgreSQL constraints, RLS, and server-side ownership rules remain authoritative. Validation logic has dedicated unit coverage.
