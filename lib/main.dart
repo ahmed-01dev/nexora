@@ -14,6 +14,7 @@ import 'features/auth/phone_number.dart';
 import 'features/media/media_upload_service.dart';
 import 'features/media/post_media_gallery.dart';
 import 'features/friends/friend_requests_screen.dart';
+import 'features/friends/follow_requests_screen.dart';
 import 'features/comments/comments_screen.dart';
 import 'features/messaging/messages_screen.dart';
 import 'features/notifications/notifications_screen.dart';
@@ -1076,6 +1077,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 ),
               ),
               icon: const Icon(Icons.person_add_alt_1),
+            ),
+            IconButton(
+              tooltip: 'طلبات المتابعة',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const FollowRequestsScreen(),
+                ),
+              ),
+              icon: const Icon(Icons.person_add_alt),
             ),
             IconButton(
               tooltip: 'الأصدقاء والمتابَعون',
