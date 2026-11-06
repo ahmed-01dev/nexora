@@ -1285,6 +1285,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
           ),
           actions: [
             IconButton(
+              tooltip: 'ريلز',
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const ReelsScreen(),
+                ),
+              ),
+              icon: const Icon(Icons.play_circle_outline_rounded),
+            ),
+            IconButton(
               tooltip: 'الأشخاص القريبون',
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
