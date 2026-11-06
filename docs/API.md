@@ -90,6 +90,7 @@ The following client calls were extracted from the current Flutter source on bra
 | `remove_friend` | `lib/features/friends/friend_requests_screen.dart` | `p_other_user_id` | `(p_other_user_id uuid) → boolean` |
 | `cancel_friend_request` | `lib/features/friends/friend_requests_screen.dart` | `p_request_id` | `(p_request_id uuid) → boolean` |
 | `accept_friend_request` | `lib/features/friends/friend_requests_screen.dart` | `p_request_id` | `(p_request_id uuid) → boolean` |
+| `decline_friend_request` | `lib/features/friends/friend_requests_screen.dart` via `_act('decline_friend_request', ...)` | `p_request_id` | `(p_request_id uuid) → boolean` |
 | `get_my_conversation_previews` | `lib/features/messaging/messages_screen.dart` | none | `() → TABLE` |
 | `create_direct_conversation` | `lib/features/messaging/messages_screen.dart`; `lib/features/nearby/nearby_discovery_screen.dart` | `p_other_user_id` | `(p_other_user_id uuid) → uuid` |
 | `my_nearby_presence_enabled` | `lib/features/nearby/nearby_discovery_screen.dart` | none | `() → boolean` |
@@ -98,7 +99,7 @@ The following client calls were extracted from the current Flutter source on bra
 | `get_my_notification_page` | `lib/features/notifications/notifications_screen.dart` | `p_offset`, `p_limit` | `(p_offset integer, p_limit integer) → TABLE` |
 | `update_privacy_settings` | `lib/features/settings/privacy_settings_screen.dart` | `p_is_private`, `p_allow_messages_from`, `p_allow_friend_requests` | `(p_is_private boolean, p_allow_messages_from text, p_allow_friend_requests boolean) → void` |
 
-**Result of this snapshot:** 18 distinct RPC names and 19 call sites were found in the reviewed feature screens and app entry point. Each listed name has a matching live public function with the listed identity-argument types; no missing-function or parameter-key mismatch was found in these call sites. This does not validate runtime grants, RLS outcomes, business rules, returned row decoding, or error handling. Re-run this comparison whenever a client RPC or database function changes.
+**Result of this snapshot:** 19 distinct RPC names and 20 call sites were found in the reviewed feature screens and app entry point. Each listed name has a matching live public function with the listed identity-argument types; no missing-function or parameter-key mismatch was found in these call sites. This does not validate runtime grants, RLS outcomes, business rules, returned row decoding, or error handling. Re-run this comparison whenever a client RPC or database function changes.
 
 **Safety boundary:** this was read-only inspection. No function, grant, schema, migration, or database object was changed. No app build or test suite was run.
 
