@@ -418,7 +418,7 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
                       alignment: AlignmentDirectional.centerStart,
                       child: Text(
                         validation!,
-                        style: const TextStyle(color: Colors.redAccent),
+                        style: const TextStyle(color: NexoraColors.danger),
                       ),
                     ),
                   const SizedBox(height: 8),
