@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
+import '../../core/theme/nexora_theme.dart';
 
 class FriendRequestsScreen extends StatefulWidget {
   const FriendRequestsScreen({super.key});
@@ -200,7 +201,7 @@ class _FriendRequestTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(name, style: const TextStyle(fontWeight: FontWeight.w800)),
-                  Text(profileHidden ? 'الملف الشخصي غير متاح' : '@${profile['username'] ?? 'user'}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  Text(profileHidden ? 'الملف الشخصي غير متاح' : '@${profile['username'] ?? 'user'}', style: const TextStyle(color: NexoraColors.textMuted, fontSize: 12)),
                 ],
               ),
             ),
