@@ -153,3 +153,10 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - GitHub Actions Flutter CI run `42219653552` passed on source commit `135b533bdebb7a80e1132cc3db799d2d934742ce`: dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` all succeeded. This validates source analysis/tests only; no APK/AAB/Web build was run.
 
 - RPC inventory correction: the first literal-string scan did not count the dynamic dispatcher in `FriendRequestsScreen._act`. Its `decline_friend_request` target was separately verified in the live catalog: public wrapper is SECURITY INVOKER and authenticated-only; the private SECURITY DEFINER helper requires the current user to be the pending request addressee, uses an empty search path, and denies anon/PUBLIC execution. The API inventory now records 18 RPC names and 20 source call sites, including this dynamic dispatch.
+
+## Followers/following list verification — 2026-11-06
+
+- Updated `FriendsScreen` to switch between accepted accounts the current user follows and accepted followers of the current user. Both directions use the correct live foreign-key relationship, deterministic newest-first ordering with an ID tie-breaker, and a 100-row cap.
+- Profile joins remain subject to ordinary RLS. If a private profile is not visible, the list shows a generic privacy-safe placeholder rather than bypassing authorization.
+- Follow/unfollow actions reuse the existing server RPCs. Pagination beyond the first 100 rows and real multi-user RLS tests remain pending.
+- GitHub Actions Flutter CI run `42220627564` passed on commit `b1ee0c0de6aa2adadddaaaf4543227fb051ece84`: dependency installation, analysis, and tests succeeded. No APK/AAB/Web build was run.
