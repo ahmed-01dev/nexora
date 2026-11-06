@@ -55,7 +55,9 @@ class NexoraPushService {
       badge: true,
       sound: true,
     );
-    if (settings.authorizationStatus != AuthorizationStatus.authorized) {
+    if (settings.authorizationStatus != AuthorizationStatus.authorized ||
+        _registrationSuspended ||
+        Supabase.instance.client.auth.currentUser == null) {
       return false;
     }
     await FirebaseMessaging.instance.register();
