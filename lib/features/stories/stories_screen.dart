@@ -180,6 +180,13 @@ class _StoryComposerScreenState extends State<StoryComposerScreen> {
   String _visibility = 'followers';
   bool _busy = false;
   String? _error;
+  late final String? _ownerUserId;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownerUserId = Supabase.instance.client.auth.currentUser?.id;
+  }
 
   Future<void> _pickImage() async {
     try {
@@ -209,8 +216,8 @@ class _StoryComposerScreenState extends State<StoryComposerScreen> {
     }
     final client = Supabase.instance.client;
     final userId = client.auth.currentUser?.id;
-    if (userId == null) {
-      setState(() => _error = 'انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
+    if (userId == null || userId != _ownerUserId) {
+      setState(() => _error = 'تغير الحساب. أغلق محرر القصة وافتحه من الحساب الحالي.');
       return;
     }
     setState(() { _busy = true; _error = null; });
