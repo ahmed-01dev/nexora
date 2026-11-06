@@ -183,6 +183,31 @@ This inventory records object names and types only. It does not replace the deta
 | Feature owner/status | Matching entry in IMPLEMENTATION_STATUS.md |
 | Test evidence | Reproducible test identifier and result |
 
+### Catalog-level structural and RLS snapshot
+
+The same read-only catalog pass recorded:
+
+| Metric | Live result |
+|---|---:|
+| Public columns | 250 |
+| Private columns | 4 |
+| Total columns | 254 |
+| NOT NULL columns | 193 |
+| Columns with defaults | 114 |
+| Primary-key constraints | 39 |
+| Foreign-key constraints | 67 |
+| Unique constraints | 9 |
+| Check constraints | 51 |
+| Indexes | 106 |
+| RLS-enabled ordinary tables | 39 / 39 |
+| RLS-forced ordinary tables | 0 / 39 |
+| Public policies | 111 |
+| Private policies | 1 |
+
+All 38 public tables and the one private table have RLS enabled. None has FORCE ROW LEVEL SECURITY. This is an important distinction: table owners and roles with BYPASSRLS can bypass ordinary RLS, so policy presence alone does not establish end-to-end access safety. The policy counts above are catalog counts, not a correctness verdict; every policy expression, grant, SECURITY DEFINER path, and actual authenticated/anonymous behavior still requires review.
+
+The 67 foreign keys and 106 indexes are structural counts only. Their names, referenced columns, delete/update actions, partial predicates, and query-plan suitability are not exhaustively documented in this ERD snapshot. No index was added or removed.
+
 ### Migration safety
 
 The implementation audit records a mismatch between remote migration history and local migration files. Until every remote version is mapped to exact source SQL and a recoverable backup is verified, do not run `supabase db push`, reset, replay, or any schema-changing operation. This ERD update does not authorize database changes.
