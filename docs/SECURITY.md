@@ -76,3 +76,7 @@
 - The following-feed query now uses a SECURITY INVOKER paged RPC that includes accepted follows and accepted friendships while preserving table RLS.
 - Supabase Security Advisor's only remaining finding is leaked-password protection disabled. The project currently cannot enable this feature on its Free plan; the email signup UI's 12-character rule is client-side only and is not a substitute.
 - Migration history remains unsynchronized: do not run `supabase db push`, reset, or replay local migrations until every remote migration is mapped to exact source SQL and a recoverable backup exists.
+
+## Live Storage policy snapshot — 2026-11-06
+
+See `docs/STORAGE-SECURITY-INVENTORY.md` for the deployed bucket and `storage.objects` policy definitions. The only bucket, `nexora-media`, is private with a 50 MiB object limit. Authenticated uploads/deletes are owner-folder scoped; reads are owner-folder or `private.can_read_media_path(name)` authorized. There is no Storage UPDATE policy, and current client uploads use `upsert: false` with unique paths. The bucket MIME allowlist is broader than the app's actual upload support. Server-side media scanning/processing remains a release blocker.
