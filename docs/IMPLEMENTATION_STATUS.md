@@ -235,3 +235,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 
 - Flutter CI run `42229160349` passed dependency installation, static analysis, and tests on commit `bdef062f211b70fbff6575a697aff541b15426f7`, covering the media-upload account-switch guard. The subsequent documentation-only changes did not alter application source. No APK/AAB/Web build was run.
 - FCM diagnostics now log only exception runtime types, not raw plugin/backend error strings. `test/app_error_test.dart` also asserts that shared error reporting does not emit sample email/token values.
+
+- Friendship action buttons now capture the target profile and invalidate in-flight actions when the widget is recycled to a different profile. Old completions cannot clear a newer action's busy state or refresh/show errors against the wrong target. Added acceptance case SOC-021; backend two-user tests remain pending.
