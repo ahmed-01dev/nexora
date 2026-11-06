@@ -1030,6 +1030,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
         .order('created_at', ascending: false)
         .order('id', ascending: false)
         .range(offset, offset + _pageSize - 1);
+    if (client.auth.currentUser?.id != id) {
+      throw StateError('تغير الحساب أثناء تحميل قائمة الأصدقاء.');
+    }
     return List<Map<String, dynamic>>.from(rows);
   }
 
