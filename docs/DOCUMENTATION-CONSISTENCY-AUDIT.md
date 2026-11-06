@@ -320,3 +320,19 @@ A fresh privilege query confirms `authenticated` has `USAGE` on schema `private`
 ### Trigger inventory snapshot
 
 `docs/ERD-LIVE-TRIGGERS.md` records 21 non-internal triggers across `auth`, `public`, and `storage` (including 9 public application triggers, the auth user profile-creation trigger, and 11 Supabase Storage platform triggers). This records definitions only; it does not prove runtime success or complete side-effect behavior.
+
+### Cross-feature session-continuity and CI follow-up — 2026-11-06
+
+A source-only review added or tightened account/session binding in these client flows:
+
+- FCM installation registration/unregistration: pending unregister callbacks retain per-FID FIFO owner identity; a delayed callback cannot clear a newer account's registration for the same FID.
+- Profile, post, story, and message media: owner checks surround asynchronous Storage/database operations; rollback is not attempted using a different account's session. Orphan cleanup after a session switch remains a server-side gap.
+- Comments, notifications, friends/followers, community channels, community members, conversation previews, and report submission: stale results/actions are rejected or hidden when the authenticated viewer changes.
+- Report input now mirrors the live `reports` target-type and reason CHECK constraints and validates UUID-shaped target IDs before insert.
+- Flutter framework errors no longer invoke `FlutterError.presentError`, which could print raw exception details; privacy-safe logging has regression coverage.
+
+The CNT-017 acceptance matrix now contains 30 test cases, including a media-upload account-switch case. New cross-feature acceptance cases cover FCM, comments, messages, notifications, reports, followers, and community session changes. These are acceptance criteria, not device-test evidence.
+
+**CI evidence:** run `42233234987` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on commit `2708e0fc59f58682f9a212eb3268b21c9c26c23e`. This is source-only verification. No APK/AAB/Web build, database migration, DDL, grant change, or production-provider change was performed.
+
+**Canonical scope remains blocked:** the original Document 01 catalog of 118 exact IDs/titles and Document 02 Section C systems 18–27 are still not recoverable from the current repository or retrieved prior context. System 17 is documented as CNT-017; do not infer or invent the missing names/specifications. The working I–K systems 63–90 remain unverified against the canonical catalog.
