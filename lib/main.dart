@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_error.dart';
 import 'core/theme/nexora_theme.dart';
 import 'core/widgets/nexora_glass.dart';
+import 'features/auth/email_auth_validation.dart';
 import 'features/design_gallery/design_gallery_screen.dart';
 import 'features/preview/nexora_preview_screen.dart';
 import 'features/media/media_upload_service.dart';
@@ -293,29 +294,11 @@ class _AuthScreenState extends State<AuthScreen> {
     _notice = null;
   }
 
-  String? _validateEmail(String? value) {
-    final email = (value ?? '').trim();
-    if (email.isEmpty ||
-        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-      return 'اكتب بريدًا إلكترونيًا صحيحًا';
-    }
-    return null;
-  }
+  String? _validateEmail(String? value) =>
+      NexoraEmailAuthValidation.email(value);
 
-  String? _validatePassword(String? value) {
-    final password = value ?? '';
-    if (password.isEmpty) return 'اكتب كلمة المرور';
-    if (_register) {
-      if (password.length < 12) return 'استخدم 12 حرفًا على الأقل';
-      if (!RegExp(r'[A-Za-z]').hasMatch(password) ||
-          !RegExp(r'\d').hasMatch(password)) {
-        return 'أضف حرفًا إنجليزيًا ورقمًا على الأقل';
-      }
-    } else if (password.length < 8) {
-      return 'كلمة المرور غير صحيحة';
-    }
-    return null;
-  }
+  String? _validatePassword(String? value) =>
+      NexoraEmailAuthValidation.password(value, registering: _register);
 
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
@@ -467,9 +450,8 @@ class _AuthScreenState extends State<AuthScreen> {
                           labelText: 'اسمك الظاهر',
                           prefixIcon: Icon(Icons.person_outline),
                         ),
-                        validator: (v) => _register &&
-                                (v == null || v.trim().length < 2)
-                            ? 'اكتب اسمًا من حرفين على الأقل'
+                        validator: (v) => _register
+                            ? NexoraEmailAuthValidation.displayName(v)
                             : null,
                       ),
                       const SizedBox(height: 14),
