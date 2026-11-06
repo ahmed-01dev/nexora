@@ -12,6 +12,7 @@ class BlockedAccountsScreen extends StatefulWidget {
 
 class _BlockedAccountsScreenState extends State<BlockedAccountsScreen> {
   late Future<List<Map<String, dynamic>>> _future;
+  String? _loadedUserId;
 
   @override
   void initState() {
@@ -30,6 +31,10 @@ class _BlockedAccountsScreenState extends State<BlockedAccountsScreen> {
         )
         .eq('blocker_id', uid)
         .order('created_at', ascending: false);
+    if (client.auth.currentUser?.id != uid) {
+      throw StateError('تغير الحساب أثناء تحميل قائمة الحظر.');
+    }
+    _loadedUserId = uid;
     return List<Map<String, dynamic>>.from(rows);
   }
 
@@ -59,14 +64,17 @@ class _BlockedAccountsScreenState extends State<BlockedAccountsScreen> {
     if (confirmed != true || !mounted) return;
 
     try {
-      final uid = Supabase.instance.client.auth.currentUser?.id;
-      if (uid == null) throw StateError('انتهت جلسة الدخول.');
-      await Supabase.instance.client
+      final client = Supabase.instance.client;
+      final uid = client.auth.currentUser?.id;
+      if (uid == null || uid != _loadedUserId) {
+        throw StateError('تغير الحساب. حدّث قائمة الحظر قبل إلغاء الحظر.');
+      }
+      await client
           .from('blocks')
           .delete()
           .eq('blocker_id', uid)
           .eq('blocked_id', row['blocked_id'] as String);
-      if (!mounted) return;
+      if (!mounted || client.auth.currentUser?.id != uid) return;
       setState(() => _future = _load());
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('تم إلغاء الحظر')),
@@ -92,6 +100,16 @@ class _BlockedAccountsScreenState extends State<BlockedAccountsScreen> {
         body: FutureBuilder<List<Map<String, dynamic>>>(
           future: _future,
           builder: (context, snapshot) {
+            final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+            if (currentUserId == null ||
+                (_loadedUserId != null && currentUserId != _loadedUserId)) {
+              return Center(
+                child: TextButton(
+                  onPressed: _refresh,
+                  child: const Text('تغير الحساب. حدّث قائمة الحظر.'),
+                ),
+              );
+            }
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
