@@ -22,6 +22,7 @@ class _CommunityMembersScreenState extends State<CommunityMembersScreen> {
   String? _error;
   final Set<String> _busy = {};
   List<Map<String, dynamic>> _members = [];
+  String? _loadedUserId;
 
   @override
   void initState() {
@@ -35,13 +36,27 @@ class _CommunityMembersScreenState extends State<CommunityMembersScreen> {
       _error = null;
     });
     try {
-      final rows = await Supabase.instance.client
+      final client = Supabase.instance.client;
+      final userId = client.auth.currentUser?.id;
+      if (userId == null) {
+        throw StateError('انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
+      }
+      final rows = await client
           .from('community_members')
           .select('user_id,role,joined_at,profiles!community_members_user_id_fkey(id,username,display_name,avatar_url)')
           .eq('community_id', widget.communityId)
           .order('joined_at');
       if (!mounted) return;
+      if (client.auth.currentUser?.id != userId) {
+        setState(() {
+          _members = [];
+          _error = 'تغير الحساب أثناء تحميل الأعضاء.';
+          _loading = false;
+        });
+        return;
+      }
       setState(() {
+        _loadedUserId = userId;
         _members = List<Map<String, dynamic>>.from(rows);
         _loading = false;
       });
@@ -55,14 +70,20 @@ class _CommunityMembersScreenState extends State<CommunityMembersScreen> {
   }
 
   Future<void> _setRole(String userId, String role) async {
-    if (_busy.contains(userId)) return;
+    final client = Supabase.instance.client;
+    final actorId = client.auth.currentUser?.id;
+    if (actorId == null || actorId != _loadedUserId || _busy.contains(userId)) {
+      _showError(StateError('انتهت الجلسة أو تغير الحساب. حدّث القائمة.'));
+      return;
+    }
     setState(() => _busy.add(userId));
     try {
-      await Supabase.instance.client
+      await client
           .from('community_members')
           .update({'role': role})
           .eq('community_id', widget.communityId)
           .eq('user_id', userId);
+      if (client.auth.currentUser?.id != actorId) return;
       await _load();
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'community_member_role');
@@ -90,15 +111,18 @@ class _CommunityMembersScreenState extends State<CommunityMembersScreen> {
         ],
       ),
     );
-    if (confirmed != true || !mounted || _busy.contains(userId)) return;
+    final client = Supabase.instance.client;
+    final actorId = client.auth.currentUser?.id;
+    if (confirmed != true || !mounted || actorId == null ||
+        actorId != _loadedUserId || _busy.contains(userId)) return;
     setState(() => _busy.add(userId));
     try {
-      await Supabase.instance.client
+      await client
           .from('community_members')
           .delete()
           .eq('community_id', widget.communityId)
           .eq('user_id', userId);
-      if (mounted) {
+      if (mounted && client.auth.currentUser?.id == actorId) {
         setState(() => _members.removeWhere((row) => row['user_id'] == userId));
       }
     } catch (error, stack) {
@@ -119,6 +143,7 @@ class _CommunityMembersScreenState extends State<CommunityMembersScreen> {
   @override
   Widget build(BuildContext context) {
     final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final viewerChanged = currentUserId == null || currentUserId != _loadedUserId;
     return Scaffold(
       appBar: AppBar(
         title: Text('أعضاء ${widget.communityName}'),
@@ -132,7 +157,17 @@ class _CommunityMembersScreenState extends State<CommunityMembersScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _error != null
+          : viewerChanged
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('تغير الحساب. حدّث قائمة الأعضاء.'),
+                      TextButton(onPressed: _load, child: const Text('تحديث')),
+                    ],
+                  ),
+                )
+              : _error != null
               ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
