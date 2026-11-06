@@ -75,3 +75,12 @@ Still requiring verification or completion:
 ### Additional consistency pass
 
 The production profile hero, profile/avatar placeholders, feed metadata, brand mark, and community secondary labels now use the central Aurora color tokens instead of the previous blue/gray palette. The feed hero and ordinary content cards remain solid surfaces; the floating bottom navigation is the primary glass surface. This is still a targeted consistency pass, not a complete screen-by-screen visual sign-off.
+
+
+### Follow-up component consistency pass
+
+- The appearance settings palette now exposes only the four approved Aurora accents (violet, cyan, pink, amber), with a focused regression test.
+- Appearance previews use shared AMOLED and muted-text tokens rather than unrelated hard-coded gray values.
+- Comments, community creation/channels, messaging, nearby discovery, notification preferences, privacy settings, follow requests, friend requests, and report validation now use shared semantic muted/danger colors.
+- The design gallery custom-theme sample uses the approved Aurora pink accent; intentional black/white media-overlay colors in Reels and Stories remain local to those immersive surfaces.
+- These edits are source-level consistency improvements. They do not replace a full visual review on physical Android hardware.
