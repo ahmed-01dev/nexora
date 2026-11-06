@@ -299,3 +299,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Community-member lists are now bound to the viewer ID that loaded them. A different or expired session hides the stale list; role changes and member removal require the same captured viewer and do not update stale UI after a switch. Server RLS remains authoritative; device-level tests remain pending.
 
 - Conversation previews now remember which authenticated viewer loaded them. If the active account changes, the previous account's conversation titles/peers are hidden until a fresh load; stale taps cannot navigate into the prior account's chat. Conversation creation is bound to the same captured session across the picker and RPC. Device-level account-switch tests remain pending.
+
+- Flutter CI run `42233234987` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on commit `2708e0fc59f58682f9a212eb3268b21c9c26c23e`. This includes the additional conversation-list and community-member viewer-session guards. No APK/AAB/Web build was run.
