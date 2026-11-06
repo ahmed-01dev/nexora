@@ -273,3 +273,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Notification pagination now tracks the backend offset independently from the visible deduplicated row count, so relationship/notification inserts between pages do not cause repeated-page loops. Refresh errors are contained by the FutureBuilder state rather than escaping the refresh callback.
 
 - Comment pagination now tracks the backend offset independently of the deduplicated visible list, preventing repeated or skipped pages when new comments arrive during paging. The first-page and load-more queries retain identical descending timestamp/ID ordering.
+
+- Message-image upload now checks the original session before message/attachment writes and after metadata insertion; rollback writes are skipped if a different account is active. Signed URL lookup rechecks viewer identity after URL creation, and attachment deletion rechecks before Storage removal. A completed send during an account switch can still have an ambiguous client outcome; device testing and idempotent send/reconciliation remain pending.
