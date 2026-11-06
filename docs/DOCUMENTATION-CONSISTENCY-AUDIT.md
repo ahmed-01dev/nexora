@@ -244,3 +244,12 @@ This is stronger evidence than source presence alone: the database trigger reach
 Client code registers a Firebase Installation ID (FID), stores it in `user_devices.push_token`, and the Edge Function sends using the FCM HTTP v1 `message.fid` field. This matches Firebase's current REST schema, which supports FID as a message target. [Firebase Message resource](https://firebase.google.com/docs/reference/fcm/rest/v1/projects.messages).
 
 Operational follow-up: add bounded retries/observability for transient FCM failures and verify real-device foreground/background delivery. Do not log device identifiers or notification bodies.
+### SECURITY DEFINER function inventory and search_path review
+
+A read-only catalog inventory returned 31 SECURITY DEFINER functions across `public` and `private`. All inspected functions are owned by `postgres`. Most `private` functions use an empty `search_path`; six helper/trigger functions use an explicit `pg_catalog, public, private` or `pg_catalog, public, private, auth` path instead.
+
+Read-only schema privilege checks confirmed that `authenticated`, `anon`, and `PUBLIC` have no CREATE privilege on `public`, `private`, `auth`, or `pg_catalog`. This reduces object-shadowing risk for those explicit paths. It does not replace a function-by-function review of qualified object references, `auth.uid()` checks, grants, and intended direct-call exposure.
+
+Notable follow-up: verify the Supabase Data API exposed-schema list in project settings. The database-side `current_setting('pgrst.db_schemas', true)` query returned NULL, so this audit cannot conclude whether `private` is excluded from PostgREST. Do not revoke helper EXECUTE grants blindly: RLS policies call several of these helpers.
+
+No function definition, grant, schema privilege, or API setting was changed.
