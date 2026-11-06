@@ -249,3 +249,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Flutter CI run `42229683958` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on commit `cb5121df7294528699f7d6f90f5ded24acdb87a9`. This run includes the FCM per-FID FIFO ownership helper and its delayed-callback/account-switch unit tests. The later changes in this PR after that commit are documentation-only; no APK/AAB/Web build was run.
 
 - Story flow hardening: publishing now handles an expired session before entering the busy state, rechecks account identity before inserting story metadata, and avoids null-session crashes when marking views or rendering owner-only actions. Video initialization errors now show a recoverable message instead of attempting to render an uninitialized player. Real-device media playback remains unverified.
+
+- Story list loading now signs private media URLs in bounded batches of eight and isolates per-story signing failures, avoiding up to 100 sequential Storage round-trips and preventing one inaccessible media object from failing the entire story list.
