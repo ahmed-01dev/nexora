@@ -179,3 +179,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Authentication trigger check: live `auth.users` has an AFTER INSERT trigger that creates `public.profiles` from the new auth UUID and `display_name` metadata via a SECURITY DEFINER function with an empty search path. This verifies profile-row creation wiring only. Supabase Phone provider/SMS delivery settings remain unverified; the app currently implements SMS OTP, not WhatsApp OTP.
 
 - Follow-inbox operation serialization: refresh is held while an accept action is running; load-more is held while acceptance is running; acceptance is held while load-more or refresh is active. This prevents offset changes from racing with an in-flight page. Flutter CI run `42223590469` passed on implementation commit `2849ff786797e96dc02358c689ff4885c68ad7f9`. Multi-user backend concurrency tests remain pending.
+
+- Added `docs/SECURITY-DEFINER-INVENTORY.md`: 32 live SECURITY DEFINER functions (2 public, 30 private), all owned by postgres; records signatures, settings, and anon/authenticated/PUBLIC EXECUTE flags. This is an inventory, not a complete function-body security sign-off.
