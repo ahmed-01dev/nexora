@@ -8,6 +8,13 @@ final ValueNotifier<String> nexoraThemeNotifier = ValueNotifier<String>('amoled'
 final ValueNotifier<Color> nexoraAccentNotifier =
     ValueNotifier<Color>(NexoraColors.violet);
 
+const List<Color> nexoraAccentPalette = [
+  NexoraColors.violet,
+  NexoraColors.cyan,
+  NexoraColors.pink,
+  NexoraColors.amber,
+];
+
 String nexoraColorToHex(Color color) =>
     '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
 
@@ -35,13 +42,6 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
     'pink_amoled': 'AMOLED وردي',
     'custom': 'لون مخصص',
   };
-
-  static const List<Color> _accents = [
-    NexoraColors.violet,
-    NexoraColors.cyan,
-    NexoraColors.pink,
-    NexoraColors.amber,
-  ];
 
   Future<void> _save({required String theme, required Color accent}) async {
     if (_saving) return;
@@ -154,7 +154,7 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
                 spacing: 14,
                 runSpacing: 14,
                 children: [
-                  for (final color in _accents)
+                  for (final color in nexoraAccentPalette)
                     Semantics(
                       button: true,
                       label: 'اختيار اللون ${nexoraColorToHex(color)}',
