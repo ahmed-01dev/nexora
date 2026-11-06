@@ -4,7 +4,7 @@
 
 ## Client-callable public RPCs
 
-All 16 listed functions exist in `public`. Each has EXECUTE for `authenticated` and no EXECUTE for `anon`. Each public wrapper is `SECURITY INVOKER` (not SECURITY DEFINER). The app call argument names match the deployed signatures.
+All 17 listed functions exist in `public`. Each has EXECUTE for `authenticated` and no EXECUTE for `anon`. Each public wrapper is `SECURITY INVOKER` (not SECURITY DEFINER). The app call argument names match the deployed signatures.
 
 | Public RPC | Deployed arguments | Implementation / authorization evidence |
 |---|---|---|
