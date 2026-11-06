@@ -80,3 +80,42 @@ If sources disagree, mark the item **CONFLICT / NOT VERIFIED** until reconciled.
 
 ## Current non-build commitment
 Until the complete source/code/file set is prepared and reviewed, do not dispatch APK/AAB/Web packaging workflows or call a debug artifact an application delivery. Source-only checks may be used only when needed to validate source changes and must be described as such.
+
+
+## Addendum — CNT-017 documentation pass (2026-11-06)
+
+The following artifacts now exist on the documentation branch:
+
+- `02-CONTENT-SYSTEM-017.md`: functional working specification.
+- `02-CONTENT-SYSTEM-017-ACCEPTANCE.md`: 29-case verification matrix; test plan only, not pass evidence.
+- `02-CONTENT-SYSTEM-017-PUBLISH-CONTRACT.md`: client state machine, authority boundaries, error classes, invariants, and implementation gates.
+- `README.md`: links the three CNT-017 artifacts and explicitly pauses APK/AAB/Web build workflows during source/specification completion.
+
+### CNT-017 evidence reconciliation
+
+| Topic | Current documented evidence | Required disposition |
+|---|---|---|
+| Text-only creation | API and implementation status list text-post insertion as implemented | Keep as implemented in status, but require authenticated integration evidence before release sign-off |
+| Media selection/upload | Flutter-side media selection/upload and rollback are documented | Do not equate client validation/rollback with server-side inspection |
+| File limits | 10 files / 50 MiB each / 100 MiB aggregate appear as client limits | Do not claim server enforcement until verified at the trusted boundary |
+| Private media | Private bucket and audience-aware policies are described | Verify actual deployed policies and signed URL behavior read-only |
+| Processing/scanning | Media process endpoint is listed as planned; scanning/transcoding/thumbnails remain pending | Keep pending; do not create UI claims that imply these services exist |
+| Idempotency | No deployed idempotent publish contract is established in API/status evidence | Treat ambiguous timeout as unknown and reconcile before retry; implement/test server deduplication before claiming retry safety |
+| Orphan cleanup | Client rollback is documented for failed multi-file upload | Verify database/storage outcomes; do not claim a durable background cleanup queue without evidence |
+
+### Next implementation evidence gates
+
+1. Locate the exact Flutter composer source file and call chain; record file paths and function names in a traceability table.
+2. Locate the exact post insert and media upload calls; compare their payloads with the actual schema and Storage policies.
+3. Verify author identity is derived from the authenticated session and cannot be overridden by client payload.
+4. Verify cross-user Storage attachment attempts with two synthetic authenticated accounts.
+5. Verify private/friends-only post media access matches post-row visibility, including blocks and soft deletion.
+6. Verify the timeout-after-commit case; until a server-enforced idempotency mechanism exists, do not label publish retries safe.
+7. Attach reproducible test evidence before changing any status from Partial/Pending to Implemented.
+
+### Scope guardrails
+
+- The original 118-system catalog and complete Document 02 remain absent from the repository snapshot reviewed for this branch. Do not fabricate systems 18–27 or claim 63–90 titles are canonical.
+- The older 1–50 master prompt numbering is a separate catalog and must not be merged with Document 02's 1–118 numbering.
+- Migration history reconciliation remains a hard stop for schema writes.
+- This addendum authorizes no Supabase mutation, migration, provider activation, application build, or artifact release.
