@@ -10,10 +10,7 @@ The migration `20261105225000_hide_deleted_message_attachments.sql` redefines `p
 - private-account eligibility for story media;
 - the `posts.deleted_at IS NULL` check for non-owner post-media access.
 
-A proposed source correction is included at:
-`supabase/migrations/20261106003000_restore_media_visibility_invariants.sql`.
-
-The correction restores the previous complete authorization expression, including block checks and non-deleted message-attachment checks. It is **not applied** to any database.
+The live Supabase definition of `private.can_read_media_path(text)` was inspected read-only and contains the friend-only post, private-story, deleted-post, deleted-message and block checks. The local GitHub migration `20261105225000_hide_deleted_message_attachments.sql` is older/different and omits some of those predicates. This is a local-source/history drift finding; it is not evidence of a current live Storage vulnerability. Do not create or apply a corrective migration until the remote/local migration history is reconciled.
 
 ## Required identity fixtures
 
@@ -37,13 +34,13 @@ Use isolated test identities and content, never real users:
 | Soft-deleted post media | Allow | Deny | Deny | Deny | Deny |
 | Public story on public account | Allow | Allow | Allow | Allow | Deny |
 | Public-looking story on private account | Allow | Allow only if accepted follower | Deny | Deny | Deny |
-| Expired or archived story media | Allow only if owner rule remains intentional | Deny | Deny | Deny | Deny |
+| Expired or archived story media | Deny | Deny | Deny | Deny | Deny |
 | Message attachment, message active and membership valid | Allow for participant | Allow for participant | Allow for participant | Deny | Deny when block invalidates direct membership |
 | Message attachment after message soft-delete | Deny from attachment metadata and Storage | Deny | Deny | Deny | Deny |
 | Public community cover | Allow | Allow | Allow | Allow | Apply community membership/block policy explicitly |
 | Private community cover | Allow | Deny unless member | Deny unless member | Deny | Deny unless still authorized member |
 
-**Note:** The owner behavior for expired/archived stories must be chosen explicitly and tested against the intended product retention policy. The current helper's owner branch permits the owner to access their own story media even after expiry/archive; do not silently change that behavior in a corrective migration.
+**Note:** The live helper filters archived/expired stories before the owner/viewer authorization branch, so expired or archived story media is denied to everyone, including the owner. Preserve this behavior unless the product retention policy is deliberately changed.
 
 ## Test execution requirements
 
