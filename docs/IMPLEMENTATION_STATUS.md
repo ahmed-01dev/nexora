@@ -289,3 +289,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Notifications screen now captures the authenticated viewer for page reads, mark-read, mark-all-read, and notification navigation. It rejects stale page results after account changes and does not navigate to a prior account's conversation/friend-request target after a session switch. Multi-user device testing remains pending.
 
 - Additional expired-session hardening across blocked accounts, community channels/members, friendship requests, messaging, and moderation views: async loads now fail through their error states or return safely, create/unblock actions stop without a current user, and build methods no longer force-unwrap the active user ID.
+
+- Followers/following page reads now verify that the authenticated user is unchanged after the database request; results fetched for a previous account are discarded instead of entering the current list. Device-level account-switch and multi-user RLS tests remain pending.
