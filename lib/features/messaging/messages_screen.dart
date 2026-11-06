@@ -456,7 +456,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final myId = Supabase.instance.client.auth.currentUser!.id;
+    final myId = Supabase.instance.client.auth.currentUser?.id;
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis),
