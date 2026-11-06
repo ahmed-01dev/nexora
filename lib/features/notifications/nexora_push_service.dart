@@ -13,6 +13,7 @@ class NexoraPushService {
   bool _started = false;
   String? _lastInstallationId;
   int _registrationGeneration = 0;
+  bool _registrationSuspended = false;
   StreamSubscription<String>? _registrationSubscription;
   StreamSubscription<String>? _unregistrationSubscription;
 
