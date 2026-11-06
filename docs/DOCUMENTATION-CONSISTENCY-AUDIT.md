@@ -273,3 +273,15 @@ The work branch now routes the account-screen logout button through `_signOutNex
 - The workflow change was checked against the official Flutter 3.47.9 template and Firebase Android setup documentation; the script logic was simulated. No Android project was generated and no Gradle/APK build was run.
 - The checked-in Firebase package remains `com.example.nexora`, which is placeholder-style and must be replaced with the final unique package plus matching Firebase registration before public release.
 - Repository-tree review confirms no committed `android/` or `web/` platform directory and no Web release workflow. Documentation was corrected to describe Android scaffold generation and the missing Web scaffold accurately. No workflow was dispatched and no APK/AAB/Web artifact was produced.
+
+### Full live table-security inventory — 2026-11-06
+
+A second read-only catalog pass extended the ERD inventory:
+
+- All 39 ordinary tables (38 `public`, 1 `private`) have RLS enabled; none has FORCE RLS.
+- Catalog counts: 254 columns (250 public, 4 private), 39 primary keys, 67 foreign keys, 9 unique constraints, 51 check constraints, and 106 indexes.
+- Policy catalog: 111 public policies and one private policy. This is a policy count only, not a proof of correctness.
+- No `anon` or `PUBLIC` table-level grants were returned for these tables. Authenticated has SELECT on 37 public tables; `community_invites` has no direct authenticated SELECT grant and `private.profile_discovery_locations` has no direct authenticated SELECT grant.
+- Every public table has at least one policy. The private discovery-location table has one policy. `community_invites` has one policy but no direct authenticated SELECT grant; invitation reads/actions must use the existing trusted server-side workflow.
+- Because RLS is enabled but not forced, owner/BYPASSRLS behavior remains a separate trust boundary. These findings do not validate every policy expression or every SECURITY DEFINER call path.
+- Full structural totals and exact public/private table names are recorded in `docs/ERD.md`. No DDL, grant, or policy changes were made.
