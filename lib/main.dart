@@ -2387,23 +2387,30 @@ class _PersonTileState extends State<PersonTile> {
   }
 
   Future<void> _blockAccount() async {
+    final generation = _relationshipGeneration;
+    final targetId = widget.profile['id'] as String;
     try {
       final blocked = await BlockAccountService.confirmAndBlock(
         context,
-        targetUserId: widget.profile['id'] as String,
+        targetUserId: targetId,
         displayName: (widget.profile['display_name'] ??
                 widget.profile['username'] ??
                 'الحساب')
             .toString(),
       );
-      if (!mounted || !blocked) return;
+      if (!mounted ||
+          !blocked ||
+          generation != _relationshipGeneration ||
+          widget.profile['id']?.toString() != targetId) {
+        return;
+      }
       setState(() => _blocked = true);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('تم حظر الحساب')),
       );
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'block_account');
-      if (mounted) {
+      if (mounted && generation == _relationshipGeneration) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AppErrorService.message(error))),
         );
