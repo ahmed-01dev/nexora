@@ -1231,19 +1231,24 @@ class FriendsScreen extends StatefulWidget {
 }
 
 class _FriendsScreenState extends State<FriendsScreen> {
-  late Future<List<Map<String, dynamic>>> _future;
+  static const int _pageSize = 30;
+  final List<Map<String, dynamic>> _rows = [];
   bool _showFollowers = false;
+  bool _initialLoading = true;
+  bool _loadingMore = false;
+  bool _hasMore = true;
+  Object? _loadError;
+  int _offset = 0;
 
   @override
   void initState() {
     super.initState();
-    _future = _load();
+    _loadFirstPage();
   }
 
-  Future<List<Map<String, dynamic>>> _load() async {
+  Future<List<Map<String, dynamic>>> _fetchPage(int offset) async {
     final client = Supabase.instance.client;
     final id = client.auth.currentUser!.id;
-    final relation = _showFollowers ? 'follower_id' : 'following_id';
     final profileRelation = _showFollowers
         ? 'profiles!follows_follower_id_fkey'
         : 'profiles!follows_following_id_fkey';
@@ -1255,17 +1260,84 @@ class _FriendsScreenState extends State<FriendsScreen> {
         .eq(_showFollowers ? 'following_id' : 'follower_id', id)
         .eq('status', 'accepted')
         .order('created_at', ascending: false)
-        .order(relation, ascending: true)
-        .limit(100);
+        .order(_showFollowers ? 'follower_id' : 'following_id', ascending: true)
+        .range(offset, offset + _pageSize - 1);
     return List<Map<String, dynamic>>.from(rows);
+  }
+
+  Future<void> _loadFirstPage() async {
+    if (!mounted) return;
+    setState(() {
+      _initialLoading = true;
+      _loadError = null;
+      _offset = 0;
+      _hasMore = true;
+      _rows.clear();
+    });
+    try {
+      final rows = await _fetchPage(0);
+      if (!mounted) return;
+      setState(() {
+        _rows.addAll(rows);
+        _offset = rows.length;
+        _hasMore = rows.length == _pageSize;
+      });
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'friends_list_load');
+      if (mounted) setState(() => _loadError = error);
+    } finally {
+      if (mounted) setState(() => _initialLoading = false);
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore || _initialLoading) return;
+    setState(() => _loadingMore = true);
+    try {
+      final rows = await _fetchPage(_offset);
+      if (!mounted) return;
+      setState(() {
+        _rows.addAll(rows);
+        _offset += rows.length;
+        _hasMore = rows.length == _pageSize;
+      });
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'friends_list_load_more');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppErrorService.message(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
   }
 
   void _switchList(bool showFollowers) {
     if (_showFollowers == showFollowers) return;
-    setState(() {
-      _showFollowers = showFollowers;
-      _future = _load();
-    });
+    setState(() => _showFollowers = showFollowers);
+    _loadFirstPage();
+  }
+
+  Widget _buildPerson(Map<String, dynamic> row) {
+    final profile = row['profiles'];
+    if (profile is! Map) {
+      final hiddenId =
+          (row[_showFollowers ? 'follower_id' : 'following_id'] ?? '').toString();
+      final shortId =
+          hiddenId.length > 6 ? hiddenId.substring(0, 6) : hiddenId;
+      return Card(
+        child: ListTile(
+          leading: const CircleAvatar(child: Icon(Icons.lock_outline)),
+          title: const Text('حساب خاص'),
+          subtitle: Text('الملف الشخصي غير متاح · $shortId'),
+        ),
+      );
+    }
+    return PersonTile(
+      profile: Map<String, dynamic>.from(profile),
+      follow: true,
+    );
   }
 
   @override
@@ -1275,7 +1347,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
           actions: [
             IconButton(
               tooltip: 'تحديث',
-              onPressed: () => setState(() => _future = _load()),
+              onPressed: _initialLoading ? null : _loadFirstPage,
               icon: const Icon(Icons.refresh),
             ),
           ],
@@ -1302,54 +1374,56 @@ class _FriendsScreenState extends State<FriendsScreen> {
               ),
             ),
             Expanded(
-              child: FutureBuilder<List<Map<String, dynamic>>>(
-                future: _future,
-                builder: (context, snap) {
-                  if (snap.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snap.hasError) {
-                    return AppErrorView(
-                      title: 'تعذر تحميل القائمة',
-                      error: snap.error,
-                      onRetry: () => setState(() => _future = _load()),
-                    );
-                  }
-                  final rows = snap.data ?? [];
-                  if (rows.isEmpty) {
-                    return _Empty(
-                      icon: _showFollowers ? Icons.people_outline : Icons.group_add,
-                      title: _showFollowers ? 'لسه مفيش متابعين' : 'شبكتك لسه بتبدأ',
-                      subtitle: _showFollowers
-                          ? 'لما حد يتابعك هتلاقيه هنا.'
-                          : 'اكتشف أشخاص وتابعهم عشان يظهروا هنا.',
-                    );
-                  }
-                  return ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: rows.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (_, i) {
-                      final profile = rows[i]['profiles'];
-                      if (profile is! Map) {
-                        final hiddenId = (rows[i][_showFollowers ? 'follower_id' : 'following_id'] ?? '').toString();
-                        final shortId = hiddenId.length > 6 ? hiddenId.substring(0, 6) : hiddenId;
-                        return Card(
-                          child: ListTile(
-                            leading: const CircleAvatar(child: Icon(Icons.lock_outline)),
-                            title: const Text('حساب خاص'),
-                            subtitle: Text('الملف الشخصي غير متاح · $shortId'),
-                          ),
-                        );
-                      }
-                      return PersonTile(
-                        profile: Map<String, dynamic>.from(profile),
-                        follow: true,
-                      );
-                    },
-                  );
-                },
-              ),
+              child: _initialLoading && _rows.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : _loadError != null && _rows.isEmpty
+                      ? AppErrorView(
+                          title: 'تعذر تحميل القائمة',
+                          error: _loadError,
+                          onRetry: _loadFirstPage,
+                        )
+                      : _rows.isEmpty
+                          ? _Empty(
+                              icon: _showFollowers
+                                  ? Icons.people_outline
+                                  : Icons.group_add,
+                              title: _showFollowers
+                                  ? 'لسه مفيش متابعين'
+                                  : 'شبكتك لسه بتبدأ',
+                              subtitle: _showFollowers
+                                  ? 'لما حد يتابعك هتلاقيه هنا.'
+                                  : 'اكتشف أشخاص وتابعهم عشان يظهروا هنا.',
+                            )
+                          : RefreshIndicator(
+                              onRefresh: _loadFirstPage,
+                              child: ListView.separated(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.all(16),
+                                itemCount: _rows.length + (_hasMore ? 1 : 0),
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 10),
+                                itemBuilder: (_, i) {
+                                  if (i == _rows.length) {
+                                    return Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                        child: OutlinedButton.icon(
+                                          onPressed: _loadingMore ? null : _loadMore,
+                                          icon: _loadingMore
+                                              ? const SizedBox.square(
+                                                  dimension: 16,
+                                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                                )
+                                              : const Icon(Icons.expand_more),
+                                          label: Text(_loadingMore ? 'جارٍ التحميل...' : 'تحميل المزيد'),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return _buildPerson(_rows[i]);
+                                },
+                              ),
+                            ),
             ),
           ],
         ),
