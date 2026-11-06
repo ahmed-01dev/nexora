@@ -21,6 +21,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
   bool _hasMore = true;
   bool _loadingMore = false;
   int _nextOffset = 0;
+  int _generation = 0;
   int _requestGeneration = 0;
   static const int _pageSize = 100;
 
@@ -59,6 +60,8 @@ class _CommentsScreenState extends State<CommentsScreen> {
   Future<void> _loadMore(List<Map<String, dynamic>> current) async {
     if (_loadingMore || !_hasMore) return;
     final generation = _requestGeneration;
+    final generation = _generation;
+    final offset = _nextOffset;
     setState(() => _loadingMore = true);
     try {
       final rows = await _db
@@ -67,7 +70,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
           .eq('post_id', widget.postId)
           .order('created_at', ascending: false)
           .order('id', ascending: false)
-          .range(_nextOffset, _nextOffset + _pageSize - 1);
+          .range(offset, offset + _pageSize - 1);
       if (!mounted || generation != _requestGeneration) return;
       final knownIds = current.map((comment) => comment['id']).toSet();
       final additions = List<Map<String, dynamic>>.from(rows)
@@ -93,7 +96,8 @@ class _CommentsScreenState extends State<CommentsScreen> {
   }
 
   Future<void> _refresh() async {
-    final next = _load();
+    final generation = ++_generation;
+    final next = _load(generation: generation);
     setState(() {
       _nextOffset = 0;
       _loadingMore = false;
@@ -131,8 +135,8 @@ class _CommentsScreenState extends State<CommentsScreen> {
       setState(() {
         _replyTo = null;
         _replyName = null;
-        _future = _load();
       });
+      await _refresh();
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'create_comment');
       _notice(AppErrorService.message(error));
