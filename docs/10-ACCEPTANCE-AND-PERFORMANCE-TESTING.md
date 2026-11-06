@@ -200,3 +200,5 @@ The client inbox currently supports accepting incoming pending follow requests o
 | SOC-020 | Recycle a relationship tile to another profile while relationship reads or follow/block actions are pending | Old profile responses/actions cannot overwrite the new profile's relationship state or display a stale success state; only the original target receives the requested action | P1 |
 | SEC-021 | End a Supabase session outside the account-screen logout flow while FCM is registered | A `signedOut` event triggers owner-scoped device cleanup; the last known owner is retained after session clearing; no other account's device row is deleted | P1 |
 | SOC-021 | Change the target profile while a friendship action is pending | The prior target's completion cannot clear busy state, reload the new target with stale data, or display an error/success against the wrong profile | P1 |
+
+| SEC-022 | A delayed FCM `onUnregistered` callback for account A arrives after account B registers the same FID | The queued callback is attributed to A, removes only A's device row, and does not clear B's in-memory registration; repeated unregister events preserve FIFO ownership | P1 |
