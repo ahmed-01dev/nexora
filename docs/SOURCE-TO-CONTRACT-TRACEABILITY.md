@@ -106,3 +106,5 @@ No source code, database schema, deployed function, provider configuration, or b
 | Message attachment session continuity | `lib/features/messaging/message_attachment_service.dart`; `docs/10-ACCEPTANCE-AND-PERFORMANCE-TESTING.md` | Upload/delete operations re-check owner before follow-up writes; rollback is limited to the original session; signed URL is discarded after viewer change | Ambiguous completed send, orphan cleanup, and real-device session-switch tests remain pending |
 
 | Comment pagination refresh race | `lib/features/comments/comments_screen.dart` | Refresh/reload advances a request generation; stale load-more completions cannot overwrite the newer list or its pagination state | Backend concurrent-insert behavior and authenticated integration tests remain pending |
+
+| Notification account-switch safety | `lib/features/notifications/notifications_screen.dart` | Page results, read updates, and target navigation are bound to the captured viewer ID and stopped if the session changes | Authenticated multi-user and device session-switch tests remain pending |
