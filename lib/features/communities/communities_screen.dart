@@ -468,10 +468,6 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
         _showError(StateError('تغير الحساب. أعد فتح المجتمعات قبل الإنشاء.'));
         return;
       }
-      if (uid == null) {
-        _showError(StateError('انتهت جلسة الدخول. سجّل الدخول مرة تانية.'));
-        return;
-      }
       final created = await db.from('communities').insert({
         'owner_id': uid,
         'name': result['name'],
