@@ -1239,6 +1239,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
   bool _hasMore = true;
   Object? _loadError;
   int _offset = 0;
+  int _requestGeneration = 0;
 
   @override
   void initState() {
@@ -1267,8 +1268,10 @@ class _FriendsScreenState extends State<FriendsScreen> {
 
   Future<void> _loadFirstPage() async {
     if (!mounted) return;
+    final generation = ++_requestGeneration;
     setState(() {
       _initialLoading = true;
+      _loadingMore = false;
       _loadError = null;
       _offset = 0;
       _hasMore = true;
@@ -1276,7 +1279,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
     });
     try {
       final rows = await _fetchPage(0);
-      if (!mounted) return;
+      if (!mounted || generation != _requestGeneration) return;
       setState(() {
         _rows.addAll(rows);
         _offset = rows.length;
@@ -1284,18 +1287,23 @@ class _FriendsScreenState extends State<FriendsScreen> {
       });
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'friends_list_load');
-      if (mounted) setState(() => _loadError = error);
+      if (mounted && generation == _requestGeneration) {
+        setState(() => _loadError = error);
+      }
     } finally {
-      if (mounted) setState(() => _initialLoading = false);
+      if (mounted && generation == _requestGeneration) {
+        setState(() => _initialLoading = false);
+      }
     }
   }
 
   Future<void> _loadMore() async {
     if (_loadingMore || !_hasMore || _initialLoading) return;
+    final generation = _requestGeneration;
     setState(() => _loadingMore = true);
     try {
       final rows = await _fetchPage(_offset);
-      if (!mounted) return;
+      if (!mounted || generation != _requestGeneration) return;
       setState(() {
         _rows.addAll(rows);
         _offset += rows.length;
@@ -1303,13 +1311,15 @@ class _FriendsScreenState extends State<FriendsScreen> {
       });
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'friends_list_load_more');
-      if (mounted) {
+      if (mounted && generation == _requestGeneration) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AppErrorService.message(error))),
         );
       }
     } finally {
-      if (mounted) setState(() => _loadingMore = false);
+      if (mounted && generation == _requestGeneration) {
+        setState(() => _loadingMore = false);
+      }
     }
   }
 
