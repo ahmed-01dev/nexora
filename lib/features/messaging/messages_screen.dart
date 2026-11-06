@@ -163,6 +163,19 @@ class _MessagesScreenState extends State<MessagesScreen> {
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _future,
         builder: (context, snapshot) {
+          final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+          if (currentUserId == null ||
+              (_loadedUserId != null && _loadedUserId != currentUserId)) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('تغير الحساب. حدّث قائمة المحادثات.'),
+                  TextButton(onPressed: _refresh, child: const Text('تحديث')),
+                ],
+              ),
+            );
+          }
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
