@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/nexora_theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
@@ -357,7 +358,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   if (_replyTo != null)
                     Row(
                       children: [
-                        Expanded(child: Text('الرد على $_replyName', style: const TextStyle(fontSize: 12, color: Colors.grey))),
+                        Expanded(child: Text('الرد على $_replyName', style: const TextStyle(fontSize: 12, color: NexoraColors.textMuted))),
                         IconButton(
                           tooltip: 'إلغاء الرد',
                           onPressed: () => setState(() { _replyTo = null; _replyName = null; }),
@@ -514,7 +515,7 @@ class _CommentTileState extends State<_CommentTile> {
                 const CircleAvatar(radius: 15, child: Icon(Icons.person_outline, size: 17)),
                 const SizedBox(width: 8),
                 Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.w800))),
-                Text(stamp, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                Text(stamp, style: const TextStyle(fontSize: 10, color: NexoraColors.textMuted)),
                 if (!widget.mine && !deleted)
                   IconButton(
                     tooltip: 'الإبلاغ عن التعليق',
@@ -542,7 +543,7 @@ class _CommentTileState extends State<_CommentTile> {
             Text(
               deleted ? 'تم حذف هذا التعليق' : (comment['content'] ?? '').toString(),
               style: TextStyle(
-                color: deleted ? Colors.grey : null,
+                color: deleted ? NexoraColors.textMuted : null,
                 fontStyle: deleted ? FontStyle.italic : FontStyle.normal,
                 height: 1.5,
               ),
