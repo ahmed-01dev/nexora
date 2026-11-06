@@ -75,7 +75,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
   }
 
   Future<void> _refresh() async {
-    if (_refreshing) return;
+    if (_refreshing || _accepting.isNotEmpty) return;
     final generation = ++_requestGeneration;
     setState(() {
       _refreshing = true;
@@ -108,7 +108,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
   }
 
   Future<void> _loadMore() async {
-    if (_loadingMore || !_hasMore || _initialLoading || _refreshing) return;
+    if (_loadingMore || !_hasMore || _initialLoading || _refreshing || _accepting.isNotEmpty) return;
     final generation = _requestGeneration;
     setState(() => _loadingMore = true);
     try {
@@ -137,7 +137,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
   Future<void> _accept(Map<String, dynamic> request) async {
     final followerId = request['follower_id']?.toString();
     final userId = Supabase.instance.client.auth.currentUser?.id;
-    if (followerId == null || userId == null || _refreshing || _initialLoading || _accepting.contains(followerId)) {
+    if (followerId == null || userId == null || _refreshing || _initialLoading || _loadingMore || _accepting.contains(followerId)) {
       return;
     }
 
@@ -233,7 +233,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
                                 child: _loadingMore
                                     ? const CircularProgressIndicator()
                                     : OutlinedButton(
-                                        onPressed: _loadMore,
+                                        onPressed: _accepting.isNotEmpty ? null : _loadMore,
                                         child: const Text('تحميل المزيد'),
                                       ),
                               ),
@@ -270,7 +270,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
                               ),
                               subtitle: Text(profileHidden ? 'الملف الشخصي غير متاح · $followerLabel' : '@$username'),
                               trailing: FilledButton.tonalIcon(
-                                onPressed: _refreshing || _accepting.contains(followerId)
+                                onPressed: _refreshing || _loadingMore || _accepting.contains(followerId)
                                     ? null
                                     : () => _accept(request),
                                 icon: _accepting.contains(followerId)
