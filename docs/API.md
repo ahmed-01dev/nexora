@@ -203,4 +203,4 @@ A read-only live catalog inspection confirmed the `auth.users` AFTER INSERT trig
 
 ## Live RPC signature and authorization audit
 
-The current client-side RPC call names and argument signatures have been matched against the deployed PostgreSQL catalog. See [`RPC-CONTRACT-TRACEABILITY.md`](RPC-CONTRACT-TRACEABILITY.md) for the 17-function mapping, authenticated-only EXECUTE evidence, and the corresponding SECURITY DEFINER helper authorization checks. This is a read-only contract audit; it does not replace authenticated integration tests.
+The current client-side RPC call names and argument signatures have been matched against the deployed PostgreSQL catalog. See [`RPC-CONTRACT-TRACEABILITY.md`](RPC-CONTRACT-TRACEABILITY.md) for the 18-function mapping, authenticated-only EXECUTE evidence, and the corresponding SECURITY DEFINER helper authorization checks. This is a read-only contract audit; it does not replace authenticated integration tests.
