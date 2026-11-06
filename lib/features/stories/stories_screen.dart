@@ -17,6 +17,7 @@ class StoriesScreen extends StatefulWidget {
 
 class _StoriesScreenState extends State<StoriesScreen> {
   late Future<List<Map<String, dynamic>>> _future;
+  String? _loadedUserId;
 
   @override
   void initState() {
@@ -26,6 +27,8 @@ class _StoriesScreenState extends State<StoriesScreen> {
 
   Future<List<Map<String, dynamic>>> _load() async {
     final client = Supabase.instance.client;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) throw StateError('انتهت جلسة الدخول.');
     final rows = await client
         .from('stories')
         .select('id,user_id,media_path,text_content,story_type,visibility,created_at,expires_at,profiles!stories_user_id_fkey(display_name,username)')
@@ -33,6 +36,9 @@ class _StoriesScreenState extends State<StoriesScreen> {
         .gt('expires_at', DateTime.now().toUtc().toIso8601String())
         .order('created_at', ascending: false)
         .limit(100);
+    if (client.auth.currentUser?.id != userId) {
+      throw StateError('تغير الحساب أثناء تحميل القصص.');
+    }
     final result = rows
         .map((row) => Map<String, dynamic>.from(row))
         .toList(growable: false);
@@ -52,7 +58,11 @@ class _StoriesScreenState extends State<StoriesScreen> {
           item['signed_url'] = null;
         }
       }));
+      if (client.auth.currentUser?.id != userId) {
+        throw StateError('تغير الحساب أثناء تجهيز القصص.');
+      }
     }
+    _loadedUserId = userId;
     return result;
   }
 
@@ -76,6 +86,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
   }
 
   void _open(Map<String, dynamic> story) {
+    if (Supabase.instance.client.auth.currentUser?.id != _loadedUserId) return;
     Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => StoryViewerScreen(story: story),
     ));
@@ -83,6 +94,9 @@ class _StoriesScreenState extends State<StoriesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final viewerChanged = currentUserId == null ||
+        (_loadedUserId != null && currentUserId != _loadedUserId);
     return Scaffold(
       appBar: AppBar(
         title: const Text('القصص'),
@@ -93,7 +107,9 @@ class _StoriesScreenState extends State<StoriesScreen> {
         icon: const Icon(Icons.add),
         label: const Text('قصتك'),
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
+      body: viewerChanged
+          ? Center(child: TextButton(onPressed: _refresh, child: const Text('تغير الحساب. أعد تحميل القصص.')))
+          : FutureBuilder<List<Map<String, dynamic>>>(
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -310,13 +326,15 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> {
   }
 
   Future<void> _markViewed() async {
-    final viewerId = Supabase.instance.client.auth.currentUser?.id;
+    final client = Supabase.instance.client;
+    final viewerId = client.auth.currentUser?.id;
     if (viewerId == null) return;
     try {
-      await Supabase.instance.client.from('story_views').insert({
+      await client.from('story_views').insert({
         'story_id': widget.story['id'],
         'viewer_id': viewerId,
       });
+      if (client.auth.currentUser?.id != viewerId) return;
     } catch (error, stack) {
       if (!error.toString().contains('23505')) {
         AppErrorService.report(error, stack, source: 'story_view');
