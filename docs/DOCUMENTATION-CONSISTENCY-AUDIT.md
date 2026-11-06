@@ -312,3 +312,7 @@ These are snapshots of live metadata, not migration source. RLS is enabled but n
 ### PostgREST exposed-schema setting remains unverified
 
 The database-side `current_setting('pgrst.db_schemas', true)` inspection returned NULL. This does not establish which schemas are exposed by the hosted Data API. Confirm the project's API > Exposed schemas setting directly before release and ensure `private` is not exposed. The `private` schema currently has no direct authenticated table SELECT grant on its discovery-location table, but function/schema exposure and function EXECUTE grants must be evaluated together. No API exposure setting was changed.
+
+### Private schema exposure is a release-critical configuration check
+
+A fresh privilege query confirms `authenticated` has `USAGE` on schema `private` (but not `CREATE`); `anon` and `PUBLIC` have no `USAGE`. Authenticated also has EXECUTE on several SECURITY DEFINER helpers in that schema, including block, staff, conversation/community, media, and nearby-discovery helpers. This is intentional for RLS policies and trusted public wrapper functions, so revoking EXECUTE blindly could break authorization. However, if `private` is included in PostgREST's exposed schemas, those helpers may become directly callable RPCs. The database setting query returned NULL and cannot confirm the hosted API configuration. **Verify Dashboard → API → Exposed schemas excludes `private` before release.** No grants or API settings were changed.
