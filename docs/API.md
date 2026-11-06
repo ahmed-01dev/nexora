@@ -167,3 +167,11 @@ A static scan of recognized Supabase query-builder filter/order calls across the
 - Result: **zero mismatched query-builder column references** among the 150 recognized database references.
 - One string operation on an error message containing `23505` was excluded after source inspection; it is not a database filter.
 - Dynamic column names and query-builder methods outside the recognized scan patterns are not covered. This is not a runtime authorization or query-execution test.
+
+## 11. Incoming follow-request workflow
+
+- Source: `lib/features/friends/follow_requests_screen.dart`, opened from the discovery screen.
+- Read path: `public.follows` where `following_id = auth.uid()` and `status = 'pending'`, with the requester profile joined through `follows_follower_id_fkey`; pages are ordered newest-first in 30-row ranges.
+- Accept path: update only `status = 'accepted'`, filtered by the exact `follower_id`, current `following_id`, and pending status. Live privileges grant authenticated users UPDATE on the `status` column only (not table-wide UPDATE or ownership columns); the live UPDATE policy restricts recipients to their own incoming pending rows and rechecks block state.
+- No recipient-side decline operation exists in the current live RPC/policy contract. The UI therefore offers accept only; it does not attempt a client-side DELETE or invent a decline RPC.
+- This is source/schema contract evidence, not a multi-user RLS integration test.
