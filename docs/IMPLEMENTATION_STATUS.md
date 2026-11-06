@@ -279,3 +279,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Feed pagination now tracks fetched backend offsets separately from visible posts and invalidates in-flight page responses whenever the feed mode changes or a refresh starts. This prevents old-mode rows from contaminating the new feed and avoids duplicate-page loops after concurrent insertions.
 
 - Community discovery pagination now uses a backend-row offset, deduplicates visible community IDs, and discards stale page/membership responses after a refresh. Membership actions also stop safely when the authenticated session is absent.
+
+- Comments pagination now uses a request-generation guard: an older load-more response cannot replace a newer refresh or post-submit reload, and refresh resets the loading-more state. Stable descending `(created_at, id)` ordering and backend offsets are retained; concurrent-session integration tests remain pending.
