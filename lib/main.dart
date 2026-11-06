@@ -685,7 +685,10 @@ class _MainShellState extends State<MainShell> {
       body: Stack(
         children: [
           const Positioned.fill(child: _NexoraAuroraBackdrop()),
-          IndexedStack(index: _tab, children: pages),
+          Positioned.fill(
+            bottom: 108,
+            child: IndexedStack(index: _tab, children: pages),
+          ),
           Positioned(
             left: 14,
             right: 14,
