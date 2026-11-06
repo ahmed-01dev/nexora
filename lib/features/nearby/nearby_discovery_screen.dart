@@ -35,7 +35,10 @@ class _NearbyDiscoveryScreenState extends State<NearbyDiscoveryScreen> {
       final userId = client.auth.currentUser?.id;
       if (userId == null) throw StateError('انتهت جلسة الدخول.');
       final result = await client.rpc('my_nearby_presence_enabled');
-      if (client.auth.currentUser?.id != userId) return;
+      if (client.auth.currentUser?.id != userId) {
+        if (mounted) setState(() { _loading = false; _error = 'تغير الحساب. أعد تحميل اكتشاف الأشخاص القريبين.'; });
+        return;
+      }
       final enabled = result == true;
       if (!mounted) return;
       _loadedUserId = userId;
@@ -163,7 +166,7 @@ class _NearbyDiscoveryScreenState extends State<NearbyDiscoveryScreen> {
       ));
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'nearby_start_conversation');
-      if (!mounted) return;
+      if (!mounted || client.auth.currentUser?.id != userId) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppErrorService.message(error))),
       );
