@@ -22,7 +22,8 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
 
   Future<Map<String, List<Map<String, dynamic>>>> _load() async {
     final client = Supabase.instance.client;
-    final me = client.auth.currentUser!.id;
+    final me = client.auth.currentUser?.id;
+    if (me == null) throw StateError('انتهت جلسة الدخول.');
     final incoming = await client
         .from('friendships')
         .select('id,requester_id,profiles!friendships_requester_id_fkey(id,username,display_name)')
@@ -220,7 +221,7 @@ class _FriendRequestActionState extends State<FriendRequestAction> {
   @override
   void initState() {
     super.initState();
-    _myId = Supabase.instance.client.auth.currentUser!.id;
+    _myId = Supabase.instance.client.auth.currentUser?.id;
     _load();
   }
 
