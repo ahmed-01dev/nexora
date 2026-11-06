@@ -150,3 +150,12 @@ A static parser compared literal PostgREST `.select(...)` projections in 29 Flut
 - This is a name-existence check only. It does not prove that the caller is allowed to read a column/row, that relationship cardinality matches UI assumptions, or that filters/order clauses and write payloads are correct.
 - Dynamic/computed select strings, runtime authorization, authenticated RLS behavior, and result decoding remain outside this static check.
 - No database or client source was changed by this inspection.
+
+## 9. Insert/update/upsert payload key check
+
+A static scan of literal `insert`, `update`, and `upsert` map payloads in the reviewed Flutter app/feature sources compared **111 literal write keys** with the live public-table column inventory.
+
+- No literal write-key mismatch was found.
+- One profile-image update uses a computed key named `column`; source inspection confirmed it is constrained to the two live profile columns `avatar_url` and `cover_url`.
+- This does not verify row-level authorization, column grants, check constraints, nullability at runtime, transaction behavior, or Storage upload/delete authorization. It also does not cover maps built dynamically outside the literal payload patterns.
+- No database, Storage, or runtime configuration was changed.
