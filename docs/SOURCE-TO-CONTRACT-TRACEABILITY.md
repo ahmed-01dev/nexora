@@ -124,3 +124,5 @@ No source code, database schema, deployed function, provider configuration, or b
 | Nearby, notification, and moderation session continuity | `nearby_discovery_screen.dart`, `notification_preferences_screen.dart`, `my_moderation_screen.dart`, `moderation_appeals_screen.dart` | Viewer/reviewer identity is captured across async reads, permission flows, writes, and appeal decisions | Real-device location/permission and authenticated moderator integration tests remain pending |
 
 | Community discovery and management session continuity | `lib/features/communities/communities_screen.dart` | Page and membership queries, join/leave, invite actions, and community creation are checked against the captured viewer | Transactional orphan prevention and real-device multi-account tests remain pending |
+
+| Story feed/composer session binding | `lib/features/stories/stories_screen.dart` | Story rows and signed URLs are discarded on viewer change; composer publishes only for its opening account | Signed-URL expiry and real-device multi-account tests remain pending |
