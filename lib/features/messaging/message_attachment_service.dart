@@ -33,17 +33,21 @@ class MessageAttachmentService {
       messageId = row['id'] as String;
       _requireCurrentUser(uid);
       await client.from('message_attachments').insert({'message_id': messageId, 'uploader_id': uid, 'storage_path': path, 'mime_type': type, 'size_bytes': bytes.length});
+      _requireCurrentUser(uid);
       return messageId;
     } catch (_) {
-      if (messageId != null) {
-        try {
-          await client.from('messages')
-              .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
-              .eq('id', messageId)
-              .eq('sender_id', uid);
-        } catch (_) {}
+      // Never issue rollback writes using a newly signed-in account.
+      if (client.auth.currentUser?.id == uid) {
+        if (messageId != null) {
+          try {
+            await client.from('messages')
+                .update({'deleted_at': DateTime.now().toUtc().toIso8601String()})
+                .eq('id', messageId)
+                .eq('sender_id', uid);
+          } catch (_) {}
+        }
+        try { await client.storage.from('nexora-media').remove([path]); } catch (_) {}
       }
-      try { await client.storage.from('nexora-media').remove([path]); } catch (_) {}
       rethrow;
     }
   }
@@ -71,7 +75,10 @@ class MessageAttachmentService {
       final path = row?['storage_path'] as String?;
       if (path == null) continue;
       if (client.auth.currentUser?.id != viewerId) return null;
-      return client.storage.from('nexora-media').createSignedUrl(path, 3600);
+      final signedUrl =
+          await client.storage.from('nexora-media').createSignedUrl(path, 3600);
+      if (client.auth.currentUser?.id != viewerId) return null;
+      return signedUrl;
     }
     return null;
   }
@@ -87,10 +94,12 @@ class MessageAttachmentService {
         .maybeSingle();
     final path = row?['storage_path'] as String?;
     if (path == null) return;
+    _requireCurrentUser(uid);
     await client.from('message_attachments')
         .delete()
         .eq('message_id', messageId)
         .eq('uploader_id', uid);
+    if (client.auth.currentUser?.id != uid) return;
     try { await client.storage.from('nexora-media').remove([path]); } catch (_) {}
   }
 }
