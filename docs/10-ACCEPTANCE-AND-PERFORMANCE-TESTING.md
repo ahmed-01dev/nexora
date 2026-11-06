@@ -51,7 +51,7 @@ Severity:
 | SOC-017 | Refresh friendship requests from empty and populated states | Pull-to-refresh remains available with zero incoming/outgoing rows and after a failed refresh; no unhandled refresh future escapes the UI | P2 |
 | SOC-012 | Open accepted followers/following lists | Correct direction and accepted-only rows; no blocked relationship leaks; hidden private profile details and internal user-ID fragments remain hidden; deterministic 30-row pagination, load-more, and refresh | P1 |
 | SOC-013 | Measure follower/following page performance | Capture representative EXPLAIN ANALYZE and latency at realistic relationship counts; verify whether the explicit created_at/user-ID sort needs a reconciled composite index before proposing DDL | P1 |
-| SOC-017 | Load another followers/following page while new relationships change the ordered result set | Duplicate relationship IDs are not rendered twice; backend offset advances by rows fetched, not rows newly rendered | P2 |
+| SOC-019 | Load another followers/following page while new relationships change the ordered result set | Duplicate relationship IDs are not rendered twice; backend offset advances by rows fetched, not rows newly rendered | P2 |
 
 ## 4. Content and media tests
 | ID | Scenario | Expected result | Severity |
@@ -196,3 +196,5 @@ The client inbox currently supports accepting incoming pending follow requests o
 ### Client error privacy unit coverage
 
 `test/app_error_test.dart` verifies safe Arabic mappings for network, authentication, RLS, and unknown failures. It does not test log sinks, production telemetry, or end-to-end recovery.
+
+| SOC-020 | Recycle a relationship tile to another profile while relationship reads or follow/block actions are pending | Old profile responses/actions cannot overwrite the new profile's relationship state or display a stale success state; only the original target receives the requested action | P1 |
