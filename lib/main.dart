@@ -501,7 +501,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     const SizedBox(height: 8),
                     Text(_register ? 'مساحتك. صوتك. عالمك.' : 'رجعت تنوّر عالمك',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Color(0xFFA1A1AA))),
+                      style: const TextStyle(color: NexoraColors.textMuted)),
                     const SizedBox(height: 24),
                     SegmentedButton<String>(
                       segments: const [
@@ -1162,7 +1162,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         else if (_posts.isNotEmpty)
                           const Padding(
                             padding: EdgeInsets.all(16),
-                            child: Center(child: Text('وصلت لآخر المنشورات', style: TextStyle(color: Color(0xFF8A8A8A)))),
+                            child: Center(child: Text('وصلت لآخر المنشورات', style: TextStyle(color: NexoraColors.textMuted))),
                           ),
                       ],
                     ),
@@ -1903,7 +1903,7 @@ class _CreateScreenState extends State<CreateScreen> {
       ))),
       const SizedBox(height: 12),
       const Text('الملفات تُرفع إلى مساحة خاصة، ويُسمح بمشاهدتها حسب خصوصية المنشور والحساب.',
-        style: TextStyle(color: Color(0xFFA1A1AA), height: 1.5)),
+        style: TextStyle(color: NexoraColors.textMuted, height: 1.5)),
     ]),
   );
 }
@@ -2112,7 +2112,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (p == null) return const _Empty(icon: Icons.person_off, title: 'الملف الشخصي غير موجود', subtitle: 'راجع إعداد إنشاء صف profiles عند تسجيل الحساب.');
     final u = Supabase.instance.client.auth.currentUser!;
     return ListView(padding: const EdgeInsets.all(18), children: [
-      Container(padding: const EdgeInsets.fromLTRB(16, 12, 16, 22), decoration: BoxDecoration(borderRadius: BorderRadius.circular(26), gradient: const LinearGradient(colors: [Color(0xFF171717), Color(0xFF050505)]), border: Border.all(color: const Color(0xFF292929))), child: Column(children: [
+      Container(padding: const EdgeInsets.fromLTRB(16, 12, 16, 22), decoration: BoxDecoration(borderRadius: BorderRadius.circular(26), gradient: const LinearGradient(colors: [NexoraColors.surfaceRaised, NexoraColors.surface]), border: Border.all(color: NexoraColors.hairline)), child: Column(children: [
         Stack(children: [
           _ProfileCover(path: p['cover_url']?.toString()),
           Positioned(left: 8, top: 8, child: IconButton.filledTonal(
@@ -2510,7 +2510,7 @@ class _PostCardState extends State<PostCard> {
     final d = DateTime.tryParse((widget.post['created_at'] ?? '').toString())?.toLocal();
     final stamp = d == null ? '' : d.day.toString() + '/' + d.month.toString() + ' • ' + d.hour.toString().padLeft(2, '0') + ':' + d.minute.toString().padLeft(2, '0');
     return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(children: [_ProfileAvatar(url: a is Map ? a['avatar_url']?.toString() : null), const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(fontWeight: FontWeight.w800)), Text('@' + handle + ' • ' + stamp, style: const TextStyle(fontSize: 11, color: Color(0xFF8390A4)))])), PopupMenuButton<String>(
+      Row(children: [_ProfileAvatar(url: a is Map ? a['avatar_url']?.toString() : null), const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(fontWeight: FontWeight.w800)), Text('@' + handle + ' • ' + stamp, style: const TextStyle(fontSize: 11, color: NexoraColors.textMuted))])), PopupMenuButton<String>(
         tooltip: 'خيارات المنشور',
         onSelected: (value) async {
           if (value == 'block_user') {
@@ -2572,7 +2572,7 @@ class _PostCardState extends State<PostCard> {
       if ((widget.post['content'] ?? '').toString().isNotEmpty)
         Text((widget.post['content'] ?? '').toString(), style: const TextStyle(fontSize: 15, height: 1.65)),
       PostMediaGallery(postId: widget.post['id'] as String),
-      const Divider(height: 24, color: Color(0xFF292929)),
+      const Divider(height: 24, color: NexoraColors.hairline),
       Row(children: [
         TextButton.icon(
           onPressed: _busy || _liked == null ? null : _like,
@@ -2583,7 +2583,7 @@ class _PostCardState extends State<PostCard> {
           onPressed: widget.post['visibility'] == 'public' && !_repostBusy ? _toggleRepost : null,
           icon: _repostBusy
               ? const SizedBox.square(dimension: 14, child: CircularProgressIndicator(strokeWidth: 2))
-              : Icon(_reposted ? Icons.repeat_on : Icons.repeat, color: _reposted ? const Color(0xFFB8E986) : null),
+              : Icon(_reposted ? Icons.repeat_on : Icons.repeat, color: _reposted ? NexoraColors.success : null),
           label: Text(_reposted ? 'أعدت النشر' : 'إعادة نشر'),
         ),
         IconButton(
@@ -2765,9 +2765,9 @@ class _PersonTileState extends State<PersonTile> {
     return Card(child: Padding(padding: const EdgeInsets.all(13), child: Row(children: [
       _ProfileAvatar(url: p['avatar_url']?.toString(), size: 48), const SizedBox(width: 12),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [Flexible(child: Text((p['display_name'] ?? 'مستخدم').toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800))), if (p['is_verified'] == true) const Icon(Icons.verified, size: 16, color: Colors.lightBlueAccent)]),
-        Text('@' + (p['username'] ?? 'user').toString(), style: const TextStyle(color: Color(0xFF9AA7BA), fontSize: 12)),
-        if ((p['bio'] ?? '').toString().isNotEmpty) Text(p['bio'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF8996AA), fontSize: 12)),
+        Row(children: [Flexible(child: Text((p['display_name'] ?? 'مستخدم').toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800))), if (p['is_verified'] == true) const Icon(Icons.verified, size: 16, color: NexoraColors.cyan)]),
+        Text('@' + (p['username'] ?? 'user').toString(), style: const TextStyle(color: NexoraColors.textMuted, fontSize: 12)),
+        if ((p['bio'] ?? '').toString().isNotEmpty) Text(p['bio'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: NexoraColors.textMuted, fontSize: 12)),
       ])),
       if (p['id'] != Supabase.instance.client.auth.currentUser?.id)
         PopupMenuButton<String>(
@@ -2826,7 +2826,7 @@ class _Brand extends StatelessWidget {
   const _Brand({this.size = 46});
   final double size;
   @override
-  Widget build(BuildContext context) => Container(width: size, height: size, decoration: BoxDecoration(borderRadius: BorderRadius.circular(size * .3), gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF8CEBFF), Color(0xFF6B83FF), Color(0xFFB17BFF)]), border: Border.all(color: const Color(0x99FFFFFF)), boxShadow: const [BoxShadow(color: Color(0x6654CFFF), blurRadius: 26, offset: Offset(0, 8))]), child: Icon(Icons.bolt_rounded, color: const Color(0xFF071321), size: size * .58));
+  Widget build(BuildContext context) => Container(width: size, height: size, decoration: BoxDecoration(borderRadius: BorderRadius.circular(size * .3), gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: NexoraColors.brandGradient), border: Border.all(color: const Color(0x99FFFFFF)), boxShadow: const [BoxShadow(color: Color(0x6654CFFF), blurRadius: 26, offset: Offset(0, 8))]), child: Icon(Icons.bolt_rounded, color: Colors.white, size: size * .58));
 }
 Future<String?> _resolvePrivateMediaUrl(String? value) async {
   final raw = (value ?? '').trim();
@@ -2863,7 +2863,7 @@ class _ProfileAvatarState extends State<_ProfileAvatar> {
   @override
   Widget build(BuildContext context) => Container(
     width: widget.size, height: widget.size, clipBehavior: Clip.antiAlias,
-    decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF243448), border: Border.all(color: const Color(0xFF40536A))),
+    decoration: BoxDecoration(shape: BoxShape.circle, color: NexoraColors.surfaceRaised, border: Border.all(color: NexoraColors.hairline)),
     child: FutureBuilder<String?>(
       future: _urlFuture,
       builder: (context, snapshot) => snapshot.data == null
@@ -2898,9 +2898,9 @@ class _ProfileCoverState extends State<_ProfileCover> {
       child: FutureBuilder<String?>(
         future: _urlFuture,
         builder: (context, snapshot) => snapshot.data == null
-          ? Container(color: const Color(0xFF202A36), child: const Center(child: Icon(Icons.landscape_outlined, size: 38, color: Color(0xFF8492A6))))
+          ? Container(color: NexoraColors.surfaceRaised, child: const Center(child: Icon(Icons.landscape_outlined, size: 38, color: NexoraColors.textMuted)))
           : Image.network(snapshot.data!, fit: BoxFit.cover, width: double.infinity,
-              errorBuilder: (_, __, ___) => Container(color: const Color(0xFF202A36), child: const Icon(Icons.broken_image_outlined))),
+              errorBuilder: (_, __, ___) => Container(color: NexoraColors.surfaceRaised, child: const Icon(Icons.broken_image_outlined, color: NexoraColors.textMuted))),
       ),
     ),
   );
@@ -2910,17 +2910,17 @@ class _Info extends StatelessWidget {
   const _Info({required this.icon, required this.title, required this.value});
   final IconData icon; final String title, value;
   @override
-  Widget build(BuildContext context) => Card(child: ListTile(leading: Icon(icon, color: const Color(0xFFFFFFFF)), title: Text(title, style: const TextStyle(fontSize: 12, color: Color(0xFF8F9CB0))), subtitle: Text(value)));
+  Widget build(BuildContext context) => Card(child: ListTile(leading: Icon(icon, color: NexoraColors.textMuted), title: Text(title, style: const TextStyle(fontSize: 12, color: NexoraColors.textMuted)), subtitle: Text(value)));
 }
 class _Notice extends StatelessWidget {
   const _Notice({required this.text, required this.error});
   final String text; final bool error;
   @override
-  Widget build(BuildContext context) => Container(margin: const EdgeInsets.only(top: 12), padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: error ? const Color(0x33FF7777) : const Color(0x333E7540), borderRadius: BorderRadius.circular(14)), child: Text(text, textAlign: TextAlign.center, style: TextStyle(color: error ? const Color(0xFFFFA0A0) : const Color(0xFFFFFFFF))));
+  Widget build(BuildContext context) => Container(margin: const EdgeInsets.only(top: 12), padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: error ? NexoraColors.danger.withValues(alpha: .12) : NexoraColors.success.withValues(alpha: .12), borderRadius: BorderRadius.circular(14)), child: Text(text, textAlign: TextAlign.center, style: TextStyle(color: error ? NexoraColors.danger : NexoraColors.text)));
 }
 class _Empty extends StatelessWidget {
   const _Empty({required this.icon, required this.title, required this.subtitle});
   final IconData icon; final String title, subtitle;
   @override
-  Widget build(BuildContext context) => Center(child: Padding(padding: const EdgeInsets.all(30), child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 54, color: const Color(0xFFFFFFFF)), const SizedBox(height: 18), Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)), const SizedBox(height: 8), Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFF8E9BB0), height: 1.6))])));
+  Widget build(BuildContext context) => Center(child: Padding(padding: const EdgeInsets.all(30), child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 54, color: NexoraColors.text), const SizedBox(height: 18), Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)), const SizedBox(height: 8), Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(color: NexoraColors.textMuted, height: 1.6))])));
 }
