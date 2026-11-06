@@ -33,15 +33,25 @@ class _StoriesScreenState extends State<StoriesScreen> {
         .gt('expires_at', DateTime.now().toUtc().toIso8601String())
         .order('created_at', ascending: false)
         .limit(100);
-    final result = <Map<String, dynamic>>[];
-    for (final row in rows) {
-      final item = Map<String, dynamic>.from(row);
-      if (item['media_path'] != null) {
-        item['signed_url'] = await client.storage
-            .from('nexora-media')
-            .createSignedUrl(item['media_path'] as String, 3600);
-      }
-      result.add(item);
+    final result = rows
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList(growable: false);
+    // Sign URLs in bounded batches so a full 100-story page does not issue
+    // 100 sequential network round-trips or overwhelm Storage at once.
+    for (var start = 0; start < result.length; start += 8) {
+      final end = (start + 8 < result.length) ? start + 8 : result.length;
+      await Future.wait(result.sublist(start, end).map((item) async {
+        final path = item['media_path'] as String?;
+        if (path == null) return;
+        try {
+          item['signed_url'] = await client.storage
+              .from('nexora-media')
+              .createSignedUrl(path, 3600);
+        } catch (error, stack) {
+          AppErrorService.report(error, stack, source: 'story_signed_url');
+          item['signed_url'] = null;
+        }
+      }));
     }
     return result;
   }
