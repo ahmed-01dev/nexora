@@ -59,6 +59,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Future<void> _refresh() async {
+    if (!mounted) return;
     final next = _load();
     setState(() => _future = next);
     try {
