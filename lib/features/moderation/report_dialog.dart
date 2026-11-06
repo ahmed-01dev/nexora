@@ -80,13 +80,23 @@ class _ReportDialogState extends State<ReportDialog> {
     });
 
     try {
-      await Supabase.instance.client.from('reports').insert({
+      final client = Supabase.instance.client;
+      await client.from('reports').insert({
         'reporter_id': uid,
         'target_type': widget.targetType,
         'target_id': widget.targetId,
         'reason': _reason,
         'details': _details.text.trim(),
       });
+      if (client.auth.currentUser?.id != uid) {
+        if (mounted) {
+          setState(() {
+            _error = 'تغير الحساب أثناء إرسال البلاغ. تحقق من حالة البلاغ قبل إعادة المحاولة.';
+            _sending = false;
+          });
+        }
+        return;
+      }
       if (mounted) Navigator.pop(context, true);
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'submit_report');
