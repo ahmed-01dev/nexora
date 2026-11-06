@@ -240,3 +240,5 @@ The client inbox currently supports accepting incoming pending follow requests o
 | APP-042 | Open the story composer as one account, then switch accounts before publishing | The composer refuses to publish the prior account's draft/media under a different account | P1 |
 
 | APP-043 | Switch reviewer accounts while the moderation report queue loads, a target preview is open, or a report decision is submitted | Old reviewer data is hidden; assignment/dismissal/target preview is bound to the reviewer who loaded the queue | P1 |
+
+| APP-044 | Switch accounts while the block confirmation or report dialog is open | The action is bound to the account that opened the dialog; confirmation cannot execute under the next signed-in account | P1 |
