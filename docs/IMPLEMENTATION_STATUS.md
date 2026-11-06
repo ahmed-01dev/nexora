@@ -156,11 +156,11 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 
 ## Followers/following list verification — 2026-11-06
 
-- Updated `FriendsScreen` to switch between accepted accounts the current user follows and accepted followers of the current user. Both directions use the correct live foreign-key relationship, deterministic newest-first ordering with an ID tie-breaker, and a 100-row cap.
+- Updated `FriendsScreen` to switch between accepted accounts the current user follows and accepted followers of the current user. Both directions use the correct live foreign-key relationship, deterministic newest-first ordering with an ID tie-breaker, and 30-row pages with load-more pagination.
 - Profile joins remain subject to ordinary RLS. If a private profile is not visible, the list shows a generic privacy-safe placeholder rather than bypassing authorization.
-- Follow/unfollow actions reuse the existing server RPCs. Pagination beyond the first 100 rows and real multi-user RLS tests remain pending.
+- Follow/unfollow actions reuse the existing server RPCs. Filters, activity indicators, and real multi-user RLS tests remain pending.
 - GitHub Actions Flutter CI run `42220627564` passed on commit `b1ee0c0de6aa2adadddaaaf4543227fb051ece84`: dependency installation, analysis, and tests succeeded. No APK/AAB/Web build was run.
 
-- ERD refresh: read-only PostgreSQL catalog queries confirmed 38 public tables, one private table, no views/materialized views in those schemas, and 57 foreign-key constraints. `docs/ERD.md` now records the complete table-name inventory and all 57 FK source/target column mappings; the high-level Mermaid diagram remains conceptual rather than a full column-level ERD.
+- ERD refresh: read-only PostgreSQL catalog queries confirmed 38 public tables, one private table, no views/materialized views in those schemas, and 67 foreign-key constraints, 9 unique constraints, 51 check constraints, 106 indexes, and RLS enabled on all 39 tables (not FORCE RLS). `docs/ERD.md` now records the live table inventory and catalog counts; the high-level Mermaid diagram remains conceptual rather than a full column-level ERD.
 
 - Follow graph pagination update: accepted followers/following lists now use explicit 30-row load-more pages with deterministic ordering and pull-to-refresh. The earlier first-page-only limitation is resolved in source; integration/performance tests remain pending.
