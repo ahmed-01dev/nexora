@@ -1229,23 +1229,121 @@ class FriendsScreen extends StatefulWidget {
   @override
   State<FriendsScreen> createState() => _FriendsScreenState();
 }
+
 class _FriendsScreenState extends State<FriendsScreen> {
   late Future<List<Map<String, dynamic>>> _future;
+  bool _showFollowers = false;
+
   @override
-  void initState() { super.initState(); _future = _load(); }
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
   Future<List<Map<String, dynamic>>> _load() async {
-    final id = Supabase.instance.client.auth.currentUser!.id;
-    final rows = await Supabase.instance.client.from('follows').select('status,profiles!follows_following_id_fkey(id,username,display_name,bio,avatar_url,is_verified)').eq('follower_id', id).eq('status', 'accepted').order('created_at', ascending: false).limit(100);
+    final client = Supabase.instance.client;
+    final id = client.auth.currentUser!.id;
+    final relation = _showFollowers ? 'follower_id' : 'following_id';
+    final profileRelation = _showFollowers
+        ? 'profiles!follows_follower_id_fkey'
+        : 'profiles!follows_following_id_fkey';
+    final profileFields =
+        '$profileRelation(id,username,display_name,bio,avatar_url,is_verified)';
+    final rows = await client
+        .from('follows')
+        .select('follower_id,following_id,created_at,$profileFields')
+        .eq(_showFollowers ? 'following_id' : 'follower_id', id)
+        .eq('status', 'accepted')
+        .order('created_at', ascending: false)
+        .order(relation, ascending: true)
+        .limit(100);
     return List<Map<String, dynamic>>.from(rows);
   }
+
+  void _switchList(bool showFollowers) {
+    if (_showFollowers == showFollowers) return;
+    setState(() {
+      _showFollowers = showFollowers;
+      _future = _load();
+    });
+  }
+
   @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('مجتمعك', style: TextStyle(fontWeight: FontWeight.w800)), actions: [IconButton(onPressed: () => setState(() => _future = _load()), icon: const Icon(Icons.refresh))]), body: FutureBuilder<List<Map<String, dynamic>>>(future: _future, builder: (context, snap) {
-    if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-    if (snap.hasError) return AppErrorView(title: 'تعذر تحميل المتابَعين', error: snap.error, onRetry: () => setState(() => _future = _load()));
-    final rows = snap.data ?? [];
-    if (rows.isEmpty) return const _Empty(icon: Icons.group_add, title: 'شبكتك لسه بتبدأ', subtitle: 'اكتشف أشخاص وتابعهم عشان يظهروا هنا.');
-    return ListView.separated(padding: const EdgeInsets.all(16), itemCount: rows.length, separatorBuilder: (_, __) => const SizedBox(height: 10), itemBuilder: (_, i) => rows[i]['profiles'] is Map<String, dynamic> ? PersonTile(profile: Map<String, dynamic>.from(rows[i]['profiles']), follow: false) : const SizedBox.shrink());
-  }));
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(
+          title: const Text('مجتمعك', style: TextStyle(fontWeight: FontWeight.w800)),
+          actions: [
+            IconButton(
+              tooltip: 'تحديث',
+              onPressed: () => setState(() => _future = _load()),
+              icon: const Icon(Icons.refresh),
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(
+                    value: false,
+                    label: Text('أتابعهم'),
+                    icon: Icon(Icons.person_add_alt),
+                  ),
+                  ButtonSegment(
+                    value: true,
+                    label: Text('متابعيني'),
+                    icon: Icon(Icons.people_alt_outlined),
+                  ),
+                ],
+                selected: {_showFollowers},
+                onSelectionChanged: (selection) => _switchList(selection.first),
+              ),
+            ),
+            Expanded(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: _future,
+                builder: (context, snap) {
+                  if (snap.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snap.hasError) {
+                    return AppErrorView(
+                      title: 'تعذر تحميل القائمة',
+                      error: snap.error,
+                      onRetry: () => setState(() => _future = _load()),
+                    );
+                  }
+                  final rows = snap.data ?? [];
+                  if (rows.isEmpty) {
+                    return _Empty(
+                      icon: _showFollowers ? Icons.people_outline : Icons.group_add,
+                      title: _showFollowers ? 'لسه مفيش متابعين' : 'شبكتك لسه بتبدأ',
+                      subtitle: _showFollowers
+                          ? 'لما حد يتابعك هتلاقيه هنا.'
+                          : 'اكتشف أشخاص وتابعهم عشان يظهروا هنا.',
+                    );
+                  }
+                  return ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: rows.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (_, i) {
+                      final profile = rows[i]['profiles'];
+                      if (profile is! Map) return const SizedBox.shrink();
+                      return PersonTile(
+                        profile: Map<String, dynamic>.from(profile),
+                        follow: true,
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 class CreateScreen extends StatefulWidget {
