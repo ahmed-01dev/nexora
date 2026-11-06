@@ -71,3 +71,7 @@ Still requiring verification or completion:
 - Physical-device 60 fps/jank, reduced-transparency OS behavior, small-screen/inset, and video transition tests are not yet evidenced.
 - The five-tab shell and visual refinements need fresh CI analysis/tests after the latest source edits.
 - The debug design gallery is a component preview, not proof that every production screen is visually complete.
+
+### Additional consistency pass
+
+The production profile hero, profile/avatar placeholders, feed metadata, brand mark, and community secondary labels now use the central Aurora color tokens instead of the previous blue/gray palette. The feed hero and ordinary content cards remain solid surfaces; the floating bottom navigation is the primary glass surface. This is still a targeted consistency pass, not a complete screen-by-screen visual sign-off.
