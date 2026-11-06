@@ -59,8 +59,14 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = _load());
-    await _future;
+    final next = _load();
+    setState(() => _future = next);
+    try {
+      await next;
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'messages_refresh');
+      // FutureBuilder owns the error state; do not leak a failed refresh future.
+    }
   }
 
   Future<void> _newMessage() async {
@@ -144,29 +150,36 @@ class _MessagesScreenState extends State<MessagesScreen> {
           }
           final items = snapshot.data ?? [];
           if (items.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(28),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.forum_outlined, size: 54),
-                    const SizedBox(height: 16),
-                    const Text('مساحتك الخاصة للكلام',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'ابدأ محادثة مع شخص تسمح إعدادات الخصوصية عنده باستقبال رسائلك.',
-                      textAlign: TextAlign.center,
+            return RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  const SizedBox(height: 100),
+                  Padding(
+                    padding: const EdgeInsets.all(28),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.forum_outlined, size: 54),
+                        const SizedBox(height: 16),
+                        const Text('مساحتك الخاصة للكلام',
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'ابدأ محادثة مع شخص تسمح إعدادات الخصوصية عنده باستقبال رسائلك.',
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 18),
+                        FilledButton.icon(
+                          onPressed: _newMessage,
+                          icon: const Icon(Icons.add_comment_outlined),
+                          label: const Text('رسالة جديدة'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 18),
-                    FilledButton.icon(
-                      onPressed: _newMessage,
-                      icon: const Icon(Icons.add_comment_outlined),
-                      label: const Text('رسالة جديدة'),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             );
           }
