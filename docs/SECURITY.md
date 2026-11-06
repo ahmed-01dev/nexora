@@ -117,3 +117,7 @@ The Android push listener no longer overwrites the captured installation owner w
 ### Media upload account-switch handling
 
 `MediaUploadService` verifies that the requested owner matches the active Supabase user before remote writes and re-checks after profile/story Storage uploads and around each post-media Storage/metadata operation. On a failed bulk upload, client cleanup is attempted only while the original owner remains the active session; it is not attempted with a newly signed-in account. This prevents cross-account cleanup attempts but cannot guarantee removal of an object uploaded just before a session change. Add server-side orphan cleanup and test sign-out/account-switch timing on a device. Client-side signature checks remain bypassable and are not malware scanning.
+
+### FCM delayed unregister across account switching
+
+Pending unregister operations now retain their account owner in a per-FID FIFO queue. A delayed `onUnregistered` callback consumes the queued owner rather than trusting the currently signed-in account, and it clears the in-memory tracked registration only when both FID and owner match. This prevents a prior account's callback from clearing a newly registered account's state when Firebase reuses the same FID. The pure ownership rules are unit-tested; Firebase event ordering and actual row cleanup remain device-test requirements.
