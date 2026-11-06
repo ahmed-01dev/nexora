@@ -197,3 +197,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Added `docs/ERD-LIVE-TRIGGERS.md` with 21 live non-internal trigger definitions, including auth profile creation, follow-status enforcement, community synchronization, notification/FCM hooks, moderation audit, and Supabase Storage platform triggers.
 
 - Latest Flutter source CI run `42226031696` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on commit `7dfb822afec111d532f93c96f2598507c7fa2fc8`. This includes the FCM sign-out suspension/recovery changes and the current social graph UI. The workflow did not build an APK/AAB/Web artifact.
+
+- Friendship inbox hardening: accept/decline/cancel buttons now prevent duplicate actions per request ID, show a busy state while the RPC is running, and hide profile details when profile RLS returns no visible profile. SOC-016 added; latest source CI result is pending.
