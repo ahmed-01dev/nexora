@@ -175,3 +175,7 @@ A static scan of recognized Supabase query-builder filter/order calls across the
 - Accept path: update only `status = 'accepted'`, filtered by the exact `follower_id`, current `following_id`, and pending status. Live privileges grant authenticated users UPDATE on the `status` column only (not table-wide UPDATE or ownership columns); the live UPDATE policy restricts recipients to their own incoming pending rows and rechecks block state.
 - No recipient-side decline operation exists in the current live RPC/policy contract. The UI therefore offers accept only; it does not attempt a client-side DELETE or invent a decline RPC.
 - This is source/schema contract evidence, not a multi-user RLS integration test.
+
+### Follow-request screen delta after the static scan
+
+The subsequently added `lib/features/friends/follow_requests_screen.dart` was checked separately against the same live schema snapshot: its `follows` projection and embedded requester profile columns exist, its filter/order fields exist, and its sole write key `status` is the only column-level UPDATE privilege granted to authenticated users. The screen's update is additionally constrained by the recipient-only RLS policy. This brings the source files reviewed for these literal contract checks to 30; it does not add a decline operation or replace multi-user integration testing.
