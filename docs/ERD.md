@@ -233,3 +233,5 @@ For exact deployed definitions captured read-only on 2026-11-06, see:
 These snapshots are descriptive only. They do not replace local migration source or authorize schema changes.
 
 - `docs/ERD-LIVE-POLICIES.md` — all 112 deployed RLS policy definitions, including command, roles, USING, and WITH CHECK expressions.
+
+- `docs/ERD-LIVE-TRIGGERS.md` — 21 non-internal trigger definitions across auth, public, and storage schemas, including the application trigger functions.
