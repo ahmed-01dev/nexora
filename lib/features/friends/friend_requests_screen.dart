@@ -215,6 +215,7 @@ class _FriendRequestActionState extends State<FriendRequestAction> {
   bool _busy = false;
   String? _myId;
   int _loadGeneration = 0;
+  int _actionGeneration = 0;
 
   @override
   void initState() {
@@ -227,7 +228,9 @@ class _FriendRequestActionState extends State<FriendRequestAction> {
   void didUpdateWidget(covariant FriendRequestAction oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.otherUserId != widget.otherUserId) {
+      _actionGeneration++;
       _request = null;
+      _busy = false;
       _load();
     }
   }
@@ -270,26 +273,52 @@ class _FriendRequestActionState extends State<FriendRequestAction> {
 
   Future<void> _perform() async {
     if (_busy) return;
+    final generation = ++_actionGeneration;
+    final targetId = widget.otherUserId;
     setState(() => _busy = true);
     try {
       final request = _request;
-      if (request == null || request['status'] == 'declined' || request['status'] == 'cancelled') {
-        await Supabase.instance.client.rpc('request_friend', params: {'p_addressee_id': widget.otherUserId});
+      if (request == null ||
+          request['status'] == 'declined' ||
+          request['status'] == 'cancelled') {
+        await Supabase.instance.client.rpc(
+          'request_friend',
+          params: {'p_addressee_id': targetId},
+        );
       } else if (request['status'] == 'accepted') {
-        await Supabase.instance.client.rpc('remove_friend', params: {'p_other_user_id': widget.otherUserId});
+        await Supabase.instance.client.rpc(
+          'remove_friend',
+          params: {'p_other_user_id': targetId},
+        );
       } else if (request['requester_id'] == _myId) {
-        await Supabase.instance.client.rpc('cancel_friend_request', params: {'p_request_id': request['id']});
+        await Supabase.instance.client.rpc(
+          'cancel_friend_request',
+          params: {'p_request_id': request['id']},
+        );
       } else {
-        await Supabase.instance.client.rpc('accept_friend_request', params: {'p_request_id': request['id']});
+        await Supabase.instance.client.rpc(
+          'accept_friend_request',
+          params: {'p_request_id': request['id']},
+        );
       }
-      await _load();
+      if (mounted &&
+          generation == _actionGeneration &&
+          widget.otherUserId == targetId) {
+        await _load();
+      }
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'friendship_action');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppErrorService.message(error))));
+      if (mounted &&
+          generation == _actionGeneration &&
+          widget.otherUserId == targetId) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppErrorService.message(error))),
+        );
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted && generation == _actionGeneration) {
+        setState(() => _busy = false);
+      }
     }
   }
 
