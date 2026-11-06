@@ -60,6 +60,7 @@ class NexoraPushService {
 
   Future<void> registerIfAllowed() async {
     if (!supported || Supabase.instance.client.auth.currentUser == null) return;
+    _registrationSuspended = false;
     if (await status() != AuthorizationStatus.authorized) return;
     await FirebaseMessaging.instance.register();
   }
