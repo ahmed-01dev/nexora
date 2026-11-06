@@ -21,3 +21,9 @@ The build workflow copies `firebase/android/google-services.json` into the gener
 - The Firebase service-account key remains in Supabase Edge Function secrets.
 - The database-to-function shared secret remains in Supabase Vault and Edge Function secrets.
 - The function rejects unauthenticated client requests; the database webhook uses the shared secret.
+
+### Generated Android Gradle configuration
+
+The manual preview workflow generates the Android Kotlin-DSL platform using the pinned Flutter 3.47.9 template. It now explicitly declares Google Services Gradle plugin `com.google.gms.google-services` version `4.5.0` in `settings.gradle.kts` and applies it in `app/build.gradle.kts`, then verifies that the Gradle `applicationId` matches a package entry in `google-services.json`. This is required for the JSON configuration to be converted into Android resources used by default native Firebase initialization.
+
+The checked-in Firebase configuration currently matches `com.example.nexora`. Replace that placeholder-style package ID and register the corresponding Android app in Firebase before public release.
