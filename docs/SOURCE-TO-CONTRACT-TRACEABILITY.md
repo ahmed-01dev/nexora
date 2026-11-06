@@ -28,7 +28,7 @@
 | Concern | Source location | Observed operation | Evidence boundary |
 |---|---|---|---|
 | Comments | `lib/features/comments/comments_screen.dart` | `comments` and `comment_likes` operations | UI/source workflow exists; do not infer independent RLS integration coverage |
-| Friend requests | `lib/features/friends/friend_requests_screen.dart` | RPC family: `request_friend`, `accept_friend_request`, `cancel_friend_request`, `remove_friend`; reads `friendships` | Client call sites exist; server-side authorization must be verified from deployed function definitions and policies |
+| Friend requests | `lib/features/friends/friend_requests_screen.dart` | RPC family: `request_friend`, `accept_friend_request`, `decline_friend_request`, `cancel_friend_request`, `remove_friend`; reads `friendships` | Client call sites exist; server-side authorization must be verified from deployed function definitions and policies |
 | Community invites | `lib/features/communities/communities_screen.dart` | `accept_community_invite`, `create_community_invite`, `revoke_community_invites` | Client integration exists; invite expiry/use-limit enforcement must be checked in SQL |
 | Community channels | `lib/features/communities/community_channels_screen.dart` | `community_channels`, `conversations`, `conversation_members` | Channel conversation wiring exists; moderator/admin tools remain distinct |
 | Community membership | `lib/features/communities/community_members_screen.dart` | `community_members` | Member screen exists; role privilege correctness needs SQL/RLS verification |
