@@ -12,6 +12,7 @@ class NexoraPushService {
 
   bool _started = false;
   String? _lastInstallationId;
+  String? _installationOwnerUserId;
   int _registrationGeneration = 0;
   bool _registrationSuspended = false;
   StreamSubscription<String>? _registrationSubscription;
@@ -27,13 +28,18 @@ class NexoraPushService {
     final messaging = FirebaseMessaging.instance;
     _registrationSubscription = messaging.onRegistered.listen((fid) {
       _lastInstallationId = fid;
+      _installationOwnerUserId =
+          Supabase.instance.client.auth.currentUser?.id;
       saveInstallationId(fid);
     }, onError: (Object error) {
       debugPrint('NEXORA FCM registration failed: $error');
     });
     _unregistrationSubscription = messaging.onUnregistered.listen((fid) {
-      _lastInstallationId = null;
-      _deleteInstallationId(fid);
+      final ownerId = _installationOwnerUserId ??
+          Supabase.instance.client.auth.currentUser?.id;
+      if (_lastInstallationId == fid) _lastInstallationId = null;
+      _installationOwnerUserId = null;
+      _deleteInstallationId(fid, ownerId: ownerId);
     });
     await registerIfAllowed();
   }
@@ -125,6 +131,7 @@ class NexoraPushService {
     final ownerId = Supabase.instance.client.auth.currentUser?.id;
     final fid = _lastInstallationId;
     _lastInstallationId = null;
+    _installationOwnerUserId = ownerId;
     if (fid != null) {
       await _deleteInstallationId(fid, ownerId: ownerId);
     }
