@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/nexora_theme.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../core/theme/nexora_theme.dart';
 
 import '../../core/app_error.dart';
 import 'nexora_push_service.dart';
@@ -84,7 +85,6 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
     }
     finally { if (mounted) setState(() => saving = false); }
   }
-
 
   Future<void> savePush(String category, bool enabled) async {
     if (saving) return;
