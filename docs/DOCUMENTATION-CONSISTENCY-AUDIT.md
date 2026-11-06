@@ -296,3 +296,15 @@ A second read-only catalog pass extended the ERD inventory:
 ### Follow-request inbox offset correction
 
 The incoming follow-request list now advances its backend offset by rows fetched, not by the number of visible deduplicated rows. When a pending row is accepted and leaves the filtered result set, the offset is decremented so the next page does not skip the row shifted into that position. A generation guard blocks stale page responses after refresh, and accept actions are disabled during refresh to prevent stale pending rows reappearing. Source CI run `42222964161` passed analysis and tests on the implementation commit; concurrent authenticated integration testing remains NOT RUN.
+
+### Complete read-only PostgreSQL and Storage snapshots
+
+The ERD evidence set now includes:
+
+- `ERD-LIVE-COLUMNS.md`: 254 deployed columns across 39 ordinary tables (38 public, one private), including types, nullability, and defaults.
+- `ERD-LIVE-CONSTRAINTS.md`: 166 deployed constraints (39 PK, 67 FK, 9 unique, 51 check).
+- `ERD-LIVE-INDEXES.md`: all 106 deployed index definitions.
+- `ERD-LIVE-POLICIES.md`: all 112 public/private RLS policy definitions.
+- `STORAGE-SECURITY-INVENTORY.md`: the private 50 MiB `nexora-media` bucket, allowed MIME list, and all three `storage.objects` policies.
+
+These are snapshots of live metadata, not migration source. RLS is enabled but not forced on all 39 tables; no anon/PUBLIC table grants were returned. Authenticated SELECT is not granted directly on `community_invites` or `private.profile_discovery_locations`. The current app uses trusted invite workflows and private location storage. No DDL, grants, policies, bucket settings, or runtime services were changed.
