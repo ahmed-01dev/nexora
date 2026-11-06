@@ -154,6 +154,9 @@ class NexoraPushService {
     final ownerId = Supabase.instance.client.auth.currentUser?.id ??
         _installationOwnerUserId;
     final fid = _lastInstallationId;
+    // Preserve the account being cleaned until its asynchronous callback is
+    // resolved; a newer signed-in account may register the same FID meanwhile.
+    _installationOwnerUserId = ownerId;
     _lastInstallationId = null;
     if (fid != null && ownerId != null) {
       _registrationOwnership.queueUnregistration(fid, ownerId);
