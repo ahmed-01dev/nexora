@@ -232,3 +232,6 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - RPC audit follow-up: included the friendship inbox's dynamically selected `decline_friend_request(p_request_id uuid)` call. Live public wrapper is authenticated-only and delegates to a SECURITY DEFINER helper that checks `auth.uid()` and recipient ownership of the pending request.
 
 - Media-upload session-switch guard: profile and story uploads re-check the authenticated owner after Storage completes; post-media uploads re-check before each file, before Storage, and before inserting metadata. Failure cleanup runs only while the original account remains active, avoiding cleanup requests under a different user's session. If the session changes after a Storage write, orphan cleanup is still best-effort and requires a server-side cleanup path plus device testing.
+
+- Flutter CI run `42229160349` passed dependency installation, static analysis, and tests on commit `bdef062f211b70fbff6575a697aff541b15426f7`, covering the media-upload account-switch guard. The subsequent documentation-only changes did not alter application source. No APK/AAB/Web build was run.
+- FCM diagnostics now log only exception runtime types, not raw plugin/backend error strings. `test/app_error_test.dart` also asserts that shared error reporting does not emit sample email/token values.
