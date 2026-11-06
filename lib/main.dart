@@ -217,10 +217,162 @@ class _NexoraAppState extends State<NexoraApp> {
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
+
   @override
   Widget build(BuildContext context) => StreamBuilder<AuthState>(
     stream: Supabase.instance.client.auth.onAuthStateChange,
-    builder: (context, snap) => (snap.data?.session ?? Supabase.instance.client.auth.currentSession) == null ? const AuthScreen() : const MainShell(),
+    builder: (context, snap) {
+      if (snap.data?.event == AuthChangeEvent.passwordRecovery) {
+        return const PasswordRecoveryScreen();
+      }
+      final session =
+          snap.data?.session ?? Supabase.instance.client.auth.currentSession;
+      return session == null ? const AuthScreen() : const MainShell();
+    },
+  );
+}
+
+class PasswordRecoveryScreen extends StatefulWidget {
+  const PasswordRecoveryScreen({super.key});
+
+  @override
+  State<PasswordRecoveryScreen> createState() => _PasswordRecoveryScreenState();
+}
+
+class _PasswordRecoveryScreenState extends State<PasswordRecoveryScreen> {
+  final _form = GlobalKey<FormState>();
+  final _password = TextEditingController();
+  final _confirm = TextEditingController();
+  bool _busy = false;
+  bool _visible = false;
+  String? _error;
+  String? _notice;
+
+  @override
+  void dispose() {
+    _password.dispose();
+    _confirm.dispose();
+    super.dispose();
+  }
+
+  Future<void> _savePassword() async {
+    if (!_form.currentState!.validate()) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+      _notice = null;
+    });
+    try {
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(password: _password.text),
+      );
+      if (mounted) {
+        setState(() => _notice = 'تم تحديث كلمة المرور بنجاح.');
+      }
+    } on AuthException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (e, s) {
+      AppErrorService.report(e, s, source: 'email_password_recovery');
+      if (mounted) setState(() => _error = AppErrorService.message(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460),
+            child: Form(
+              key: _form,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Center(child: _Brand(size: 76)),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'كلمة مرور جديدة',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'اختار كلمة مرور قوية لحساب NEXORA.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: NexoraColors.textMuted),
+                  ),
+                  const SizedBox(height: 26),
+                  TextFormField(
+                    controller: _password,
+                    enabled: !_busy && _notice == null,
+                    obscureText: !_visible,
+                    textDirection: TextDirection.ltr,
+                    decoration: InputDecoration(
+                      labelText: 'كلمة المرور الجديدة',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        onPressed: () => setState(() => _visible = !_visible),
+                        icon: Icon(
+                          _visible ? Icons.visibility_off : Icons.visibility,
+                        ),
+                      ),
+                    ),
+                    validator: (value) =>
+                        NexoraEmailAuthValidation.password(
+                      value,
+                      registering: true,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _confirm,
+                    enabled: !_busy && _notice == null,
+                    obscureText: true,
+                    textDirection: TextDirection.ltr,
+                    decoration: const InputDecoration(
+                      labelText: 'تأكيد كلمة المرور',
+                      prefixIcon: Icon(Icons.lock_reset_outlined),
+                    ),
+                    validator: (value) => value != _password.text
+                        ? 'كلمتا المرور غير متطابقتين'
+                        : null,
+                  ),
+                  if (_error != null) _Notice(text: _error!, error: true),
+                  if (_notice != null) _Notice(text: _notice!, error: false),
+                  const SizedBox(height: 20),
+                  FilledButton(
+                    onPressed: _busy || _notice != null ? null : _savePassword,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(54),
+                    ),
+                    child: _busy
+                        ? const SizedBox.square(
+                            dimension: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('حفظ كلمة المرور الجديدة'),
+                  ),
+                  if (_notice != null)
+                    OutlinedButton(
+                      onPressed: () => Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const MainShell(),
+                        ),
+                        (_) => false,
+                      ),
+                      child: const Text('متابعة إلى NEXORA'),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
   );
 }
 
