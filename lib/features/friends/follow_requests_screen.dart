@@ -180,10 +180,11 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'follow_request_accept');
       if (!mounted) return;
-      setState(() => _accepting.remove(followerId));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppErrorService.message(error))),
       );
+    } finally {
+      if (mounted) setState(() => _accepting.remove(followerId));
     }
   }
 
