@@ -49,6 +49,7 @@ Severity:
 | SOC-016 | Accept/decline/cancel a friendship request repeatedly | Only one action per request ID is in flight; controls show a busy state; success reloads both request directions and failure leaves the row actionable | P1 |
 | SOC-012 | Open accepted followers/following lists | Correct direction and accepted-only rows; no blocked relationship leaks; hidden private profile details and internal user-ID fragments remain hidden; deterministic 30-row pagination, load-more, and refresh | P1 |
 | SOC-013 | Measure follower/following page performance | Capture representative EXPLAIN ANALYZE and latency at realistic relationship counts; verify whether the explicit created_at/user-ID sort needs a reconciled composite index before proposing DDL | P1 |
+| SOC-017 | Load another followers/following page while new relationships change the ordered result set | Duplicate relationship IDs are not rendered twice; backend offset advances by rows fetched, not rows newly rendered | P2 |
 
 ## 4. Content and media tests
 | ID | Scenario | Expected result | Severity |
