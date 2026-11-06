@@ -319,3 +319,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Moderation report queue reads, target previews, assignment, and dismissal are now bound to the reviewer ID that loaded the queue; stale data/actions are suppressed after reviewer account changes. Moderator-role/RLS integration tests remain pending.
 
 - Latest completed Flutter CI run `42256045554` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on source commit `91a12b822e2a547ec44320c6f7713d9c98dea257`. This run includes the block/privacy/friend/follow, nearby, notification preferences, stories, communities, and moderation session-continuity changes. No APK/AAB/Web build was run.
+
+- Block confirmation and report submission now capture the account that opened each dialog; the action is rejected if the authenticated user changes before confirmation/submission.
