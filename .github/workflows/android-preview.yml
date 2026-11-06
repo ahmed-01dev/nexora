@@ -117,7 +117,7 @@ jobs:
               anchor = "    <application"
               if anchor not in source:
                   raise SystemExit("Could not find the Android application manifest element.")
-              source = source.replace(anchor, "\\n".join(missing) + "\\n" + anchor, 1)
+              source = source.replace(anchor, "\n".join(missing) + "\n" + anchor, 1)
               manifest.write_text(source)
           print("Location and Android 13+ notification permissions are declared.")
           PY
