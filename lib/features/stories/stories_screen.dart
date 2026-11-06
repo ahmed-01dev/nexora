@@ -167,7 +167,11 @@ class _StoryComposerScreenState extends State<StoryComposerScreen> {
     }
     setState(() { _busy = true; _error = null; });
     final client = Supabase.instance.client;
-    final userId = client.auth.currentUser!.id;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) {
+      setState(() => _error = 'انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
+      return;
+    }
     String? path;
     try {
       if (_file != null) {
@@ -175,6 +179,9 @@ class _StoryComposerScreenState extends State<StoryComposerScreen> {
       }
       final isVideo = _file?.name.toLowerCase().endsWith('.mp4') == true ||
           _file?.name.toLowerCase().endsWith('.webm') == true;
+      if (client.auth.currentUser?.id != userId) {
+        throw StateError('تغير الحساب أثناء رفع القصة. سجّل الدخول مرة تانية.');
+      }
       await client.from('stories').insert({
         'user_id': userId,
         'media_path': path,
@@ -277,10 +284,12 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> {
   }
 
   Future<void> _markViewed() async {
+    final viewerId = Supabase.instance.client.auth.currentUser?.id;
+    if (viewerId == null) return;
     try {
       await Supabase.instance.client.from('story_views').insert({
         'story_id': widget.story['id'],
-        'viewer_id': Supabase.instance.client.auth.currentUser!.id,
+        'viewer_id': viewerId,
       });
     } catch (error, stack) {
       if (!error.toString().contains('23505')) {
@@ -299,6 +308,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> {
   Widget build(BuildContext context) {
     final text = (widget.story['text_content'] ?? '').toString();
     final url = widget.story['signed_url'] as String?;
+    final viewerId = Supabase.instance.client.auth.currentUser?.id;
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -306,8 +316,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> {
         foregroundColor: Colors.white,
         title: const Text('NEXORA Story'),
         actions: [
-          if (widget.story['user_id'] !=
-              Supabase.instance.client.auth.currentUser!.id)
+          if (viewerId != null && widget.story['user_id'] != viewerId)
             IconButton(
               tooltip: 'حظر صاحب القصة',
               onPressed: () async {
@@ -333,8 +342,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> {
               },
               icon: const Icon(Icons.block_outlined),
             ),
-          if (widget.story['user_id'] !=
-              Supabase.instance.client.auth.currentUser!.id)
+          if (viewerId != null && widget.story['user_id'] != viewerId)
             IconButton(
               tooltip: 'الإبلاغ عن القصة',
               onPressed: () async {
@@ -359,9 +367,25 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> {
           if (widget.story['story_type'] == 'video' && _video != null)
             FutureBuilder<void>(
               future: _videoReady,
-              builder: (context, snapshot) => snapshot.connectionState == ConnectionState.done
-                  ? Center(child: AspectRatio(aspectRatio: _video!.value.aspectRatio, child: VideoPlayer(_video!)))
-                  : const Center(child: CircularProgressIndicator()),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return const Center(
+                    child: Text(
+                      'تعذر تشغيل الفيديو.',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  );
+                }
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                return Center(
+                  child: AspectRatio(
+                    aspectRatio: _video!.value.aspectRatio,
+                    child: VideoPlayer(_video!),
+                  ),
+                );
+              },
             )
           else if (url != null)
             Center(child: Image.network(url, fit: BoxFit.contain))
