@@ -121,3 +121,7 @@ The Android push listener no longer overwrites the captured installation owner w
 ### FCM delayed unregister across account switching
 
 Pending unregister operations now retain their account owner in a per-FID FIFO queue. A delayed `onUnregistered` callback consumes the queued owner rather than trusting the currently signed-in account, and it clears the in-memory tracked registration only when both FID and owner match. This prevents a prior account's callback from clearing a newly registered account's state when Firebase reuses the same FID. The pure ownership rules are unit-tested; Firebase event ordering and actual row cleanup remain device-test requirements.
+
+### Flutter framework error logging
+
+The global `FlutterError.onError` handler must not call `FlutterError.presentError`, because that default presenter writes the raw exception message to debug output. NEXORA now routes framework exceptions through `AppErrorService.report`, which logs only the exception runtime type and stack trace. Unit coverage asserts that sample email/token-like values are not emitted. Re-check this boundary if crash telemetry or a third-party reporter is introduced.
