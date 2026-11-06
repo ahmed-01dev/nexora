@@ -66,7 +66,7 @@ class NexoraPushService {
   }
 
   Future<void> saveInstallationId(String fid) async {
-    if (!supported || fid.isEmpty) return;
+    if (!supported || fid.isEmpty || _registrationSuspended) return;
     final client = Supabase.instance.client;
     final userId = client.auth.currentUser?.id;
     if (userId == null) return;
