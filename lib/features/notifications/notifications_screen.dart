@@ -37,7 +37,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (mounted && requestGeneration == _generation) {
       setState(() {
         _hasMore = rows.length == _pageSize;
-        _nextOffset = offset + rows.length;
+        _nextOffset = (offset + rows.length).toInt();
       });
     }
     return List<Map<String, dynamic>>.from(rows);
