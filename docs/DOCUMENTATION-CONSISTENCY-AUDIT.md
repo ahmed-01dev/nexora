@@ -285,3 +285,10 @@ A second read-only catalog pass extended the ERD inventory:
 - Every public table has at least one policy. The private discovery-location table has one policy. `community_invites` has one policy but no direct authenticated SELECT grant; invitation reads/actions must use the existing trusted server-side workflow.
 - Because RLS is enabled but not forced, owner/BYPASSRLS behavior remains a separate trust boundary. These findings do not validate every policy expression or every SECURITY DEFINER call path.
 - Full structural totals and exact public/private table names are recorded in `docs/ERD.md`. No DDL, grant, or policy changes were made.
+
+### Follower list paging hardening
+
+- The accepted follower/following UI now loads 30 rows per page and has explicit load-more and pull-to-refresh behavior.
+- A request-generation guard prevents a response from an older direction or pre-refresh request from being appended to the current list.
+- Source CI run `42222087355` passed analysis and tests on the implementation commit. No device-level scrolling, large-account load, or multi-user RLS test has been performed.
+- Both directional query plans use the existing composite filter index and then sort by `created_at DESC` plus the opposite user ID. This warrants representative performance testing; no index DDL was applied.
