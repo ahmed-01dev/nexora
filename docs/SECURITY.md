@@ -147,3 +147,7 @@ The member list stores the viewer ID associated with its successful load. If the
 ### Conversation-list viewer binding
 
 The conversation list is associated with the authenticated viewer ID that loaded its previews. If the current viewer changes, old previews are hidden and stale rows cannot open a chat. The new-conversation flow also verifies that the original viewer remains active after the picker and after conversation creation. This protects against stale UI/session races; conversation membership RLS remains authoritative.
+
+### Block, privacy, and relationship-request session binding
+
+Block creation rechecks the authenticated actor after its existing-block lookup and after insertion. The blocked-account screen associates its rows with the viewer who loaded them and refuses stale unblocks. Privacy settings reads verify the viewer between profile/settings queries and bind the save RPC to the viewer whose settings were loaded. Friend and follow request lists/actions similarly reject stale viewer state. These are client-side session-race protections only; database RLS and RPC authorization remain authoritative. Real-device multi-account tests and partial-write reconciliation remain pending.
