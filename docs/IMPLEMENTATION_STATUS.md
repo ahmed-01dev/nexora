@@ -277,3 +277,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Message-image upload now checks the original session before message/attachment writes and after metadata insertion; rollback writes are skipped if a different account is active. Signed URL lookup rechecks viewer identity after URL creation, and attachment deletion rechecks before Storage removal. A completed send during an account switch can still have an ambiguous client outcome; device testing and idempotent send/reconciliation remain pending.
 
 - Feed pagination now tracks fetched backend offsets separately from visible posts and invalidates in-flight page responses whenever the feed mode changes or a refresh starts. This prevents old-mode rows from contaminating the new feed and avoids duplicate-page loops after concurrent insertions.
+
+- Community discovery pagination now uses a backend-row offset, deduplicates visible community IDs, and discards stale page/membership responses after a refresh. Membership actions also stop safely when the authenticated session is absent.
