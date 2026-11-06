@@ -205,6 +205,7 @@ class _FriendRequestActionState extends State<FriendRequestAction> {
   bool _loading = true;
   bool _busy = false;
   String? _myId;
+  int _loadGeneration = 0;
 
   @override
   void initState() {
@@ -213,27 +214,48 @@ class _FriendRequestActionState extends State<FriendRequestAction> {
     _load();
   }
 
+  @override
+  void didUpdateWidget(covariant FriendRequestAction oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.otherUserId != widget.otherUserId) {
+      _request = null;
+      _load();
+    }
+  }
+
   Future<void> _load() async {
+    final generation = ++_loadGeneration;
+    final targetId = widget.otherUserId;
+    final myId = _myId;
+    if (myId == null) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+    if (mounted) setState(() => _loading = true);
     try {
       final client = Supabase.instance.client;
       final outgoing = await client
           .from('friendships')
           .select('id,requester_id,addressee_id,status')
-          .eq('requester_id', _myId!)
-          .eq('addressee_id', widget.otherUserId)
+          .eq('requester_id', myId)
+          .eq('addressee_id', targetId)
           .maybeSingle();
       final incoming = outgoing == null
           ? await client
               .from('friendships')
               .select('id,requester_id,addressee_id,status')
-              .eq('requester_id', widget.otherUserId)
-              .eq('addressee_id', _myId!)
+              .eq('requester_id', targetId)
+              .eq('addressee_id', myId)
               .maybeSingle()
           : null;
-      if (mounted) setState(() { _request = outgoing ?? incoming; _loading = false; });
+      if (mounted && generation == _loadGeneration) {
+        setState(() { _request = outgoing ?? incoming; _loading = false; });
+      }
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'load_friendship');
-      if (mounted) setState(() => _loading = false);
+      if (mounted && generation == _loadGeneration) {
+        setState(() => _loading = false);
+      }
     }
   }
 
