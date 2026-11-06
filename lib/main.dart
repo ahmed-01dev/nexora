@@ -46,7 +46,16 @@ const _key = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: 'sb_publi
 
 Future<void> _signOutNexora() async {
   await NexoraPushService.instance.unregisterCurrentDevice();
-  await Supabase.instance.client.auth.signOut();
+  try {
+    await Supabase.instance.client.auth.signOut();
+  } catch (_) {
+    // If Supabase sign-out fails, restore push registration for the still
+    // authenticated account rather than leaving notifications suspended.
+    await NexoraPushService.instance.registerIfAllowed(
+      resumeAfterSignIn: true,
+    );
+    rethrow;
+  }
 }
 
 Future<void> main() async {
