@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/nexora_theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
@@ -162,7 +163,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                         const SizedBox(height: 10),
                         const Text(
                           'الاختيار ده بيتطبق على إنشاء المحادثات الجديدة. الحظر المتبادل يمنع بدء محادثة في كل الحالات.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey, height: 1.5),
+                          style: TextStyle(fontSize: 12, color: NexoraColors.textMuted, height: 1.5),
                         ),
                       ],
                     ),
@@ -170,7 +171,7 @@ class _PrivacySettingsScreenState extends State<PrivacySettingsScreen> {
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                  Text(_error!, style: const TextStyle(color: NexoraColors.danger)),
                 ],
                 const SizedBox(height: 20),
                 FilledButton(
