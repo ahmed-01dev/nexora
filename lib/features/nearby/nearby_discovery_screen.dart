@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../../core/theme/nexora_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -216,7 +217,7 @@ class _NearbyDiscoveryScreenState extends State<NearbyDiscoveryScreen> {
             ),
             if (_error != null) ...[
               const SizedBox(height: 12),
-              Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+              Text(_error!, style: const TextStyle(color: NexoraColors.danger)),
               TextButton(onPressed: _loadStatus, child: const Text('إعادة المحاولة')),
             ],
             if (_enabled && !_busy) ...[
