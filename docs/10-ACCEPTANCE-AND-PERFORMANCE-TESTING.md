@@ -191,3 +191,7 @@ Do not release if any P0 authorization/privacy defect remains; a core flow silen
 
 ### Follow-request inbox implementation note
 The client inbox currently supports accepting incoming pending follow requests only. Recipient-side decline is not part of the live backend contract; do not test or claim a decline action until a trusted, authorized server operation is added. SOC-009 through SOC-011 are acceptance criteria and remain NOT RUN until authenticated multi-user integration tests execute.
+
+### Client error privacy unit coverage
+
+`test/app_error_test.dart` verifies safe Arabic mappings for network, authentication, RLS, and unknown failures. It does not test log sinks, production telemetry, or end-to-end recovery.
