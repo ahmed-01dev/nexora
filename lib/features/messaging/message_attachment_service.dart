@@ -49,11 +49,31 @@ class MessageAttachmentService {
   }
 
   Future<String?> signedImageUrl(String messageId) async {
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-    final row = await Supabase.instance.client.from('message_attachments').select('storage_path').eq('message_id', messageId).inFilter('mime_type', ['image/jpeg', 'image/png', 'image/webp']).maybeSingle();
-    final path = row?['storage_path'] as String?;
-    if (path == null) return null;
-    return Supabase.instance.client.storage.from('nexora-media').createSignedUrl(path, 3600);
+    final client = Supabase.instance.client;
+    final viewerId = client.auth.currentUser?.id;
+    if (viewerId == null) return null;
+
+    // The realtime message row can arrive before its attachment metadata.
+    // Retry briefly instead of relying on one arbitrary fixed delay.
+    for (var attempt = 0; attempt < 4; attempt++) {
+      if (client.auth.currentUser?.id != viewerId) return null;
+      if (attempt > 0) {
+        await Future<void>.delayed(
+          Duration(milliseconds: 200 * (1 << (attempt - 1))),
+        );
+      }
+      final row = await client
+          .from('message_attachments')
+          .select('storage_path')
+          .eq('message_id', messageId)
+          .inFilter('mime_type', ['image/jpeg', 'image/png', 'image/webp'])
+          .maybeSingle();
+      final path = row?['storage_path'] as String?;
+      if (path == null) continue;
+      if (client.auth.currentUser?.id != viewerId) return null;
+      return client.storage.from('nexora-media').createSignedUrl(path, 3600);
+    }
+    return null;
   }
 
   Future<void> deleteOwnAttachment(String messageId) async {
