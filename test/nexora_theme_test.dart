@@ -32,6 +32,17 @@ void main() {
     expect(NexoraMotion.emphasized, const Duration(milliseconds: 320));
   });
 
+  test('brand gradients preserve the Aurora color order', () {
+    expect(
+      NexoraColors.brandGradient,
+      [NexoraColors.violet, NexoraColors.pink, NexoraColors.amber],
+    );
+    expect(
+      NexoraColors.coolGradient,
+      [NexoraColors.violet, NexoraColors.cyan],
+    );
+  });
+
   group('normalizeNexoraTheme', () {
     test('keeps all supported theme values', () {
       for (final value in ['amoled', 'light', 'pink_amoled', 'custom']) {
