@@ -725,6 +725,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Map<String, dynamic>> _posts = [];
   _FeedMode _mode = _FeedMode.latest;
   bool _loading = true, _loadingMore = false, _hasMore = true;
+  int _nextOffset = 0;
+  int _requestGeneration = 0;
   String? _error;
 
   @override
@@ -747,43 +749,59 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadFirstPage() async {
+    final generation = ++_requestGeneration;
     setState(() {
       _loading = true;
       _loadingMore = false;
       _hasMore = true;
+      _nextOffset = 0;
       _error = null;
       _posts.clear();
     });
     try {
       final rows = await _fetchPage(0);
-      if (!mounted) return;
+      if (!mounted || generation != _requestGeneration) return;
       setState(() {
         _posts.addAll(rows);
+        _nextOffset = rows.length;
         _hasMore = rows.length == _pageSize;
         _loading = false;
       });
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'feed_initial');
-      if (mounted) setState(() { _error = AppErrorService.message(error); _loading = false; });
+      if (mounted && generation == _requestGeneration) {
+        setState(() {
+          _error = AppErrorService.message(error);
+          _loading = false;
+        });
+      }
     }
   }
 
   Future<void> _loadMore() async {
     if (_loading || _loadingMore || !_hasMore || _error != null) return;
+    final generation = _requestGeneration;
     setState(() => _loadingMore = true);
     try {
-      final rows = await _fetchPage(_posts.length);
-      if (!mounted) return;
+      final rows = await _fetchPage(_nextOffset);
+      if (!mounted || generation != _requestGeneration) return;
       final knownIds = _posts.map((p) => p['id']).toSet();
       final uniqueRows = rows.where((p) => !knownIds.contains(p['id']));
       setState(() {
         _posts.addAll(uniqueRows);
+        // Advance by backend rows fetched, not only newly visible rows.
+        _nextOffset += rows.length;
         _hasMore = rows.length == _pageSize;
         _loadingMore = false;
       });
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'feed_more');
-      if (mounted) setState(() { _error = AppErrorService.message(error); _loadingMore = false; });
+      if (mounted && generation == _requestGeneration) {
+        setState(() {
+          _error = AppErrorService.message(error);
+          _loadingMore = false;
+        });
+      }
     }
   }
 
