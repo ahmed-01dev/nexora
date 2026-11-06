@@ -55,6 +55,24 @@ class _NearbyDiscoveryScreenState extends State<NearbyDiscoveryScreen> {
     }
   }
 
+  String _nearbyErrorMessage(Object error) {
+    final detail = error.toString();
+    if (detail.contains('فعّل خدمة الموقع')) {
+      return 'خدمة الموقع مقفولة. فعّلها من إعدادات الجهاز وحاول تاني.';
+    }
+    if (detail.contains('لازم تسمح بإذن الموقع')) {
+      return 'لازم تسمح بإذن الموقع أثناء استخدام التطبيق لتشغيل اكتشاف الأشخاص القريبين.';
+    }
+    if (detail.contains('إذن الموقع مرفوض نهائيًا')) {
+      return 'إذن الموقع مرفوض نهائيًا. افتح إعدادات التطبيق واسمح بالموقع، ثم ارجع وحاول تاني.';
+    }
+    if (detail.contains('Location service') ||
+        detail.contains('location permissions')) {
+      return 'تعذر الوصول للموقع. راجع خدمة الموقع والأذونات وحاول تاني.';
+    }
+    return AppErrorService.message(error);
+  }
+
   Future<void> _setEnabled(bool value) async {
     if (_busy) return;
     setState(() { _busy = true; _error = null; });
@@ -97,7 +115,7 @@ class _NearbyDiscoveryScreenState extends State<NearbyDiscoveryScreen> {
       await _loadPeople();
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'nearby_toggle');
-      if (mounted) setState(() => _error = AppErrorService.message(error));
+      if (mounted) setState(() => _error = _nearbyErrorMessage(error));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
