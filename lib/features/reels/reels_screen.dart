@@ -189,10 +189,19 @@ class _ReelPlayerState extends State<_ReelPlayer> {
   void didUpdateWidget(covariant _ReelPlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!_ready || oldWidget.active == widget.active) return;
-    if (widget.active) {
-      _controller.play();
-    } else {
-      _controller.pause();
+    _changeActiveState();
+  }
+
+  Future<void> _changeActiveState() async {
+    try {
+      if (widget.active) {
+        await _controller.play();
+      } else {
+        await _controller.pause();
+      }
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'reel_active_state');
+      if (mounted) setState(() => _error = error);
     }
   }
 
@@ -202,17 +211,31 @@ class _ReelPlayerState extends State<_ReelPlayer> {
     super.dispose();
   }
 
-  void _togglePlayback() {
-    if (!_ready) return;
-    setState(() {
-      _controller.value.isPlaying ? _controller.pause() : _controller.play();
-    });
+  Future<void> _togglePlayback() async {
+    if (!_ready || _error != null) return;
+    try {
+      if (_controller.value.isPlaying) {
+        await _controller.pause();
+      } else {
+        await _controller.play();
+      }
+      if (mounted) setState(() {});
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'reel_toggle_playback');
+      if (mounted) setState(() => _error = error);
+    }
   }
 
   Future<void> _toggleMute() async {
-    if (!_ready) return;
-    setState(() => _muted = !_muted);
-    await _controller.setVolume(_muted ? 0 : 1);
+    if (!_ready || _error != null) return;
+    final nextMuted = !_muted;
+    try {
+      await _controller.setVolume(nextMuted ? 0 : 1);
+      if (mounted) setState(() => _muted = nextMuted);
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'reel_toggle_mute');
+      if (mounted) setState(() => _error = error);
+    }
   }
 
   @override
@@ -238,11 +261,13 @@ class _ReelPlayerState extends State<_ReelPlayer> {
                 ),
               ),
             )
-          else
+          else if (_error == null)
             const ColoredBox(
               color: Color(0xFF080808),
               child: Center(child: CircularProgressIndicator()),
-            ),
+            )
+          else
+            const ColoredBox(color: Color(0xFF080808)),
           if (_error != null)
             const Center(child: Text('الفيديو غير متاح حاليًا', style: TextStyle(color: Colors.white))),
           if (_ready && !_controller.value.isPlaying)
