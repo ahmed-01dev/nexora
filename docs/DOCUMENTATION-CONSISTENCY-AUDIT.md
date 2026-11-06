@@ -308,3 +308,7 @@ The ERD evidence set now includes:
 - `STORAGE-SECURITY-INVENTORY.md`: the private 50 MiB `nexora-media` bucket, allowed MIME list, and all three `storage.objects` policies.
 
 These are snapshots of live metadata, not migration source. RLS is enabled but not forced on all 39 tables; no anon/PUBLIC table grants were returned. Authenticated SELECT is not granted directly on `community_invites` or `private.profile_discovery_locations`. The current app uses trusted invite workflows and private location storage. No DDL, grants, policies, bucket settings, or runtime services were changed.
+
+### PostgREST exposed-schema setting remains unverified
+
+The database-side `current_setting('pgrst.db_schemas', true)` inspection returned NULL. This does not establish which schemas are exposed by the hosted Data API. Confirm the project's API > Exposed schemas setting directly before release and ensure `private` is not exposed. The `private` schema currently has no direct authenticated table SELECT grant on its discovery-location table, but function/schema exposure and function EXECUTE grants must be evaluated together. No API exposure setting was changed.
