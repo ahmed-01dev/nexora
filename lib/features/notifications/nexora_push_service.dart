@@ -12,6 +12,7 @@ class NexoraPushService {
 
   bool _started = false;
   String? _lastInstallationId;
+  int _registrationGeneration = 0;
   StreamSubscription<String>? _registrationSubscription;
   StreamSubscription<String>? _unregistrationSubscription;
 
@@ -67,6 +68,7 @@ class NexoraPushService {
     final client = Supabase.instance.client;
     final userId = client.auth.currentUser?.id;
     if (userId == null) return;
+    final generation = _registrationGeneration;
     try {
       await client.from('user_devices').upsert({
         'user_id': userId,
@@ -75,14 +77,24 @@ class NexoraPushService {
         'device_label': 'Android device',
         'last_seen_at': DateTime.now().toUtc().toIso8601String(),
       }, onConflict: 'user_id,push_token');
+
+      // A registration request can finish after sign-out/account switching.
+      // Reconcile the old owner's row after the upsert to avoid stale devices.
+      if (generation != _registrationGeneration ||
+          client.auth.currentUser?.id != userId) {
+        await _deleteInstallationId(fid, ownerId: userId);
+      }
     } catch (error) {
       debugPrint('NEXORA FCM installation registration failed: $error');
     }
   }
 
-  Future<void> _deleteInstallationId(String fid) async {
+  Future<void> _deleteInstallationId(
+    String fid, {
+    String? ownerId,
+  }) async {
     final client = Supabase.instance.client;
-    final userId = client.auth.currentUser?.id;
+    final userId = ownerId ?? client.auth.currentUser?.id;
     if (userId == null || fid.isEmpty) return;
     try {
       await client.from('user_devices').delete()
@@ -96,8 +108,14 @@ class NexoraPushService {
   /// Remove this account's installation before signing out.
   Future<void> unregisterCurrentDevice() async {
     if (!supported) return;
+    // Invalidate registrations already in flight before deleting the row.
+    _registrationGeneration++;
+    final ownerId = Supabase.instance.client.auth.currentUser?.id;
     final fid = _lastInstallationId;
-    if (fid != null) await _deleteInstallationId(fid);
+    _lastInstallationId = null;
+    if (fid != null) {
+      await _deleteInstallationId(fid, ownerId: ownerId);
+    }
     try {
       await FirebaseMessaging.instance.unregister();
     } catch (error) {
