@@ -201,3 +201,15 @@ The existing `android-preview.yml` had both `workflow_dispatch` and an automatic
 
 README now describes the actual CI and debug-APK workflows and explicitly notes that no AAB/Web release workflow was found in the inspected directory. Re-check the repository workflow inventory before any future release claims.
 The work branch also sets `permissions: contents: read` on `flutter-ci.yml`, limiting the workflow token to repository read access. This is a static configuration change; no CI run was manually dispatched.
+
+## Correction — live Supabase verification supersedes the preliminary media-regression finding (2026-11-06)
+
+A read-only catalog query against the connected NEXORA Supabase project confirmed that the **live** `private.can_read_media_path(text)` definition contains the friend-only post, private-account story, soft-deleted-post, deleted-message and block checks. The live helper is owned by `postgres`, uses `SECURITY DEFINER` with an empty `search_path`, and its ACL lists `postgres` and `authenticated`.
+
+Therefore the earlier addendum describing a current live media authorization regression is superseded: the discrepancy is in the local GitHub migration source/history, not a demonstrated live vulnerability. The temporary manually drafted migration `20261106003000_restore_media_visibility_invariants.sql` was removed from the work branch; no new migration should be created until the proper local Supabase CLI migration workflow and source-history reconciliation are available.
+
+The same read-only catalog query confirmed the live `private.is_blocked_between(a uuid, b uuid)` helper exists, is owned by `postgres`, is `SECURITY DEFINER` with an empty `search_path`, and checks blocks in both directions. Its original local migration source remains unlocated.
+
+A direct comparison of current remote history and `main` migration files now gives: 43 remote records, 42 local files, 21 exact version/name matches, 14 same-name/different-version records, 8 remote-only names and 7 local-only names. The detailed mapping is in `docs/SQL-CONTRACT-TRACEABILITY.md`. This replaces the earlier count-only description.
+
+These were read-only checks. No database mutation, migration, secret change, provider activation, CI dispatch, or APK/AAB/Web build was performed.
