@@ -30,6 +30,6 @@ class FcmRegistrationOwnership {
     required String? callbackOwnerId,
   }) {
     return trackedFid == callbackFid &&
-        (trackedOwnerId == null || trackedOwnerId == callbackOwnerId);
+        trackedOwnerId == callbackOwnerId;
   }
 }
