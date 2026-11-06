@@ -221,3 +221,6 @@ Read-only Supabase advisors returned:
 - **Performance info:** 43 indexes were reported as unused at the advisor observation time. This is not an instruction to drop them: the project is early/low-traffic, and several indexes protect expected future query patterns. Measure query plans and workload after realistic traffic before considering any index removal. [Unused-index guidance](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
 
 No advisor remediation or database mutation was executed.
+### Additional private-schema exposure check
+
+The live `private.is_blocked_between(a uuid, b uuid)` ACL grants `authenticated` EXECUTE, and the local foundation migration grants `authenticated` USAGE on schema `private`. This is required by current RLS expressions, but if `private` is exposed through the Supabase Data API, the helper may be callable directly with arbitrary user IDs and reveal pairwise block status. A read-only `current_setting('pgrst.db_schemas', true)` query returned NULL and did not establish the configured exposed-schema list. Verify the Data API exposed schemas in project settings and ensure `private` is excluded. Do not revoke EXECUTE blindly because policies depend on it.
