@@ -265,3 +265,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Reels now sign private video URLs in bounded batches of eight and skip only media items whose URL signing fails, rather than failing the entire feed or making 40 sequential Storage calls. Reel refresh catches failures while leaving the FutureBuilder responsible for its visible error state. Stories use the same bounded URL-signing and resolved-refresh pattern.
 
 - Messaging/story refresh hardening: failed refresh futures are now contained and reported while FutureBuilder owns the visible error state; empty messages and stories lists support pull-to-refresh. Acceptance case APP-022 added. Flutter CI validation for these latest refresh changes is pending.
+
+- Report submission re-checks the authenticated user after the insert completes. If the session changes while the request is in flight, the dialog does not report success in the new account and warns the user to reconcile before retrying, avoiding blind duplicate submissions. Server-side RLS remains authoritative.
