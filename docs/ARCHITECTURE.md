@@ -51,4 +51,18 @@ flowchart TB
 7. Media processing, push delivery, WebRTC TURN, and admin privilege assignment require trusted infrastructure and credentials; the UI must not fake them.
 
 ## Current implementation boundary
-The Flutter app currently has email/password auth, basic profiles, text posts, basic follows, and a simple feed. The database foundation was extended with friendship, messaging, notification, story, community, reporting, call-signaling, and private preference tables. Those tables are not equivalent to completed client features or production integrations.
+
+The repository is beyond a text-post-only prototype, but it is not production complete. The dated [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) is the feature-level source of truth and documents partial workflows for profiles/private media, posts/feed/comments, follows/friendships, messaging, stories, communities, notifications, safety/moderation, nearby discovery and themes. Read each feature's status notes before relying on it.
+
+Important distinctions:
+- Phone-first OTP UI exists, but SMS provider delivery, cost and real-device verification are not production-verified; email/password is an alternative.
+- Text-only post creation and public-feed querying are documented as implemented; the wider post/media experience remains Partial.
+- Messaging is not E2EE; message bodies remain server-readable.
+- Call-session records are signaling foundations, not voice/video calls. WebRTC, STUN/TURN and reliable incoming-call delivery remain pending.
+- FCM code and a deployed Edge Function/webhook are documented, but real-device delivery depends on secrets and a registered device.
+- Private Storage and client upload UI do not imply server-side malware scanning, transcoding, thumbnails, resumable uploads or CDN delivery.
+- Database foundations do not imply complete production workflows or a finished admin console.
+
+The module boundaries above are target architecture. The current codebase may not yet be split into those modules; do not claim a module exists merely because it is listed.
+
+Source CI success does not establish real-device, provider, RLS integration, store-signing or production readiness. APK/AAB/Web packaging remains paused until source/code/file completion, review and explicit build approval.
