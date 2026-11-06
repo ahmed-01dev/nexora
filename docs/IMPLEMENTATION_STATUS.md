@@ -301,3 +301,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Conversation previews now remember which authenticated viewer loaded them. If the active account changes, the previous account's conversation titles/peers are hidden until a fresh load; stale taps cannot navigate into the prior account's chat. Conversation creation is bound to the same captured session across the picker and RPC. Device-level account-switch tests remain pending.
 
 - Flutter CI run `42233234987` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on commit `2708e0fc59f58682f9a212eb3268b21c9c26c23e`. This includes the additional conversation-list and community-member viewer-session guards. No APK/AAB/Web build was run.
+
+- Latest source-equivalent CI confirmation: run `42233441770` passed dependency installation, Flutter analysis, and all tests on commit `47129886e1010dab3ae614b86a7f3b7c32637a33`. A tree comparison confirms all 45 `lib/` and `test/` files are byte-identical between that passing commit and the current documentation head; subsequent changes are documentation-only. No APK/AAB/Web build was run.
