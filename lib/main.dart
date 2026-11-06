@@ -82,7 +82,7 @@ Future<void> main() async {
       await NexoraPushService.instance.initialize();
     } catch (e, s) {
       AppErrorService.report(e, s, source: 'startup');
-      startupError = e.toString();
+      startupError = AppErrorService.message(e);
     }
   }
   runApp(NexoraApp(ready: ready, startupError: startupError));
