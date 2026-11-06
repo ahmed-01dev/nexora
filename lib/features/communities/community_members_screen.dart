@@ -118,7 +118,7 @@ class _CommunityMembersScreenState extends State<CommunityMembersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUserId = Supabase.instance.client.auth.currentUser!.id;
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
     return Scaffold(
       appBar: AppBar(
         title: Text('أعضاء ${widget.communityName}'),
