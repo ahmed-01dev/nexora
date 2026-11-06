@@ -1331,7 +1331,17 @@ class _FriendsScreenState extends State<FriendsScreen> {
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (_, i) {
                       final profile = rows[i]['profiles'];
-                      if (profile is! Map) return const SizedBox.shrink();
+                      if (profile is! Map) {
+                        final hiddenId = (rows[i][_showFollowers ? 'follower_id' : 'following_id'] ?? '').toString();
+                        final shortId = hiddenId.length > 6 ? hiddenId.substring(0, 6) : hiddenId;
+                        return Card(
+                          child: ListTile(
+                            leading: const CircleAvatar(child: Icon(Icons.lock_outline)),
+                            title: const Text('حساب خاص'),
+                            subtitle: Text('الملف الشخصي غير متاح · $shortId'),
+                          ),
+                        );
+                      }
                       return PersonTile(
                         profile: Map<String, dynamic>.from(profile),
                         follow: true,
