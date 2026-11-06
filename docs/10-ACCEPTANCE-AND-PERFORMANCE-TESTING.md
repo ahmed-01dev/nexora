@@ -211,3 +211,5 @@ The client inbox currently supports accepting incoming pending follow requests o
 | MOD-002 | Account changes while report submission is in flight | The client does not show success in the new session; it explains that the result may need reconciliation and does not blindly resubmit | P1 |
 
 | APP-025 | Start loading more comments, then refresh or submit a new comment before the older page returns | The stale page response cannot replace the refreshed list or overwrite the current offset/loading state | P1 |
+
+| APP-026 | Switch accounts while notification page loading, marking read, or opening a notification | Old-session data is not rendered into the new account and navigation to the old notification target is stopped | P1 |
