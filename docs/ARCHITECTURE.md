@@ -55,7 +55,7 @@ flowchart TB
 The repository is beyond a text-post-only prototype, but it is not production complete. The dated [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) is the feature-level source of truth and documents partial workflows for profiles/private media, posts/feed/comments, follows/friendships, messaging, stories, communities, notifications, safety/moderation, nearby discovery and themes. Read each feature's status notes before relying on it. CI/build inventory was rechecked on 2026-11-06: `flutter-ci.yml` performs source analysis/tests, while `android-preview.yml` is a manually gated debug-APK workflow; no AAB/Web release workflow was present.
 
 Important distinctions:
-- Authentication is email/password only: signup, sign-in, email-confirmation resend, and password-reset request. Phone-number, SMS OTP, and WhatsApp OTP flows are excluded.
+- Authentication is email/password only: signup/sign-in, confirmation resend, password-reset request, and password update after a recovery callback. Android preview generation registers `nexora://auth-callback/`; production redirect allowlisting and iOS URL-scheme registration remain release configuration. Phone-number, SMS OTP, and WhatsApp OTP flows are excluded.
 - Text-only post creation and public-feed querying are documented as implemented; the wider post/media experience remains Partial.
 - Messaging is not E2EE; message bodies remain server-readable.
 - Call-session records are signaling foundations, not voice/video calls. WebRTC, STUN/TURN and reliable incoming-call delivery remain pending.
