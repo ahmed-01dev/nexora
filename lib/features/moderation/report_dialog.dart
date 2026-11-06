@@ -60,13 +60,23 @@ class _ReportDialogState extends State<ReportDialog> {
 
   Future<void> _submit() async {
     if (_sending) return;
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid == null) {
+      setState(() => _error = 'انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
+      return;
+    }
+    if (!const {'user', 'post', 'comment', 'message', 'story', 'community'}
+            .contains(widget.targetType) ||
+        widget.targetId.trim().isEmpty) {
+      setState(() => _error = 'عنصر البلاغ غير صالح.');
+      return;
+    }
     setState(() {
       _sending = true;
       _error = null;
     });
 
     try {
-      final uid = Supabase.instance.client.auth.currentUser!.id;
       await Supabase.instance.client.from('reports').insert({
         'reporter_id': uid,
         'target_type': widget.targetType,
