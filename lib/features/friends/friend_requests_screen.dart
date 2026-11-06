@@ -274,12 +274,18 @@ class _FriendRequestActionState extends State<FriendRequestAction> {
     if (mounted) setState(() => _loading = true);
     try {
       final client = Supabase.instance.client;
+      if (client.auth.currentUser?.id != myId) {
+        throw StateError('تغير الحساب. أعد فتح الملف الشخصي لتحديث حالة الصداقة.');
+      }
       final outgoing = await client
           .from('friendships')
           .select('id,requester_id,addressee_id,status')
           .eq('requester_id', myId)
           .eq('addressee_id', targetId)
           .maybeSingle();
+      if (client.auth.currentUser?.id != myId) {
+        throw StateError('تغير الحساب أثناء تحميل حالة الصداقة.');
+      }
       final incoming = outgoing == null
           ? await client
               .from('friendships')
@@ -288,7 +294,8 @@ class _FriendRequestActionState extends State<FriendRequestAction> {
               .eq('addressee_id', myId)
               .maybeSingle()
           : null;
-      if (mounted && generation == _loadGeneration) {
+      if (mounted && generation == _loadGeneration &&
+          client.auth.currentUser?.id == myId) {
         setState(() { _request = outgoing ?? incoming; _loading = false; });
       }
     } catch (error, stack) {
@@ -303,13 +310,21 @@ class _FriendRequestActionState extends State<FriendRequestAction> {
     if (_busy) return;
     final generation = ++_actionGeneration;
     final targetId = widget.otherUserId;
+    final client = Supabase.instance.client;
+    final actorId = client.auth.currentUser?.id;
+    if (actorId == null || actorId != _myId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تغير الحساب. أعد فتح الملف الشخصي لتحديث حالة الصداقة.')),
+      );
+      return;
+    }
     setState(() => _busy = true);
     try {
       final request = _request;
       if (request == null ||
           request['status'] == 'declined' ||
           request['status'] == 'cancelled') {
-        await Supabase.instance.client.rpc(
+        await client.rpc(
           'request_friend',
           params: {'p_addressee_id': targetId},
         );
@@ -330,6 +345,7 @@ class _FriendRequestActionState extends State<FriendRequestAction> {
         );
       }
       if (mounted &&
+          client.auth.currentUser?.id == actorId &&
           generation == _actionGeneration &&
           widget.otherUserId == targetId) {
         await _load();
@@ -337,6 +353,7 @@ class _FriendRequestActionState extends State<FriendRequestAction> {
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'friendship_action');
       if (mounted &&
+          client.auth.currentUser?.id == actorId &&
           generation == _actionGeneration &&
           widget.otherUserId == targetId) {
         ScaffoldMessenger.of(context).showSnackBar(
