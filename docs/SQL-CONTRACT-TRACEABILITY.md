@@ -196,3 +196,6 @@ The live `nexora-media` Storage bucket is private (`public = false`), has a 50 M
 Selected live policies inspected: post visibility filters deleted posts and blocks; story reads use `private.can_view_story(id)`; message attachment reads have a restrictive non-deleted-message + conversation-membership policy; attachment inserts have a restrictive MIME/10 MiB/image-message check; community invite direct table access is denied; nearby-location rows are owner-only.
 
 These findings are from policy catalog definitions, not authenticated behavior tests. In particular, the client-side media service accepts more formats/flows than the restrictive message-attachment policy; verify each upload purpose against its intended policy rather than assuming every bucket MIME type is accepted in every feature.
+## 11. Nearby expiry job runtime evidence
+
+The live `cron.job` catalog contains active job `nexora-cleanup-expired-nearby-locations` with schedule `*/15 * * * *`. The five latest `cron.job_run_details` entries were all `succeeded`; each reported `DELETE 0`. The schedule is active and executing, but this audit did not insert a stale-location fixture to test deletion behavior.
