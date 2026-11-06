@@ -20,7 +20,9 @@ class AppErrorService {
   }
 
   static void report(Object error, StackTrace? stack, {String source = 'app'}) {
-    debugPrint('[NEXORA][$source] $error');
+    // Backend/plugin exceptions can embed phone numbers, email addresses,
+    // identifiers, or server response details. Log only the error type.
+    debugPrint('[NEXORA][$source] ${error.runtimeType}');
     if (stack != null) debugPrintStack(stackTrace: stack);
   }
 
