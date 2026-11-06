@@ -1688,7 +1688,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         },
       ),
-      const SizedBox(height: 20), OutlinedButton.icon(onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج')),
+      const SizedBox(height: 20), OutlinedButton.icon(onPressed: _signOutNexora, icon: const Icon(Icons.logout), label: const Text('تسجيل الخروج')),
     ]);
   }));
 }
