@@ -253,3 +253,8 @@ Read-only schema privilege checks confirmed that `authenticated`, `anon`, and `P
 Notable follow-up: verify the Supabase Data API exposed-schema list in project settings. The database-side `current_setting('pgrst.db_schemas', true)` query returned NULL, so this audit cannot conclude whether `private` is excluded from PostgREST. Do not revoke helper EXECUTE grants blindly: RLS policies call several of these helpers.
 
 No function definition, grant, schema privilege, or API setting was changed.
+### Push device ownership lifecycle — logout call-site fix
+
+Static source review found that the account screen called `Supabase.auth.signOut()` directly even though `_signOutNexora()` already existed to remove the current user's FID row from `user_devices` and unregister Firebase Messaging before signing out. That bypass could leave an old account's device row behind when the same installation changes accounts.
+
+The work branch now routes the account-screen logout button through `_signOutNexora`. A source re-read confirmed the direct logout call was removed from that screen and the helper is now referenced by the UI. The device service's deletion is still best-effort (it catches network/database errors), so offline logout and rapid multi-account switching need an explicit product policy and authenticated integration test. No database change was made.
