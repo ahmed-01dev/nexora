@@ -60,7 +60,6 @@ class _CommentsScreenState extends State<CommentsScreen> {
   Future<void> _loadMore(List<Map<String, dynamic>> current) async {
     if (_loadingMore || !_hasMore) return;
     final generation = _requestGeneration;
-    final generation = _generation;
     final offset = _nextOffset;
     setState(() => _loadingMore = true);
     try {
@@ -78,7 +77,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
           .toList();
       setState(() {
         _future = Future.value([...current, ...additions]);
-        _nextOffset += rows.length;
+        _nextOffset = offset + rows.length;
         _hasMore = rows.length == _pageSize;
         _loadingMore = false;
       });
