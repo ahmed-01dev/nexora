@@ -117,7 +117,7 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 ## Latest read-only contract review — 2026-11-06
 
 - Compared the Flutter RPC call sites in the app entry point and feature screens with the live PostgreSQL function catalog.
-- Snapshot: 18 distinct RPC names across 20 call sites; every reviewed client call has a matching live `public` function and matching named argument keys/types. The inventory and source paths are recorded in `docs/API.md`.
+- Snapshot: 18 distinct RPC names across 20 call sites (19 literal plus one dynamic dispatcher); every reviewed client call has a matching live `public` function and matching named argument keys/types. The inventory and source paths are recorded in `docs/API.md`.
 - This is static contract parity only. It does not prove RLS behavior, grants, returned JSON decoding, error-path correctness, or end-to-end execution under real user identities.
 - The push service lifecycle was re-read. Device registration/deletion remains best-effort and can leave stale device rows when cleanup fails; physical-device notification display/tap behavior remains unverified.
 - No code behavior, database schema, grants, migration history, or deployed service was changed in this review. No tests or application builds were run.
