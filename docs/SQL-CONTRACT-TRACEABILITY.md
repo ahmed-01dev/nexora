@@ -199,3 +199,11 @@ These findings are from policy catalog definitions, not authenticated behavior t
 ## 11. Nearby expiry job runtime evidence
 
 The live `cron.job` catalog contains active job `nexora-cleanup-expired-nearby-locations` with schedule `*/15 * * * *`. The five latest `cron.job_run_details` entries were all `succeeded`; each reported `DELETE 0`. The schedule is active and executing, but this audit did not insert a stale-location fixture to test deletion behavior.
+
+## 12. Push notification runtime evidence
+
+Read-only inspection confirmed the enabled AFTER INSERT trigger `notify_nexora_push_after_insert` on `public.notifications`, invoking `private.notify_nexora_push()`. Vault secret metadata confirms the name `nexora_push_webhook_secret` exists; its value was not read.
+
+The deployed `send-push-notification` function is ACTIVE version 6 (`verify_jwt=false`, with custom webhook-secret or bearer-user validation). `user_devices` currently has one Android row. The `net._http_response` history includes one HTTP 200 response `{sent:1,failed:0,total:1}` and several HTTP 200 responses skipped because no registered devices were found.
+
+The client stores Firebase Installation IDs and the Edge Function targets `message.fid`, which is supported by the official FCM HTTP v1 Message schema. [Firebase Message resource](https://firebase.google.com/docs/reference/fcm/rest/v1/projects.messages). A successful FCM API response confirms acceptance by FCM, not visible notification delivery on a physical device. Foreground/background display and tap/deep-link behavior remain unverified.
