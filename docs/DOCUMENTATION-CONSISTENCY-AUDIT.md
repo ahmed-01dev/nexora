@@ -182,3 +182,6 @@ Actions taken on this branch:
 3. Updated `docs/SQL-CONTRACT-TRACEABILITY.md` to record the regression and static predicate checks.
 
 Verification is limited to source comparison and checking that the proposed SQL contains the required predicates. No live Storage request, authenticated RLS test, database catalog query, migration application or build was performed. This source correction must not be applied until remote/local migration history is reconciled and the live function definition is inspected.
+### Migration-count clarification
+
+The 42 local SQL files were counted on `main` before the proposed correction was added. The work branch now has 43 SQL files because it adds the new proposed `20261106003000` migration. That additional file is not evidence that the previously observed remote-history mismatch is reconciled; the original 42 local migrations still require exact version-to-source mapping against the 43 remote records.
