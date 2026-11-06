@@ -157,7 +157,14 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
       }
       if (!mounted) return;
       setState(() {
-        _requests.removeWhere((row) => row['follower_id'] == followerId);
+        final removed = _requests.removeWhere(
+          (row) => row['follower_id'] == followerId,
+        );
+        if (removed > 0 && _nextOffset > 0) {
+          // The accepted row leaves the pending result set. Move the backend
+          // offset back so the next page does not skip the row shifted forward.
+          _nextOffset--;
+        }
         _accepting.remove(followerId);
       });
       ScaffoldMessenger.of(context).showSnackBar(
