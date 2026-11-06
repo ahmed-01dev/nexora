@@ -321,3 +321,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Latest completed Flutter CI run `42256045554` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on source commit `91a12b822e2a547ec44320c6f7713d9c98dea257`. This run includes the block/privacy/friend/follow, nearby, notification preferences, stories, communities, and moderation session-continuity changes. No APK/AAB/Web build was run.
 
 - Block confirmation and report submission now capture the account that opened each dialog; the action is rejected if the authenticated user changes before confirmation/submission.
+
+- Latest completed CI run `42256583447` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on commit `336f35e01165b04d878777bceadb24fe64a76947`. It includes the block-confirmation and report-dialog actor binding changes. No APK/AAB/Web build was run.
