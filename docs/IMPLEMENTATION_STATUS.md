@@ -144,3 +144,9 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - This corrects the workflow's missing Gradle configuration, but does not resolve the production application-ID decision: `com.example.nexora` remains placeholder-style and must be replaced with the final ID plus matching Firebase registration before public release.
 
 - Follow-inbox contract delta: the newly added `follow_requests_screen.dart` was separately checked against live `follows` and `profiles` columns, the authenticated column-level `status` UPDATE grant, and the recipient-only UPDATE policy. No mismatch was found; no RLS integration test was run.
+
+## Follow-request inbox and source CI — 2026-11-06
+
+- Added `lib/features/friends/follow_requests_screen.dart` and linked it from discovery. It lists incoming pending follows in 30-row pages and lets the recipient accept a request using only the permitted `follows.status` update. Private requester profile fields remain hidden when profile RLS does not permit the join.
+- The live backend contract has no recipient-side decline operation, so the UI intentionally does not attempt an unauthorized DELETE or fabricate a decline RPC.
+- GitHub Actions Flutter CI run `42219653552` passed on source commit `135b533bdebb7a80e1132cc3db799d2d934742ce`: dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` all succeeded. This validates source analysis/tests only; no APK/AAB/Web build was run.
