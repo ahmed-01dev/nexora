@@ -42,11 +42,17 @@ class BlockAccountService {
         .eq('blocker_id', me)
         .eq('blocked_id', targetUserId)
         .maybeSingle();
+    if (client.auth.currentUser?.id != me) {
+      throw StateError('تغير الحساب أثناء تنفيذ الحظر. حاول مرة تانية.');
+    }
     if (existing == null) {
       await client.from('blocks').insert({
         'blocker_id': me,
         'blocked_id': targetUserId,
       });
+      if (client.auth.currentUser?.id != me) {
+        throw StateError('تغير الحساب أثناء تنفيذ الحظر. راجع قائمة الحظر قبل إعادة المحاولة.');
+      }
     }
     return true;
   }
