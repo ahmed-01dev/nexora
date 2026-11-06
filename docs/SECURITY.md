@@ -89,13 +89,13 @@ See `docs/SECURITY-DEFINER-INVENTORY.md` for the 32 live SECURITY DEFINER functi
 
 `NexoraPushService` now increments a registration generation before explicit sign-out cleanup. A registration upsert captures the current user and generation; if the request completes after sign-out or account change, it deletes the just-written row for the original owner. This reduces stale device rows caused by an in-flight registration racing with logout. Cleanup remains best-effort under network/database failure and still requires offline, multi-account, and physical-device tests.
 
-### FCM device-registration race protection
-
-`NexoraPushService` now increments a registration generation before explicit sign-out cleanup. A registration upsert captures the current user and generation; if the request completes after sign-out or account change, it deletes the just-written row for the original owner. This reduces stale device rows caused by an in-flight registration racing with logout. Cleanup remains best-effort under network/database failure and still requires offline, multi-account, and physical-device tests.
-
 ### Private schema API exposure — release gate
 
 The authenticated role has USAGE on `private` and EXECUTE on multiple SECURITY DEFINER helpers there; anon/PUBLIC have no schema USAGE. These grants support RLS policies and internal wrapper functions. Do not revoke them blindly. Verify the hosted Supabase Dashboard → API → Exposed schemas setting excludes `private` before release; the database-side PostgREST setting was not readable from the SQL session, so exposure remains unverified.
 
 FCM registration is suspended immediately before explicit sign-out and is resumed only by an initial or newly signed-in auth session. The auth listener no longer resumes registration for arbitrary token-refresh/user-update events while sign-out is in progress. Notification-permission requests recheck the signed-in/suspended state after the permission prompt.
 If the Supabase sign-out call fails after device cleanup, the account screen resumes FCM registration for the still-authenticated user before rethrowing the sign-out error; this avoids leaving a live session with push registration suspended.
+
+### FCM unregister callback ownership
+
+Before unregistering Firebase Messaging, the service captures the authenticated account ID. The asynchronous `onUnregistered` callback deletes the FID row using that captured owner rather than reading `currentUser` after sign-out may have cleared it. This prevents the callback from silently skipping cleanup solely because the session has already ended. Database/network deletion failures remain best-effort and require offline and physical-device validation.
