@@ -122,9 +122,13 @@ class _CommunityChannelsScreenState extends State<CommunityChannelsScreen> {
       },
     );
     if (result == null || !mounted || _creating) return;
-    setState(() => _creating = true);
     final db = Supabase.instance.client;
-    final uid = db.auth.currentUser!.id;
+    final uid = db.auth.currentUser?.id;
+    if (uid == null) {
+      _showError(StateError('انتهت جلسة الدخول. سجّل الدخول مرة تانية.'));
+      return;
+    }
+    setState(() => _creating = true);
     String? conversationId;
     try {
       final conversation = await db.from('conversations').insert({
