@@ -110,3 +110,7 @@ A proposed corrective migration is now present on this documentation/work branch
 Regression cases are specified in `docs/SQL-SECURITY-REGRESSION-MATRIX.md`. The correction has been statically checked for all five required predicates: friend visibility, private-story gate, deleted-post gate, deleted-message gate and block check.
 
 **Do not apply this migration yet.** The remote/local migration-history mismatch remains unresolved; inspect the live function definition and reconcile all versions first. The file is a proposed source correction, not evidence of a deployed fix.
+
+### Migration-count clarification after the proposed correction
+
+The 42-file count above is the observed `main` baseline. This branch now contains one additional proposed migration (`20261106003000_restore_media_visibility_invariants.sql`), so its working tree has 43 SQL files. This does **not** reconcile the original remote/local history mismatch: the new file is a fresh proposed correction, not the missing historical migration, and no remote history was inspected or repaired.
