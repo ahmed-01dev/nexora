@@ -105,67 +105,77 @@ Read-only catalog queries returned **38 ordinary tables in `public` and one ordi
 
 ## Verified foreign-key relationships — 2026-11-06
 
-The following **57 foreign-key constraints** were read directly from `pg_constraint`. Column order is preserved for composite keys. These are live catalog relationships, not inferred from application code.
+The following **67 foreign-key constraints** were read directly from `pg_constraint`. Each PostgreSQL-rendered definition preserves the exact source and referenced columns, including composite keys and references into `auth.users`.
 
-| Source | Constraint | References |
+| Source table | Constraint | PostgreSQL definition |
 |---|---|---|
-| `private.profile_discovery_locations.user_id` | `profile_discovery_locations_user_id_fkey` | `public.profiles.id` |
-| `public.blocks.blocked_id` | `blocks_blocked_id_fkey` | `public.profiles.id` |
-| `public.blocks.blocker_id` | `blocks_blocker_id_fkey` | `public.profiles.id` |
-| `public.call_participants.call_id` | `call_participants_call_id_fkey` | `public.call_sessions.id` |
-| `public.call_participants.user_id` | `call_participants_user_id_fkey` | `public.profiles.id` |
-| `public.call_sessions.conversation_id` | `call_sessions_conversation_id_fkey` | `public.conversations.id` |
-| `public.call_sessions.initiated_by` | `call_sessions_initiated_by_fkey` | `public.profiles.id` |
-| `public.collection_items.collection_id` | `collection_items_collection_id_fkey` | `public.collections.id` |
-| `public.collection_items.post_id` | `collection_items_post_id_fkey` | `public.posts.id` |
-| `public.collections.user_id` | `collections_user_id_fkey` | `public.profiles.id` |
-| `public.comment_likes.comment_id` | `comment_likes_comment_id_fkey` | `public.comments.id` |
-| `public.comment_likes.user_id` | `comment_likes_user_id_fkey` | `public.profiles.id` |
-| `public.comments.parent_id` | `comments_parent_id_fkey` | `public.comments.id` |
-| `public.comments.post_id` | `comments_post_id_fkey` | `public.posts.id` |
-| `public.comments.user_id` | `comments_user_id_fkey` | `public.profiles.id` |
-| `public.communities.owner_id` | `communities_owner_id_fkey` | `public.profiles.id` |
-| `public.community_channels.community_id` | `community_channels_community_id_fkey` | `public.communities.id` |
-| `public.community_channels.conversation_id` | `community_channels_conversation_id_fkey` | `public.conversations.id` |
-| `public.community_invites.community_id` | `community_invites_community_id_fkey` | `public.communities.id` |
-| `public.community_invites.created_by` | `community_invites_created_by_fkey` | `public.profiles.id` |
-| `public.community_members.community_id` | `community_members_community_id_fkey` | `public.communities.id` |
-| `public.community_members.user_id` | `community_members_user_id_fkey` | `public.profiles.id` |
-| `public.conversation_members.conversation_id` | `conversation_members_conversation_id_fkey` | `public.conversations.id` |
-| `public.conversation_members.user_id` | `conversation_members_user_id_fkey` | `public.profiles.id` |
-| `public.conversations.created_by` | `conversations_created_by_fkey` | `public.profiles.id` |
-| `public.follows.follower_id` | `follows_follower_id_fkey` | `public.profiles.id` |
-| `public.follows.following_id` | `follows_following_id_fkey` | `public.profiles.id` |
-| `public.friendships.addressee_id` | `friendships_addressee_id_fkey` | `public.profiles.id` |
-| `public.friendships.requester_id` | `friendships_requester_id_fkey` | `public.profiles.id` |
-| `public.likes.post_id` | `likes_post_id_fkey` | `public.posts.id` |
-| `public.likes.user_id` | `likes_user_id_fkey` | `public.profiles.id` |
-| `public.media.post_id` | `media_post_id_fkey` | `public.posts.id` |
-| `public.media.user_id` | `media_user_id_fkey` | `public.profiles.id` |
-| `public.message_attachments.message_id` | `message_attachments_message_id_fkey` | `public.messages.id` |
-| `public.message_attachments.uploader_id` | `message_attachments_uploader_id_fkey` | `public.profiles.id` |
-| `public.message_reactions.message_id` | `message_reactions_message_id_fkey` | `public.messages.id` |
-| `public.message_reactions.user_id` | `message_reactions_user_id_fkey` | `public.profiles.id` |
-| `public.messages.conversation_id` | `messages_conversation_id_fkey` | `public.conversations.id` |
-| `public.messages.reply_to` | `messages_reply_to_fkey` | `public.messages.id` |
-| `public.messages.sender_id` | `messages_sender_id_fkey` | `public.profiles.id` |
-| `public.moderation_actions.report_id` | `moderation_actions_report_id_fkey` | `public.reports.id` |
-| `public.moderation_appeals.action_id` | `moderation_appeals_action_id_fkey` | `public.moderation_actions.id` |
-| `public.notifications.actor_id` | `notifications_actor_id_fkey` | `public.profiles.id` |
-| `public.notifications.recipient_id` | `notifications_recipient_id_fkey` | `public.profiles.id` |
-| `public.post_hashtags.hashtag_id` | `post_hashtags_hashtag_id_fkey` | `public.hashtags.id` |
-| `public.post_hashtags.post_id` | `post_hashtags_post_id_fkey` | `public.posts.id` |
-| `public.posts.user_id` | `posts_user_id_fkey` | `public.profiles.id` |
-| `public.reports.reporter_id` | `reports_reporter_id_fkey` | `public.profiles.id` |
-| `public.reposts.post_id` | `reposts_post_id_fkey` | `public.posts.id` |
-| `public.reposts.user_id` | `reposts_user_id_fkey` | `public.profiles.id` |
-| `public.saves.post_id` | `saves_post_id_fkey` | `public.posts.id` |
-| `public.saves.user_id` | `saves_user_id_fkey` | `public.profiles.id` |
-| `public.stories.user_id` | `stories_user_id_fkey` | `public.profiles.id` |
-| `public.story_views.story_id` | `story_views_story_id_fkey` | `public.stories.id` |
-| `public.story_views.viewer_id` | `story_views_viewer_id_fkey` | `public.profiles.id` |
-| `public.user_preferences.user_id` | `user_preferences_user_id_fkey` | `public.profiles.id` |
-| `public.user_private_settings.user_id` | `user_private_settings_user_id_fkey` | `public.profiles.id` |
+| `private.profile_discovery_locations` | `profile_discovery_locations_user_id_fkey` | `FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.blocks` | `blocks_blocked_id_fkey` | `FOREIGN KEY (blocked_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.blocks` | `blocks_blocker_id_fkey` | `FOREIGN KEY (blocker_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.call_participants` | `call_participants_call_id_fkey` | `FOREIGN KEY (call_id) REFERENCES call_sessions(id) ON DELETE CASCADE` |
+| `public.call_participants` | `call_participants_user_id_fkey` | `FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.call_sessions` | `call_sessions_conversation_id_fkey` | `FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE` |
+| `public.call_sessions` | `call_sessions_initiated_by_fkey` | `FOREIGN KEY (initiated_by) REFERENCES profiles(id) ON DELETE RESTRICT` |
+| `public.collection_items` | `collection_items_collection_id_fkey` | `FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE` |
+| `public.collection_items` | `collection_items_post_id_fkey` | `FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE` |
+| `public.collections` | `collections_user_id_fkey` | `FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.comment_likes` | `comment_likes_comment_id_fkey` | `FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE` |
+| `public.comment_likes` | `comment_likes_user_id_fkey` | `FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.comments` | `comments_parent_id_fkey` | `FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE` |
+| `public.comments` | `comments_post_id_fkey` | `FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE` |
+| `public.comments` | `comments_user_id_fkey` | `FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.communities` | `communities_owner_id_fkey` | `FOREIGN KEY (owner_id) REFERENCES profiles(id) ON DELETE RESTRICT` |
+| `public.community_channels` | `community_channels_community_id_fkey` | `FOREIGN KEY (community_id) REFERENCES communities(id) ON DELETE CASCADE` |
+| `public.community_channels` | `community_channels_conversation_id_fkey` | `FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE` |
+| `public.community_channels` | `community_channels_created_by_fkey` | `FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE RESTRICT` |
+| `public.community_invites` | `community_invites_community_id_fkey` | `FOREIGN KEY (community_id) REFERENCES communities(id) ON DELETE CASCADE` |
+| `public.community_invites` | `community_invites_created_by_fkey` | `FOREIGN KEY (created_by) REFERENCES profiles(id) ON DELETE RESTRICT` |
+| `public.community_members` | `community_members_community_id_fkey` | `FOREIGN KEY (community_id) REFERENCES communities(id) ON DELETE CASCADE` |
+| `public.community_members` | `community_members_user_id_fkey` | `FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.conversation_members` | `conversation_members_conversation_id_fkey` | `FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE` |
+| `public.conversation_members` | `conversation_members_user_id_fkey` | `FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.conversations` | `conversations_created_by_fkey` | `FOREIGN KEY (created_by) REFERENCES profiles(id) ON DELETE RESTRICT` |
+| `public.follows` | `follows_follower_id_fkey` | `FOREIGN KEY (follower_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.follows` | `follows_following_id_fkey` | `FOREIGN KEY (following_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.friendships` | `friendships_addressee_id_fkey` | `FOREIGN KEY (addressee_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.friendships` | `friendships_requester_id_fkey` | `FOREIGN KEY (requester_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.likes` | `likes_post_id_fkey` | `FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE` |
+| `public.likes` | `likes_user_id_fkey` | `FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.media` | `media_post_id_fkey` | `FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE` |
+| `public.media` | `media_user_id_fkey` | `FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.message_attachments` | `message_attachments_message_id_fkey` | `FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE` |
+| `public.message_attachments` | `message_attachments_uploader_id_fkey` | `FOREIGN KEY (uploader_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.message_reactions` | `message_reactions_message_id_fkey` | `FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE` |
+| `public.message_reactions` | `message_reactions_user_id_fkey` | `FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.messages` | `messages_conversation_id_fkey` | `FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE` |
+| `public.messages` | `messages_reply_to_fkey` | `FOREIGN KEY (reply_to) REFERENCES messages(id) ON DELETE SET NULL` |
+| `public.messages` | `messages_sender_id_fkey` | `FOREIGN KEY (sender_id) REFERENCES profiles(id) ON DELETE RESTRICT` |
+| `public.moderation_actions` | `moderation_actions_moderator_id_fkey` | `FOREIGN KEY (moderator_id) REFERENCES auth.users(id)` |
+| `public.moderation_actions` | `moderation_actions_report_id_fkey` | `FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE SET NULL` |
+| `public.moderation_appeals` | `moderation_appeals_action_id_fkey` | `FOREIGN KEY (action_id) REFERENCES moderation_actions(id) ON DELETE CASCADE` |
+| `public.moderation_appeals` | `moderation_appeals_reviewer_id_fkey` | `FOREIGN KEY (reviewer_id) REFERENCES auth.users(id) ON DELETE SET NULL` |
+| `public.moderation_appeals` | `moderation_appeals_user_id_fkey` | `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE` |
+| `public.notification_preferences` | `notification_preferences_user_id_fkey` | `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE` |
+| `public.notifications` | `notifications_actor_id_fkey` | `FOREIGN KEY (actor_id) REFERENCES profiles(id) ON DELETE SET NULL` |
+| `public.notifications` | `notifications_recipient_id_fkey` | `FOREIGN KEY (recipient_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.post_hashtags` | `post_hashtags_hashtag_id_fkey` | `FOREIGN KEY (hashtag_id) REFERENCES hashtags(id) ON DELETE CASCADE` |
+| `public.post_hashtags` | `post_hashtags_post_id_fkey` | `FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE` |
+| `public.posts` | `posts_user_id_fkey` | `FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.profiles` | `profiles_id_fkey` | `FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE` |
+| `public.reports` | `reports_assigned_to_fkey` | `FOREIGN KEY (assigned_to) REFERENCES auth.users(id) ON DELETE SET NULL` |
+| `public.reports` | `reports_reporter_id_fkey` | `FOREIGN KEY (reporter_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.reposts` | `reposts_post_id_fkey` | `FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE` |
+| `public.reposts` | `reposts_user_id_fkey` | `FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.saves` | `saves_post_id_fkey` | `FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE` |
+| `public.saves` | `saves_user_id_fkey` | `FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.staff_members` | `staff_members_created_by_fkey` | `FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL` |
+| `public.staff_members` | `staff_members_user_id_fkey` | `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE` |
+| `public.stories` | `stories_user_id_fkey` | `FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.story_views` | `story_views_story_id_fkey` | `FOREIGN KEY (story_id) REFERENCES stories(id) ON DELETE CASCADE` |
+| `public.story_views` | `story_views_viewer_id_fkey` | `FOREIGN KEY (viewer_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.user_devices` | `user_devices_user_id_fkey` | `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE` |
+| `public.user_preferences` | `user_preferences_user_id_fkey` | `FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE` |
+| `public.user_private_settings` | `user_private_settings_user_id_fkey` | `FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE` |
 
 ### Remaining ERD evidence gaps
 
