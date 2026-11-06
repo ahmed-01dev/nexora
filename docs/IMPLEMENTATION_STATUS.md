@@ -275,3 +275,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Comment pagination now tracks the backend offset independently of the deduplicated visible list, preventing repeated or skipped pages when new comments arrive during paging. The first-page and load-more queries retain identical descending timestamp/ID ordering.
 
 - Message-image upload now checks the original session before message/attachment writes and after metadata insertion; rollback writes are skipped if a different account is active. Signed URL lookup rechecks viewer identity after URL creation, and attachment deletion rechecks before Storage removal. A completed send during an account switch can still have an ambiguous client outcome; device testing and idempotent send/reconciliation remain pending.
+
+- Feed pagination now tracks fetched backend offsets separately from visible posts and invalidates in-flight page responses whenever the feed mode changes or a refresh starts. This prevents old-mode rows from contaminating the new feed and avoids duplicate-page loops after concurrent insertions.
