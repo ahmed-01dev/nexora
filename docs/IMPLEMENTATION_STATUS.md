@@ -190,7 +190,7 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 
 - Flutter CI run `42225073974` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on commit `11896cc52659f875be399f9371fe8182136311ed`, covering the FCM in-flight registration guard and the current followers/following UI source. No APK/AAB/Web build was run.
 
-- FCM auth-event hardening: registration is suspended before logout, stale in-flight upserts are reconciled against the original account, and registration resumes only on initial/new sign-in events. Permission prompts recheck session/suspension state before registering. Source CI validation for this latest auth-event change is pending.
+- FCM auth-event hardening: registration is suspended before logout, stale in-flight upserts are reconciled against the original account, and registration resumes only on initial/new sign-in events. Permission prompts recheck session/suspension state before registering. Flutter CI run `42226624301` passed on commit `cf6f4d83b568023319c53aefcccb5881446aa267`, including dependency installation, analysis, and tests; physical-device lifecycle verification remains pending.
 
 - Sign-out failure recovery: if Supabase rejects sign-out after device cleanup, the app resumes FCM registration for the still-authenticated account before surfacing the error. This path is covered by source logic only; network-failure behavior still needs a device test.
 
@@ -198,8 +198,10 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 
 - Latest Flutter source CI run `42226031696` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on commit `7dfb822afec111d532f93c96f2598507c7fa2fc8`. This includes the FCM sign-out suspension/recovery changes and the current social graph UI. The workflow did not build an APK/AAB/Web artifact.
 
-- Friendship inbox hardening: accept/decline/cancel buttons now prevent duplicate actions per request ID, show a busy state while the RPC is running, and hide profile details when profile RLS returns no visible profile. SOC-016 added; latest source CI result is pending.
+- Friendship inbox hardening: accept/decline/cancel buttons now prevent duplicate actions per request ID, show a busy state while the RPC is running, and hide profile details when profile RLS returns no visible profile. SOC-016 added; Flutter CI run `42226624301` passed on commit `cf6f4d83b568023319c53aefcccb5881446aa267`.
 
 - FCM unregister callback ownership: the account ID is captured before sign-out and retained until the asynchronous Firebase `onUnregistered` event can delete the matching `user_devices` row. This closes the callback-after-session-clear ownership gap in source; no guarantee is made when the database request itself fails.
 
 - Followers/following pagination now deduplicates relationship IDs when new relationships alter the ordered result set between page requests, while advancing the offset by the number of backend rows fetched. Added acceptance case SOC-017; authenticated concurrent-change integration testing remains pending.
+
+- Latest Flutter CI run `42226624301` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on PR head `cf6f4d83b568023319c53aefcccb5881446aa267`. This includes the current FCM registration/sign-out lifecycle and friendship inbox refresh handling. It did not produce an APK/AAB/Web artifact.
