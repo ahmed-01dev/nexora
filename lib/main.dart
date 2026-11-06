@@ -724,7 +724,7 @@ class _MainShellState extends State<MainShell> {
                               scale: _tab == 2 ? 1.06 : 1,
                               duration: MediaQuery.of(context).disableAnimations
                                   ? Duration.zero
-                                  : const Duration(milliseconds: 220),
+                                  : NexoraMotion.standard,
                               curve: Curves.easeOutBack,
                               child: Container(
                                 width: 50,
@@ -805,7 +805,7 @@ class _NexoraNavItem extends StatelessWidget {
           child: AnimatedContainer(
             duration: reduceMotion
                 ? Duration.zero
-                : const Duration(milliseconds: 240),
+                : NexoraMotion.standard,
             curve: Curves.easeOutCubic,
             padding: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
@@ -821,7 +821,7 @@ class _NexoraNavItem extends StatelessWidget {
                   scale: selected ? 1.08 : 1,
                   duration: reduceMotion
                       ? Duration.zero
-                      : const Duration(milliseconds: 220),
+                      : NexoraMotion.standard,
                   curve: Curves.easeOutBack,
                   child: Icon(
                     icon,
