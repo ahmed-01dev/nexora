@@ -114,3 +114,13 @@ Regression cases are specified in `docs/SQL-SECURITY-REGRESSION-MATRIX.md`. The 
 ### Migration-count clarification after the proposed correction
 
 The 42-file count above is the observed `main` baseline. This branch now contains one additional proposed migration (`20261106003000_restore_media_visibility_invariants.sql`), so its working tree has 43 SQL files. This does **not** reconcile the original remote/local history mismatch: the new file is a fresh proposed correction, not the missing historical migration, and no remote history was inspected or repaired.
+
+## 8. Unresolved SQL helper dependency: `private.is_blocked_between`
+
+Multiple local migrations and policy/function definitions reference `private.is_blocked_between(...)`, including block-aware profile visibility, direct-conversation membership, follow/friend acceptance, nearby discovery and media access. The inspected foundation migration's function declaration inventory does not define this helper, and no matching `CREATE FUNCTION` definition was located in the local migration sources inspected during this pass.
+
+This is a source-provenance blocker, not proof that the deployed database lacks the function. It may exist in the remote schema or in the unmatched remote migration record. The exact definition, owner, SECURITY mode, `search_path`, grants and return behavior must be recovered from the live catalog and mapped to its original migration source. Do not invent a replacement or apply a guessed helper migration.
+
+### Required read-only verification
+
+Query `pg_proc`, `pg_namespace`, `pg_language`, `pg_roles`, and `information_schema.routine_privileges` in the connected database for the exact `private.is_blocked_between` signature. Record the full definition (`pg_get_functiondef`), owner, `prosecdef`, `proconfig`, ACL, and dependency references. Then map it to one of the remote migration history records and recover the exact source file before any schema action.
