@@ -29,7 +29,13 @@ class BlockAccountService {
     if (confirmed != true || !context.mounted) return false;
 
     final client = Supabase.instance.client;
-    final me = client.auth.currentUser!.id;
+    final me = client.auth.currentUser?.id;
+    if (me == null) {
+      throw StateError('انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
+    }
+    if (targetUserId.isEmpty || targetUserId == me) {
+      throw ArgumentError('لا يمكن حظر الحساب الحالي أو حساب غير صالح.');
+    }
     final existing = await client
         .from('blocks')
         .select('blocked_id')
