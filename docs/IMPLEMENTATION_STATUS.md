@@ -216,3 +216,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 
 - Relationship tiles now invalidate pending reads when recycled to a different profile and guard follow/block action completions by profile generation and target ID. Added acceptance case SOC-020. Flutter CI for the latest guard is pending.
 - Followers/following page deduplication acceptance case is SOC-019 (renumbered to avoid collision with the friendship refresh case SOC-017).
+
+- Added `docs/RPC-CONTRACT-TRACEABILITY.md`: all 17 literal RPC names found in the inspected Dart client matched live public signatures and argument names. All are authenticated-only public invoker wrappers/functions; SECURITY DEFINER helpers were checked for caller identity enforcement, with nearby discovery limited to coarse bands and public profiles. This is catalog/source evidence, not authenticated integration testing.
