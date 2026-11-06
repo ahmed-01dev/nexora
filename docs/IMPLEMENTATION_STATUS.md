@@ -210,6 +210,6 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 
 - Client error logging privacy: shared error reporting now records the source and exception runtime type instead of raw backend/plugin exception text, reducing the chance of leaking phone/email/identifier data into debug logs. Production telemetry/crash export remains unconfigured.
 
-- Android preview workflow now inserts the runtime permissions required by nearby discovery and Android 13+ notification permission prompts (`ACCESS_COARSE_LOCATION`, `ACCESS_FINE_LOCATION`, `POST_NOTIFICATIONS`) into the generated manifest. This is workflow source validation only; the preview APK has not been built or device-tested.
+- Android preview workflow now inserts release INTERNET/ACCESS_NETWORK_STATE plus nearby-location and Android 13+ notification permissions (`ACCESS_COARSE_LOCATION`, `ACCESS_FINE_LOCATION`, `POST_NOTIFICATIONS`) into the generated manifest. This is workflow source validation only; the preview APK has not been built or device-tested.
 
 - Startup failure UI now displays a safe generic error message instead of the raw Supabase initialization exception, reducing accidental disclosure of backend response details on the setup screen.
