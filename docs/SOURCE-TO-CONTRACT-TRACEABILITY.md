@@ -19,7 +19,7 @@
 | Concern | Source location | Observed operation | Evidence boundary |
 |---|---|---|---|
 | Feed page | `lib/main.dart` around lines 718 onward | RPC `get_feed_page` | Client uses server-paged feed contract; exact deployed definition must be compared with migration and database |
-| Private follow request | `lib/main.dart` around lines 2159–2167 | RPC `request_follow`, `cancel_follow` | Client sends `p_target_user_id`; request inbox/accept UI is a separate workflow |
+| Follow request lifecycle | `lib/main.dart`; `lib/features/friends/follow_requests_screen.dart` | RPCs `request_follow`, `cancel_follow`; incoming reads from `follows`; recipient updates only `status = 'accepted'` | Incoming requests are paged and can be accepted under the live recipient-only UPDATE policy; recipient-side decline is not available in the current backend contract |
 | Hashtag feed lookup | `lib/main.dart` around lines 945 onward | Join query across `post_hashtags`, `posts`, `hashtags`, `profiles` | Source proves this query path, not ranking/search safety or a full search service |
 | Hashtag service | `lib/features/search/hashtag_service.dart` | Reads/writes hashtag association objects | Unit test exists at `test/hashtag_service_test.dart`; integration/RLS behavior remains distinct |
 
