@@ -171,3 +171,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 
 - Added `docs/ERD-LIVE-POLICIES.md` with all 112 live RLS policy definitions (111 public, 1 private). The policy snapshot is descriptive; policy correctness and authenticated/anonymous integration behavior remain under review.
 - Follow-inbox paging concurrency and acceptance/refresh guards passed Flutter source CI run `42222571794` on commit `35d351c3e32937020c2313a37964e64e5259146d` (dependency install, analyze, and test).
+
+- Follow-inbox pagination hardening: the inbox now tracks backend offsets independently of visible row count, decrements the offset when an accepted request leaves the pending result set, guards stale page responses across refreshes, and prevents accept/refresh races. Flutter CI run `42222964161` passed dependency installation, analysis, and tests on commit `54bc0e6e531544f97a2659c17eff5d00b61c5a1a`. Real multi-user/concurrent-session verification remains pending.
