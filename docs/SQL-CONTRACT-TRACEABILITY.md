@@ -94,33 +94,79 @@ Do not run `supabase db push`, reset, replay, repair migration history, or apply
 
 This document is a focused contract trace, not a complete database security certification.
 
-## 7. Newly identified media authorization regression
+## 7. Live media authorization verification
 
-Static comparison of migration `20261105225000_hide_deleted_message_attachments.sql` against the prior complete definition in `20261105184333_hide_deleted_post_media_from_non_owners.sql` found that the later replacement of `private.can_read_media_path(text)` dropped three checks:
+The local migration `20261105225000_hide_deleted_message_attachments.sql` redefines `private.can_read_media_path(text)` with an older expression that omits friend-only post access, private-account story gating and soft-deleted-post denial for non-owners.
 
-- accepted-friend access for posts with `visibility = 'friends'`;
-- private-account eligibility for story media;
-- `posts.deleted_at IS NULL` for non-owner access to post media.
+A read-only query against the connected Supabase project `nexora` (project ref `wwdeexgkwpftyavbhiff`) retrieved the **live deployed** `private.can_read_media_path(text)` definition. The live definition includes all of those predicates, plus block checks and the non-deleted-message/conversation-membership check. Therefore:
 
-The later helper still checks direct-block relationships for its post/story/profile branches and requires non-deleted messages plus conversation membership for message attachments, but that does not compensate for the three missing checks.
+- This is a **local migration source/history drift**, not a demonstrated current live Storage vulnerability.
+- The live helper is owned by `postgres`, is `SECURITY DEFINER`, uses an empty `search_path`, and its ACL lists `postgres` and `authenticated`.
+- Archived/expired story filtering occurs before the owner/viewer branch, so expired or archived story media is denied to everyone, including its owner.
+- No corrective migration is needed for the currently observed live function. Do not add or apply a new migration until the local source history is reconciled.
 
-A proposed corrective migration is now present on this documentation/work branch:
-`supabase/migrations/20261106003000_restore_media_visibility_invariants.sql`.
+The regression matrix in `docs/SQL-SECURITY-REGRESSION-MATRIX.md` remains a test plan for future changes; it has not been executed against authenticated Storage requests.
 
-Regression cases are specified in `docs/SQL-SECURITY-REGRESSION-MATRIX.md`. The correction has been statically checked for all five required predicates: friend visibility, private-story gate, deleted-post gate, deleted-message gate and block check.
+## 8. Live block-helper verification
 
-**Do not apply this migration yet.** The remote/local migration-history mismatch remains unresolved; inspect the live function definition and reconcile all versions first. The file is a proposed source correction, not evidence of a deployed fix.
+The live database contains `private.is_blocked_between(a uuid, b uuid)`. Read-only catalog inspection returned:
 
-### Migration-count clarification after the proposed correction
+- Owner: `postgres`.
+- `SECURITY DEFINER`, `STABLE`, empty `search_path`.
+- ACL: `postgres` and `authenticated`.
+- Definition checks `public.blocks` in both directions.
 
-The 42-file count above is the observed `main` baseline. This branch now contains one additional proposed migration (`20261106003000_restore_media_visibility_invariants.sql`), so its working tree has 43 SQL files. This does **not** reconcile the original remote/local history mismatch: the new file is a fresh proposed correction, not the missing historical migration, and no remote history was inspected or repaired.
+The local foundation migration's function inventory does not define this helper, despite later local policies/functions referencing it. This is another source-provenance gap, not proof that the deployed database lacks the function. Its original migration source must be recovered and mapped; do not synthesize a replacement.
 
-## 8. Unresolved SQL helper dependency: `private.is_blocked_between`
+## 9. Remote/local migration reconciliation snapshot
 
-Multiple local migrations and policy/function definitions reference `private.is_blocked_between(...)`, including block-aware profile visibility, direct-conversation membership, follow/friend acceptance, nearby discovery and media access. The inspected foundation migration's function declaration inventory does not define this helper, and no matching `CREATE FUNCTION` definition was located in the local migration sources inspected during this pass.
+A fresh read-only Supabase migration listing returned **43 remote records**. A fresh GitHub listing of `main/supabase/migrations` returned **42 local SQL files**.
 
-This is a source-provenance blocker, not proof that the deployed database lacks the function. It may exist in the remote schema or in the unmatched remote migration record. The exact definition, owner, SECURITY mode, `search_path`, grants and return behavior must be recovered from the live catalog and mapped to its original migration source. Do not invent a replacement or apply a guessed helper migration.
+Matching by migration name and version gives:
 
-### Required read-only verification
+- **21 exact version + name matches**.
+- **14 same-name migrations with different version timestamps**.
+- **8 remote-only migration names**.
+- **7 local-only migration names**.
 
-Query `pg_proc`, `pg_namespace`, `pg_language`, `pg_roles`, and `information_schema.routine_privileges` in the connected database for the exact `private.is_blocked_between` signature. Record the full definition (`pg_get_functiondef`), owner, `prosecdef`, `proconfig`, ACL, and dependency references. Then map it to one of the remote migration history records and recover the exact source file before any schema action.
+Remote-only names:
+- `nexora_social_foundation_20261105`
+- `nexora_story_visibility_hardening`
+- `nexora_column_privilege_hardening`
+- `nexora_media_path_ownership_hardening`
+- `nexora_social_security_hardening_v2`
+- `nexora_social_core_tables_v2`
+- `nexora_moderation_staff_devices_v2`
+- `restrict_notification_updates_to_read_at`
+
+Local-only names:
+- `nexora_social_foundation`
+- `unique_reposts_per_user`
+- `conversation_previews_rpc`
+- `profile_media_access`
+- `community_channels`
+- `community_invites`
+- `restrict_notification_update_columns`
+
+The 14 same-name/different-version mappings are:
+
+| Migration name | Remote version | Local filename version |
+|---|---:|---:|
+| nearby_opt_in_approximate_discovery | 20261105141247 | 20261105220000 |
+| nearby_presence_status_and_expiry | 20261105141309 | 20261105221000 |
+| harden_nearby_discovery_function_boundary | 20261105141659 | 20261105222000 |
+| respect_in_app_notification_preferences | 20261105142226 | 20261105223000 |
+| notification_preferences_paged_feed_rpc | 20261105142323 | 20261105224000 |
+| hide_deleted_message_attachments | 20261105142851 | 20261105225000 |
+| hide_deleted_message_attachment_metadata | 20261105142927 | 20261105225500 |
+| validate_image_message_attachment_uploads | 20261105143331 | 20261105230000 |
+| nexora_fcm_push_delivery_webhook | 20261105151018 | 20261105233000 |
+| restrict_community_channel_grants | 20261105175432 | 20261105235000 |
+| revoke_public_execute_private_helpers | 20261105175513 | 20261105235500 |
+| remove_redundant_message_attachment_read_policy | 20261105180622 | 20261106001000 |
+| make_message_attachment_validation_restrictive | 20261105180641 | 20261106001500 |
+| enforce_case_insensitive_profile_usernames | 20261105180734 | 20261106002000 |
+
+This is a concrete mismatch inventory, not a safe repair plan. The remote-only foundation/security migrations may contain the source for live helpers such as `private.is_blocked_between`; that is a candidate to investigate, not an established mapping. Recover those exact source files and compare their effects before deciding how to reconcile.
+
+**Hard stop:** no `db push`, reset, replay, migration repair, or new corrective migration until the exact remote/local history and SQL content have been reconciled and a recoverable backup is verified.
