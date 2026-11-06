@@ -226,3 +226,5 @@ The client inbox currently supports accepting incoming pending follow requests o
 | APP-032 | Switch accounts while the blocked-account list is loading or before unblocking | Stale rows are hidden; unblock is allowed only for the viewer who loaded the list | P1 |
 | APP-033 | Switch accounts while privacy settings load or save | Settings from the previous viewer are not displayed or saved under the new session | P1 |
 | APP-034 | Switch accounts while friend/follow requests load or while an action completes | Old request lists are hidden and stale actions do not mutate the new viewer's UI | P1 |
+
+| APP-035 | Switch accounts while a profile friendship control is loading or an RPC is running | The control stops showing the previous viewer's state and disables actions for a mismatched session | P1 |
