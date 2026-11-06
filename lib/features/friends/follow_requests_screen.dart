@@ -249,9 +249,6 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
                           final displayName = profileHidden
                               ? 'حساب خاص'
                               : (profile['display_name'] ?? username).toString();
-                          final followerLabel = followerId.length > 6
-                              ? followerId.substring(0, 6)
-                              : followerId;
 
                           return Card(
                             child: ListTile(
@@ -268,7 +265,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(fontWeight: FontWeight.w800),
                               ),
-                              subtitle: Text(profileHidden ? 'الملف الشخصي غير متاح · $followerLabel' : '@$username'),
+                              subtitle: Text(profileHidden ? 'الملف الشخصي غير متاح' : '@$username'),
                               trailing: FilledButton.tonalIcon(
                                 onPressed: _refreshing || _loadingMore || _accepting.contains(followerId)
                                     ? null
