@@ -21,7 +21,7 @@ Detailed design: [Systems 63–90 — Ads & Commerce, Trust & Safety, Operations
 
 CNT-017 (Post Creation & Publishing): [functional specification](docs/02-CONTENT-SYSTEM-017.md), [publish-flow contract](docs/02-CONTENT-SYSTEM-017-PUBLISH-CONTRACT.md), and [29-case acceptance matrix](docs/02-CONTENT-SYSTEM-017-ACCEPTANCE.md). These are specifications and test plans, not proof that all cases passed.
 
-Documentation review: [Consistency audit and reconciliation plan](docs/DOCUMENTATION-CONSISTENCY-AUDIT.md). Implemented code does not mean every workflow has passed end-to-end testing with real users/devices.
+Documentation review: [Consistency audit and reconciliation plan](docs/DOCUMENTATION-CONSISTENCY-AUDIT.md). [Source-to-contract traceability](docs/SOURCE-TO-CONTRACT-TRACEABILITY.md). [SQL contract traceability](docs/SQL-CONTRACT-TRACEABILITY.md). Implemented code does not mean every workflow has passed end-to-end testing with real users/devices.
 
 ## Known production gaps
 
