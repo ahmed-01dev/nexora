@@ -91,12 +91,45 @@ class NexoraPushService {
   }
 
   Future<void> registerIfAllowed({bool resumeAfterSignIn = false}) async {
-    if (!supported || Supabase.instance.client.auth.currentUser == null) return;
-    if (resumeAfterSignIn) _registrationSuspended = false;
+    if (!supported) return;
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    if (currentUserId == null) return;
+
+    if (resumeAfterSignIn) {
+      final previousOwnerId = _installationOwnerUserId;
+      final previousFid = _lastInstallationId;
+      if (previousOwnerId != null &&
+          previousOwnerId != currentUserId &&
+          previousFid != null) {
+        // Supabase can replace a session without an account-screen logout.
+        // Remove the old owner's row and queue its callback before the new
+        // account registers the same device installation.
+        _registrationGeneration++;
+        _registrationOwnership.queueUnregistration(
+          previousFid,
+          previousOwnerId,
+        );
+        _lastInstallationId = null;
+        try {
+          await _deleteInstallationId(previousFid, ownerId: previousOwnerId);
+          await FirebaseMessaging.instance.unregister();
+        } catch (error) {
+          _registrationOwnership.removeQueuedUnregistration(
+            previousFid,
+            previousOwnerId,
+          );
+          debugPrint('NEXORA FCM account-switch cleanup failed: ${error.runtimeType}');
+        }
+      }
+      _installationOwnerUserId = currentUserId;
+      _registrationSuspended = false;
+    }
     if (_registrationSuspended) return;
     if (await status() != AuthorizationStatus.authorized) return;
     if (_registrationSuspended ||
-        Supabase.instance.client.auth.currentUser == null) return;
+        Supabase.instance.client.auth.currentUser?.id != currentUserId) {
+      return;
+    }
     await FirebaseMessaging.instance.register();
   }
 
