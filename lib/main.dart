@@ -108,11 +108,17 @@ class _NexoraAppState extends State<NexoraApp> {
     if (widget.ready) {
       _loadAppearance();
       _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((state) {
-        final isNewSession = state.event == AuthChangeEvent.initialSession ||
-            state.event == AuthChangeEvent.signedIn;
-        NexoraPushService.instance.registerIfAllowed(
-          resumeAfterSignIn: isNewSession,
-        );
+        if (state.event == AuthChangeEvent.signedOut) {
+          // Also clean up when the session ends outside the account-screen
+          // button (for example, remote revocation or session invalidation).
+          unawaited(NexoraPushService.instance.unregisterCurrentDevice());
+        } else {
+          final isNewSession = state.event == AuthChangeEvent.initialSession ||
+              state.event == AuthChangeEvent.signedIn;
+          NexoraPushService.instance.registerIfAllowed(
+            resumeAfterSignIn: isNewSession,
+          );
+        }
         _loadAppearance();
       });
       if (!kIsWeb && Firebase.apps.isNotEmpty) {
