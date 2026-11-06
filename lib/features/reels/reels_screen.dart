@@ -31,25 +31,38 @@ class _ReelsScreenState extends State<ReelsScreen> {
         .order('created_at', ascending: false)
         .limit(40);
 
+    final candidates = rows.where((row) => row['posts'] is Map).toList();
     final result = <Map<String, dynamic>>[];
-    for (final row in rows) {
-      final postRaw = row['posts'];
-      if (postRaw is! Map) continue;
-      final post = Map<String, dynamic>.from(postRaw);
-      final authorRaw = post['profiles'];
-      final author = authorRaw is Map
-          ? Map<String, dynamic>.from(authorRaw)
-          : <String, dynamic>{};
-      final url = await client.storage
-          .from('nexora-media')
-          .createSignedUrl(row['storage_path'] as String, 3600);
-      result.add({
-        'id': row['id'],
-        'post_id': row['post_id'],
-        'url': url,
-        'caption': post['content'] ?? '',
-        'author': author,
-      });
+    // Sign at most eight URLs concurrently and isolate inaccessible media.
+    for (var start = 0; start < candidates.length; start += 8) {
+      final end = (start + 8 < candidates.length)
+          ? start + 8
+          : candidates.length;
+      final signedBatch = await Future.wait(
+        candidates.sublist(start, end).map((row) async {
+          final post = Map<String, dynamic>.from(row['posts'] as Map);
+          final authorRaw = post['profiles'];
+          final author = authorRaw is Map
+              ? Map<String, dynamic>.from(authorRaw)
+              : <String, dynamic>{};
+          try {
+            final url = await client.storage
+                .from('nexora-media')
+                .createSignedUrl(row['storage_path'] as String, 3600);
+            return <String, dynamic>{
+              'id': row['id'],
+              'post_id': row['post_id'],
+              'url': url,
+              'caption': post['content'] ?? '',
+              'author': author,
+            };
+          } catch (error, stack) {
+            AppErrorService.report(error, stack, source: 'reel_signed_url');
+            return null;
+          }
+        }),
+      );
+      result.addAll(signedBatch.whereType<Map<String, dynamic>>());
     }
     return result;
   }
