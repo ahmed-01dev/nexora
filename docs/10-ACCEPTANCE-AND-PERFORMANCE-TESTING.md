@@ -242,3 +242,15 @@ The client inbox currently supports accepting incoming pending follow requests o
 | APP-043 | Switch reviewer accounts while the moderation report queue loads, a target preview is open, or a report decision is submitted | Old reviewer data is hidden; assignment/dismissal/target preview is bound to the reviewer who loaded the queue | P1 |
 
 | APP-044 | Switch accounts while the block confirmation or report dialog is open | The action is bound to the account that opened the dialog; confirmation cannot execute under the next signed-in account | P1 |
+
+## Visual design and smoothness acceptance
+
+| UI-001 | Production shell has exactly five bottom destinations with centered Create action | Home, Explore, Create, Chat, Profile; Reels reachable from Explore | P1 |
+| UI-002 | Aurora Glass palette and surface hierarchy | AMOLED black/surfaces/text/accent tokens match `docs/DESIGN-AND-MOTION-SPEC.md` | P1 |
+| UI-003 | Glass restraint | Floating controls only; no default blur on feed cards/list rows; ≤2 nested layers and ≤3 simultaneous blurred surfaces | P1 |
+| UI-004 | Motion accessibility | Tab feedback uses shared motion tokens and respects reduced-motion preference | P1 |
+| UI-005 | Content safe area | Floating navigation never obscures the last actionable item on small screens or with system insets | P1 |
+| UI-006 | Performance | Physical-device scroll/tab/reel tests show stable 60 fps target with no sustained jank; record device and trace | P1 |
+| UI-007 | Font delivery | IBM Plex Sans Arabic and Cairo fallback are bundled and verified on Android, not merely named in ThemeData | P1 |
+| UI-008 | Visual consistency | Home, Explore, Create, Chat, Profile, auth, profile details, stories, and settings use shared tokens and RTL layout | P1 |
+
