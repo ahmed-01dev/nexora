@@ -96,3 +96,5 @@ See `docs/SECURITY-DEFINER-INVENTORY.md` for the 32 live SECURITY DEFINER functi
 ### Private schema API exposure — release gate
 
 The authenticated role has USAGE on `private` and EXECUTE on multiple SECURITY DEFINER helpers there; anon/PUBLIC have no schema USAGE. These grants support RLS policies and internal wrapper functions. Do not revoke them blindly. Verify the hosted Supabase Dashboard → API → Exposed schemas setting excludes `private` before release; the database-side PostgREST setting was not readable from the SQL session, so exposure remains unverified.
+
+FCM registration is suspended immediately before explicit sign-out and is resumed only by an initial or newly signed-in auth session. The auth listener no longer resumes registration for arbitrary token-refresh/user-update events while sign-out is in progress. Notification-permission requests recheck the signed-in/suspended state after the permission prompt.
