@@ -142,3 +142,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Updated `.github/workflows/android-preview.yml` to add Google Services Gradle plugin `4.5.0` to the generated Kotlin DSL settings and app plugin blocks, then verify that the generated `applicationId` matches a package registered in `google-services.json`.
 - The patch was checked against the official Flutter 3.47.9 Android Kotlin-DSL template and Firebase's current Android setup instructions. The patch logic was simulated against the generated template shape; no Android project was generated and no Gradle/APK build was run.
 - This corrects the workflow's missing Gradle configuration, but does not resolve the production application-ID decision: `com.example.nexora` remains placeholder-style and must be replaced with the final ID plus matching Firebase registration before public release.
+
+- Follow-inbox contract delta: the newly added `follow_requests_screen.dart` was separately checked against live `follows` and `profiles` columns, the authenticated column-level `status` UPDATE grant, and the recipient-only UPDATE policy. No mismatch was found; no RLS integration test was run.
