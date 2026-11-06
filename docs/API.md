@@ -180,3 +180,11 @@ A static scan of recognized Supabase query-builder filter/order calls across the
 ### Follow-request screen delta after the static scan
 
 The subsequently added `lib/features/friends/follow_requests_screen.dart` was checked separately against the same live schema snapshot: its `follows` projection and embedded requester profile columns exist, its filter/order fields exist, and its sole write key `status` is the only column-level UPDATE privilege granted to authenticated users. The screen's update is additionally constrained by the recipient-only RLS policy. This brings the source files reviewed for these literal contract checks to 30; it does not add a decline operation or replace multi-user integration testing.
+
+## 12. Accepted followers and following lists
+
+- Source: `FriendsScreen` in `lib/main.dart`.
+- Following direction filters `public.follows.follower_id = auth.uid()`; followers direction filters `public.follows.following_id = auth.uid()`; both require `status = 'accepted'`.
+- Embedded profile relationships use the live foreign keys `follows_following_id_fkey` and `follows_follower_id_fkey`. Live catalog inspection confirmed both reference `profiles(id)`.
+- Results are newest-first with the opposite user ID as a stable tie-breaker and are capped at 100 rows. The UI shows a privacy-safe placeholder when profile RLS hides the embedded profile; it does not bypass profile authorization.
+- Follow/unfollow controls reuse the existing `request_follow` and `cancel_follow` RPCs. This list currently has no pagination beyond the first 100 rows.
