@@ -60,8 +60,15 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = _load());
-    await _future;
+    final next = _load();
+    setState(() => _future = next);
+    try {
+      await next;
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'friend_requests_refresh');
+      // FutureBuilder renders the error state; keep RefreshIndicator from
+      // leaking an unhandled refresh exception.
+    }
   }
 
   @override
