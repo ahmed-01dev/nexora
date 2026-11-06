@@ -128,7 +128,8 @@ class NexoraPushService {
     // Invalidate registrations already in flight before deleting the row.
     _registrationSuspended = true;
     _registrationGeneration++;
-    final ownerId = Supabase.instance.client.auth.currentUser?.id;
+    final ownerId = Supabase.instance.client.auth.currentUser?.id ??
+        _installationOwnerUserId;
     final fid = _lastInstallationId;
     _lastInstallationId = null;
     _installationOwnerUserId = ownerId;
