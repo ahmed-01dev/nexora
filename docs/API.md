@@ -192,3 +192,7 @@ The subsequently added `lib/features/friends/follow_requests_screen.dart` was ch
 ### Followers/following pagination query-plan note
 
 Read-only `EXPLAIN` checks for both directional page queries show the expected composite index scan (`follows_follower_status_idx` or `follows_following_status_idx`) followed by an explicit sort on `created_at DESC` and the opposite user ID. The current indexes do not satisfy that full ordering. This is a plan-shape observation using a non-existent UUID and does not measure production latency or row-volume behavior. Do not add an index until migration-history reconciliation and representative workload/EXPLAIN ANALYZE evidence are available.
+
+### Incoming follow-request paging concurrency
+
+The inbox uses a request-generation guard for first-page, refresh, and load-more requests. It tracks the backend offset separately from the number of visible rows so deduplicated rows do not cause the same backend page to be fetched repeatedly. Accept actions are disabled while a refresh is active, and refresh does not start while an accept action is in progress. These are client-side race protections; authenticated concurrent-session integration tests remain NOT RUN.
