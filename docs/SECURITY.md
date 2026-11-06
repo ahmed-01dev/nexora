@@ -107,3 +107,5 @@ The shared Flutter error reporter logs the source and exception runtime type rat
 ### Startup error disclosure
 
 The startup fallback screen now receives a generic Arabic error message from `AppErrorService.message` rather than rendering the raw Supabase initialization exception. Detailed exception values are not displayed to the user; the central reporter logs the error type and stack for local diagnostics. Provider-side configuration and startup recovery still require device validation.
+
+FCM device cleanup is also triggered by Supabase `signedOut` auth events, not only the account-screen sign-out button. The service preserves the last known installation owner when the auth session has already been cleared, so remote revocation/session invalidation can still target the correct `user_devices` row. Cleanup remains best-effort and must be verified on a physical device and under offline conditions.
