@@ -99,3 +99,7 @@ If the Supabase sign-out call fails after device cleanup, the account screen res
 ### FCM unregister callback ownership
 
 Before unregistering Firebase Messaging, the service captures the authenticated account ID. The asynchronous `onUnregistered` callback deletes the FID row using that captured owner rather than reading `currentUser` after sign-out may have cleared it. This prevents the callback from silently skipping cleanup solely because the session has already ended. Database/network deletion failures remain best-effort and require offline and physical-device validation.
+
+### Client diagnostic logging
+
+The shared Flutter error reporter logs the source and exception runtime type rather than the raw exception string, because backend/plugin errors can contain phone numbers, email addresses, identifiers, or server response details. Stack traces remain available in debug logs; production crash/telemetry export is not configured or claimed.
