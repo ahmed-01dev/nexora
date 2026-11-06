@@ -323,3 +323,6 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Block confirmation and report submission now capture the account that opened each dialog; the action is rejected if the authenticated user changes before confirmation/submission.
 
 - Latest completed CI run `42256583447` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on commit `336f35e01165b04d878777bceadb24fe64a76947`. It includes the block-confirmation and report-dialog actor binding changes. No APK/AAB/Web build was run.
+
+- Visual direction is now explicitly tracked in `docs/DESIGN-AND-MOTION-SPEC.md`. The production shell has been aligned to five bottom destinations (Home, Explore, Create, Chat, Profile), with Reels accessible from Explore; navigation uses a floating Aurora Glass layer, reduced-motion-aware 240 ms feedback, and reserved content space above the bar. The old blue blurred feed hero was replaced by a solid Aurora surface. This is a first production-shell pass, not completion of every screen's visual QA.
+- Remaining visual gates: bundle and verify IBM Plex Sans Arabic/Cairo font files; audit all production screens against the design contract; test small-screen/insets; measure physical-device frame jank and confirm stable 60 fps; verify OS reduced-transparency behavior. No performance claim is made until measured.
