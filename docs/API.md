@@ -9,7 +9,7 @@
 
 | Domain | Operation / object | Current evidence | Important limitation |
 |---|---|---|---|
-| Authentication | Supabase Auth phone OTP UI; email/password alternative | Phone-first UI and six-digit verification path documented in implementation status | SMS provider delivery, cost, and real-device verification are external/unverified; account linking, MFA, passkeys, OAuth and recovery hardening pending |
+| Authentication | Supabase Auth email/password | Email signup/sign-in, confirmation resend, and password-reset request are implemented in the Flutter client | SMTP deliverability, confirmation/recovery deep links, MFA, passkeys, and OAuth require configuration and end-to-end verification |
 | Profiles | Read/update own profile | Implemented profile display/edit documented | Authenticated real-device media/profile flow still needs end-to-end validation |
 | Profile media | Private avatar/cover Storage upload and signed display | Private paths, owner-scoped policy, signed URL display and replacement cleanup documented | Server-side signature scanning and malware scanning pending |
 | Posts | Text-only post insert; public feed query | Explicitly documented as implemented | Full post feature remains Partial; do not infer scheduling, drafts, editing, polls, or media processing |
@@ -199,7 +199,7 @@ The inbox uses a request-generation guard for first-page, refresh, and load-more
 
 ### Authentication runtime trigger evidence — 2026-11-06
 
-A read-only live catalog inspection confirmed the `auth.users` AFTER INSERT trigger `on_auth_user_created` invokes `public.handle_new_user()`. The function is SECURITY DEFINER with an empty search path and inserts the new auth UUID plus a generated `user_<uuid-without-hyphens>` username and `raw_user_meta_data.display_name` into `public.profiles`. This supports both phone OTP and email signup metadata paths at the database-trigger level. It does not prove the Supabase Phone provider/SMS vendor is enabled, that an SMS can be delivered, or that signup completes on a physical device. The current Flutter channel is SMS only; WhatsApp OTP is not implemented/configured.
+A read-only live catalog inspection confirmed the `auth.users` AFTER INSERT trigger `on_auth_user_created` invokes `public.handle_new_user()`. The function is SECURITY DEFINER with an empty search path and inserts the new auth UUID plus a generated `user_<uuid-without-hyphens>` username and `raw_user_meta_data.display_name` into `public.profiles`. This supports email signup metadata at the database-trigger level. It does not prove SMTP deliverability, confirmation-link handling, or password recovery on a physical device. NEXORA intentionally excludes phone-number, SMS OTP, and WhatsApp OTP authentication.
 
 ## Live RPC signature and authorization audit
 
