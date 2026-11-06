@@ -134,3 +134,10 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - The Firebase configuration identifies Android package `com.example.nexora`. This placeholder-style ID must be replaced with the final unique application ID and matching Firebase registration before public release.
 - A reproducible dependency lockfile is still missing. It must be generated and committed using the selected Flutter SDK before release packaging; it must not be hand-authored or fabricated.
 - No Flutter dependency resolution, analysis, tests, Android scaffold generation, APK/AAB/Web build, or workflow dispatch was performed during this inspection.
+
+## Firebase Android build configuration correction — 2026-11-06
+
+- The Android preview workflow previously copied `google-services.json` but did not apply the Google Services Gradle plugin. The generated Android project therefore lacked the documented Gradle step that converts the JSON into Android resources required by default native Firebase initialization.
+- Updated `.github/workflows/android-preview.yml` to add Google Services Gradle plugin `4.5.0` to the generated Kotlin DSL settings and app plugin blocks, then verify that the generated `applicationId` matches a package registered in `google-services.json`.
+- The patch was checked against the official Flutter 3.47.9 Android Kotlin-DSL template and Firebase's current Android setup instructions. The patch logic was simulated against the generated template shape; no Android project was generated and no Gradle/APK build was run.
+- This corrects the workflow's missing Gradle configuration, but does not resolve the production application-ID decision: `com.example.nexora` remains placeholder-style and must be replaced with the final ID plus matching Firebase registration before public release.
