@@ -157,3 +157,7 @@ Profile-level friendship controls now capture the viewer ID for both relationshi
 ### Nearby, notification preference, and moderation session binding
 
 Nearby presence/discovery reads and writes capture the viewer ID and discard stale results after session changes; location updates recheck the session after OS permission/location awaits. Direct-conversation creation from nearby results is similarly bound to the captured viewer. Notification preference reads/writes and push-permission continuation are tied to the account that loaded the preferences. Personal moderation history/appeals and reviewer appeal decisions also capture and recheck the authenticated actor. These client checks complement, but do not replace, server-side RLS/RPC authorization. Physical-device location, permission, multi-account, and moderator-role integration tests remain pending.
+
+### Community discovery and management session binding
+
+Community discovery now checks the authenticated viewer after the community query and membership query, including empty-page results. Membership changes, invite acceptance/creation/revocation, and community creation capture the viewer and suppress stale UI updates after a session change. Community creation still has a partial-insert orphan risk if the session changes after the community row is inserted but before owner membership is committed; this requires server-side transactional creation/reconciliation. RLS remains authoritative and device-level multi-account tests are pending.
