@@ -159,3 +159,11 @@ A static scan of literal `insert`, `update`, and `upsert` map payloads in the re
 - One profile-image update uses a computed key named `column`; source inspection confirmed it is constrained to the two live profile columns `avatar_url` and `cover_url`.
 - This does not verify row-level authorization, column grants, check constraints, nullability at runtime, transaction behavior, or Storage upload/delete authorization. It also does not cover maps built dynamically outside the literal payload patterns.
 - No database, Storage, or runtime configuration was changed.
+
+## 10. Literal filter and ordering column check
+
+A static scan of recognized Supabase query-builder filter/order calls across the reviewed Flutter sources checked 150 literal database column references against the live table definitions, accounting for embedded relation prefixes and explicit `referencedTable` ordering.
+
+- Result: **zero mismatched query-builder column references** among the 150 recognized database references.
+- One string operation on an error message containing `23505` was excluded after source inspection; it is not a database filter.
+- Dynamic column names and query-builder methods outside the recognized scan patterns are not covered. This is not a runtime authorization or query-execution test.
