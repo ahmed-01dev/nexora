@@ -207,3 +207,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Latest Flutter CI run `42226624301` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on PR head `cf6f4d83b568023319c53aefcccb5881446aa267`. This includes the current FCM registration/sign-out lifecycle and friendship inbox refresh handling. It did not produce an APK/AAB/Web artifact.
 
 - Friendship action widget now invalidates stale asynchronous profile relationship reads when the target user changes, preventing a previous profile's friendship state from overwriting the currently displayed profile. Latest Flutter CI is pending for this final guard.
+
+- Client error logging privacy: shared error reporting now records the source and exception runtime type instead of raw backend/plugin exception text, reducing the chance of leaking phone/email/identifier data into debug logs. Production telemetry/crash export remains unconfigured.
