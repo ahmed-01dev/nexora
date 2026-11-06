@@ -126,3 +126,11 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Static write-contract check: 111 literal `insert`/`update`/`upsert` payload keys across the reviewed Flutter app/feature sources matched live public-table columns. The sole computed profile key was inspected and is constrained to `avatar_url` or `cover_url`. Runtime grants/RLS and dynamic payloads remain unverified.
 
 - Static filter/order check: 150 recognized literal Supabase query-builder column references were compared with live table columns, including embedded relations and referenced-table ordering; zero mismatches were found. A non-database string `contains('23505')` check was excluded after source inspection. Dynamic query fields and runtime execution remain unverified.
+
+## Pre-build repository configuration check — 2026-11-06
+
+- The repository tree contains Flutter source and `pubspec.yaml`, but no committed `pubspec.lock` and no committed `android/` platform directory. The Android preview workflow intentionally generates Android scaffolding with `flutter create --platforms=android` and copies `firebase/android/google-services.json` into `android/app/` before dependency installation.
+- The manual Android preview workflow pins Flutter `3.47.9`; the corresponding upstream Flutter Git tag exists. The regular analysis/test workflow uses the stable channel rather than an exact Flutter version.
+- The Firebase configuration identifies Android package `com.example.nexora`. This placeholder-style ID must be replaced with the final unique application ID and matching Firebase registration before public release.
+- A reproducible dependency lockfile is still missing. It must be generated and committed using the selected Flutter SDK before release packaging; it must not be hand-authored or fabricated.
+- No Flutter dependency resolution, analysis, tests, Android scaffold generation, APK/AAB/Web build, or workflow dispatch was performed during this inspection.
