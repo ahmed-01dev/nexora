@@ -7,7 +7,7 @@ NEXORA is a social platform with an AMOLED-first identity, Arabic-first localiza
 - Flutter application for Android and Web/PWA output.
 - Supabase Auth and PostgreSQL.
 - Supabase RLS for client-facing authorization.
-- GitHub Actions for analysis, tests, APK, and web builds.
+- GitHub Actions for source analysis/tests and a manually gated Android debug-preview APK. No AAB or Flutter Web release workflow was found in the inspected workflow directory.
 - Current repository is a small Flutter codebase; the UI is still concentrated in `lib/main.dart`.
 
 ## Target architecture
@@ -52,7 +52,7 @@ flowchart TB
 
 ## Current implementation boundary
 
-The repository is beyond a text-post-only prototype, but it is not production complete. The dated [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) is the feature-level source of truth and documents partial workflows for profiles/private media, posts/feed/comments, follows/friendships, messaging, stories, communities, notifications, safety/moderation, nearby discovery and themes. Read each feature's status notes before relying on it.
+The repository is beyond a text-post-only prototype, but it is not production complete. The dated [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) is the feature-level source of truth and documents partial workflows for profiles/private media, posts/feed/comments, follows/friendships, messaging, stories, communities, notifications, safety/moderation, nearby discovery and themes. Read each feature's status notes before relying on it. CI/build inventory was rechecked on 2026-11-06: `flutter-ci.yml` performs source analysis/tests, while `android-preview.yml` is a manually gated debug-APK workflow; no AAB/Web release workflow was present.
 
 Important distinctions:
 - Phone-first OTP UI exists, but SMS provider delivery, cost and real-device verification are not production-verified; email/password is an alternative.
