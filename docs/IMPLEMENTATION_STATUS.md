@@ -168,3 +168,6 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Followers/following hardening: paginated requests now use a generation guard so a stale in-flight page cannot append results after the user switches direction or refreshes. Source CI run `42222087355` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on commit `0c42d17bb5fba7184aef73f01bd9e6c75248f744`. This is source validation, not a real-device or authenticated multi-user test.
 
 - Added three read-only schema snapshots: 254 column definitions, 166 constraints (39 PK / 67 FK / 9 unique / 51 check), and 106 index definitions. These are documentation artifacts only; no migration or schema changes were applied.
+
+- Added `docs/ERD-LIVE-POLICIES.md` with all 112 live RLS policy definitions (111 public, 1 private). The policy snapshot is descriptive; policy correctness and authenticated/anonymous integration behavior remain under review.
+- Follow-inbox paging concurrency and acceptance/refresh guards passed Flutter source CI run `42222571794` on commit `35d351c3e32937020c2313a37964e64e5259146d` (dependency install, analyze, and test).
