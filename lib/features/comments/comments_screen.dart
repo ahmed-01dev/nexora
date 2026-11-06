@@ -21,7 +21,6 @@ class _CommentsScreenState extends State<CommentsScreen> {
   bool _hasMore = true;
   bool _loadingMore = false;
   int _nextOffset = 0;
-  int _generation = 0;
   int _requestGeneration = 0;
   static const int _pageSize = 100;
 
