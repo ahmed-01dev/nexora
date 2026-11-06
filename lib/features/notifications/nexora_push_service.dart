@@ -45,7 +45,11 @@ class NexoraPushService {
   }
 
   Future<bool> requestPermission() async {
-    if (!supported) return false;
+    if (!supported ||
+        _registrationSuspended ||
+        Supabase.instance.client.auth.currentUser == null) {
+      return false;
+    }
     final settings = await FirebaseMessaging.instance.requestPermission(
       alert: true,
       badge: true,
