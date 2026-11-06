@@ -98,8 +98,12 @@ class _NexoraAppState extends State<NexoraApp> {
     super.initState();
     if (widget.ready) {
       _loadAppearance();
-      _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((_) {
-        NexoraPushService.instance.registerIfAllowed();
+      _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((state) {
+        final isNewSession = state.event == AuthChangeEvent.initialSession ||
+            state.event == AuthChangeEvent.signedIn;
+        NexoraPushService.instance.registerIfAllowed(
+          resumeAfterSignIn: isNewSession,
+        );
         _loadAppearance();
       });
       if (!kIsWeb && Firebase.apps.isNotEmpty) {
