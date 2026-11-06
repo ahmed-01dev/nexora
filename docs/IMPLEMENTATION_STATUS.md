@@ -311,3 +311,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Profile friendship controls now bind relationship reads and all friendship RPCs to the captured viewer session; stale relationship state is hidden and the control is disabled after an account switch.
 
 - Nearby presence/location updates and nearby messaging, notification preference reads/writes, personal moderation history/appeal submission, and moderator appeal review now bind asynchronous work to the captured authenticated user. Stale results are discarded or hidden after account changes; OS permission/location awaits are followed by session checks. Real-device and role/RLS integration tests remain pending.
+
+- Community discovery and membership/invite/create flows now capture the viewer ID, reject stale page results (including empty pages), and suppress old-session UI updates. Community creation is still a multi-request flow; a session switch after the community insert can leave an orphan community row, so a transactional server-side create operation remains a follow-up.
