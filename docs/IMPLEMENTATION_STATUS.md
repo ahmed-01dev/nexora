@@ -189,3 +189,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Security release gate: authenticated has USAGE on the `private` schema and EXECUTE on internal SECURITY DEFINER helpers; anon/PUBLIC do not. The hosted PostgREST exposed-schema setting could not be confirmed from SQL. Verify the Supabase Dashboard excludes `private` from exposed schemas before release; do not revoke helper grants blindly because RLS and public wrappers depend on them.
 
 - Flutter CI run `42225073974` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on commit `11896cc52659f875be399f9371fe8182136311ed`, covering the FCM in-flight registration guard and the current followers/following UI source. No APK/AAB/Web build was run.
+
+- FCM auth-event hardening: registration is suspended before logout, stale in-flight upserts are reconciled against the original account, and registration resumes only on initial/new sign-in events. Permission prompts recheck session/suspension state before registering. Source CI validation for this latest auth-event change is pending.
