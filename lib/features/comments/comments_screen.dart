@@ -235,8 +235,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
       child: Column(
         children: [
           _CommentTile(
+            key: ValueKey(comment['id']),
             comment: comment,
-            mine: comment['user_id'] == _myId,
+            mine: comment['user_id'] == _db.auth.currentUser?.id,
             onReply: () => setState(() {
               _replyTo = comment['id'] as String;
               _replyName = name;
