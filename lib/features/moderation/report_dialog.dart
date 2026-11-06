@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
+import 'report_submission_validation.dart';
 
 class ReportDialog extends StatefulWidget {
   const ReportDialog({
@@ -65,10 +66,12 @@ class _ReportDialogState extends State<ReportDialog> {
       setState(() => _error = 'انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
       return;
     }
-    if (!const {'user', 'post', 'comment', 'message', 'story', 'community'}
-            .contains(widget.targetType) ||
-        widget.targetId.trim().isEmpty) {
-      setState(() => _error = 'عنصر البلاغ غير صالح.');
+    if (!ReportSubmissionValidation.isValidTarget(
+          type: widget.targetType,
+          id: widget.targetId,
+        ) ||
+        !ReportSubmissionValidation.isValidReason(_reason)) {
+      setState(() => _error = 'عنصر البلاغ أو سبب البلاغ غير صالح.');
       return;
     }
     setState(() {
