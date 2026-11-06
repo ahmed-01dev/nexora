@@ -19,7 +19,7 @@
 | Likes | Insert/delete or toggle in likes table | Documented as client-used | Verify exact call sites and RLS during source trace |
 | Reposts | Repost/undo using reposts table | Public-post restriction, RLS and unique index documented | Quote repost UI pending |
 | Bookmarks | Save/unsave using saves table; own saved-post library | Documented as client-used | Verify exact call sites and pagination behavior |
-| Follows | Basic follow insertion/deletion; request/cancel RPC for private profiles | Implementation status documents both direct and RPC paths | Request inbox/accept UI pending; do not collapse public follow and private request semantics |
+| Follows | Public follow/unfollow RPCs; private follow request/cancel; incoming request inbox and recipient acceptance; accepted followers/following lists | `FriendsScreen` and `FollowRequestsScreen` use live `follows` FK relationships, owner-scoped RLS, and 30-row pagination | Follow-request decline is not implemented for follows; list filters/activity indicators and authenticated multi-user integration tests pending |
 | Friendships | request/accept/decline/cancel/remove RPC family | Server-side operations and block/permission checks documented | Verify actual SQL signatures and call sites before changing payloads |
 | Privacy | update_privacy_settings RPC | Atomic profile visibility/direct-message permission synchronization documented | Do not write protected privacy columns directly from client |
 | Messaging | Inbox, realtime messages, read state, own edit/soft-delete, image attachments | Partial client workflow and RLS/storage restrictions documented | No E2EE; video/audio/file attachments and richer delivery indicators pending |
