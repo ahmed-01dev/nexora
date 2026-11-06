@@ -26,6 +26,12 @@ void main() {
     expect(NexoraRadius.sheet, 28);
   });
 
+  test('motion tokens keep the shared Aurora timing scale', () {
+    expect(NexoraMotion.fast, const Duration(milliseconds: 160));
+    expect(NexoraMotion.standard, const Duration(milliseconds: 240));
+    expect(NexoraMotion.emphasized, const Duration(milliseconds: 320));
+  });
+
   group('normalizeNexoraTheme', () {
     test('keeps all supported theme values', () {
       for (final value in ['amoled', 'light', 'pink_amoled', 'custom']) {
