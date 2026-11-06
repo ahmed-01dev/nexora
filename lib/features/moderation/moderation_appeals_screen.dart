@@ -377,5 +377,4 @@ class _ModerationAppealsScreenState extends State<ModerationAppealsScreen> {
         ),
       );
   }
-};
-}
+
