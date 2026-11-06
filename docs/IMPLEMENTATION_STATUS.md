@@ -120,3 +120,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - This is static contract parity only. It does not prove RLS behavior, grants, returned JSON decoding, error-path correctness, or end-to-end execution under real user identities.
 - The push service lifecycle was re-read. Device registration/deletion remains best-effort and can leave stale device rows when cleanup fails; physical-device notification display/tap behavior remains unverified.
 - No code behavior, database schema, grants, migration history, or deployed service was changed in this review. No tests or application builds were run.
+
+- Additional static query review: literal `.select(...)` projections and nested embedded-relation column names across 29 reviewed Flutter app/feature Dart files were checked against live `information_schema.columns`; zero unknown selected columns or relation names were found. This does not cover dynamic projections, filters, write payloads, RLS runtime behavior, or result decoding.
