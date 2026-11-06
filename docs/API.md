@@ -196,3 +196,7 @@ Read-only `EXPLAIN` checks for both directional page queries show the expected c
 ### Incoming follow-request paging concurrency
 
 The inbox uses a request-generation guard for first-page, refresh, and load-more requests. It tracks the backend offset separately from the number of visible rows so deduplicated rows do not cause the same backend page to be fetched repeatedly. Accept actions are disabled while a refresh is active, and refresh does not start while an accept action is in progress. These are client-side race protections; authenticated concurrent-session integration tests remain NOT RUN.
+
+### Authentication runtime trigger evidence — 2026-11-06
+
+A read-only live catalog inspection confirmed the `auth.users` AFTER INSERT trigger `on_auth_user_created` invokes `public.handle_new_user()`. The function is SECURITY DEFINER with an empty search path and inserts the new auth UUID plus a generated `user_<uuid-without-hyphens>` username and `raw_user_meta_data.display_name` into `public.profiles`. This supports both phone OTP and email signup metadata paths at the database-trigger level. It does not prove the Supabase Phone provider/SMS vendor is enabled, that an SMS can be delivered, or that signup completes on a physical device. The current Flutter channel is SMS only; WhatsApp OTP is not implemented/configured.
