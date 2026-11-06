@@ -18,6 +18,8 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
   bool _refreshing = false;
   bool _loadingMore = false;
   bool _hasMore = true;
+  int _nextOffset = 0;
+  int _requestGeneration = 0;
   String? _error;
   final Set<String> _accepting = {};
 
@@ -45,22 +47,26 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
   }
 
   Future<void> _loadFirstPage() async {
+    final generation = ++_requestGeneration;
     setState(() {
       _initialLoading = true;
+      _loadingMore = false;
       _error = null;
       _hasMore = true;
+      _nextOffset = 0;
     });
     try {
       final rows = await _fetchPage(0);
-      if (!mounted) return;
+      if (!mounted || generation != _requestGeneration) return;
       setState(() {
         _requests = rows;
+        _nextOffset = rows.length;
         _hasMore = rows.length == _pageSize;
         _initialLoading = false;
       });
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'follow_requests_load');
-      if (!mounted) return;
+      if (!mounted || generation != _requestGeneration) return;
       setState(() {
         _error = AppErrorService.message(error);
         _initialLoading = false;
@@ -70,18 +76,23 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
 
   Future<void> _refresh() async {
     if (_refreshing) return;
-    setState(() => _refreshing = true);
+    final generation = ++_requestGeneration;
+    setState(() {
+      _refreshing = true;
+      _loadingMore = false;
+    });
     try {
       final rows = await _fetchPage(0);
-      if (!mounted) return;
+      if (!mounted || generation != _requestGeneration) return;
       setState(() {
         _requests = rows;
+        _nextOffset = rows.length;
         _hasMore = rows.length == _pageSize;
         _error = null;
       });
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'follow_requests_refresh');
-      if (!mounted) return;
+      if (!mounted || generation != _requestGeneration) return;
       if (_requests.isEmpty) {
         setState(() => _error = AppErrorService.message(error));
       } else {
@@ -90,30 +101,36 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _refreshing = false);
+      if (mounted && generation == _requestGeneration) {
+        setState(() => _refreshing = false);
+      }
     }
   }
 
   Future<void> _loadMore() async {
-    if (_loadingMore || !_hasMore || _initialLoading) return;
+    if (_loadingMore || !_hasMore || _initialLoading || _refreshing) return;
+    final generation = _requestGeneration;
     setState(() => _loadingMore = true);
     try {
-      final rows = await _fetchPage(_requests.length);
-      if (!mounted) return;
+      final rows = await _fetchPage(_nextOffset);
+      if (!mounted || generation != _requestGeneration) return;
       final known = _requests.map((row) => row['follower_id']).toSet();
       final additions = rows.where((row) => !known.contains(row['follower_id']));
       setState(() {
         _requests = [..._requests, ...additions];
+        _nextOffset += rows.length;
         _hasMore = rows.length == _pageSize;
-        _loadingMore = false;
       });
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'follow_requests_load_more');
-      if (!mounted) return;
-      setState(() => _loadingMore = false);
+      if (!mounted || generation != _requestGeneration) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppErrorService.message(error))),
       );
+    } finally {
+      if (mounted && generation == _requestGeneration) {
+        setState(() => _loadingMore = false);
+      }
     }
   }
 
