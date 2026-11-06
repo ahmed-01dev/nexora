@@ -309,3 +309,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Block creation, blocked-account listing/unblock, privacy settings load/save, and friend/follow request lists/actions now verify the captured authenticated viewer across asynchronous operations. Stale lists are hidden after account changes; stale actions cannot be replayed as the next signed-in account. Server RLS remains the authority; device-level account-switch tests remain pending.
 
 - Profile friendship controls now bind relationship reads and all friendship RPCs to the captured viewer session; stale relationship state is hidden and the control is disabled after an account switch.
+
+- Nearby presence/location updates and nearby messaging, notification preference reads/writes, personal moderation history/appeal submission, and moderator appeal review now bind asynchronous work to the captured authenticated user. Stale results are discarded or hidden after account changes; OS permission/location awaits are followed by session checks. Real-device and role/RLS integration tests remain pending.
