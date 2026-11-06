@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/nexora_theme.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -187,7 +188,7 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
           padding: EdgeInsets.all(16),
           child: Text('تحكم في الإشعارات داخل التطبيق وإشعارات الهاتف لكل نوع.'),
         )),
-        if (error != null) Text(error!, style: const TextStyle(color: Colors.redAccent)),
+        if (error != null) Text(error!, style: const TextStyle(color: NexoraColors.danger)),
         for (final item in categories.entries) Card(
           child: Column(
             children: [
