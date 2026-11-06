@@ -122,3 +122,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - No code behavior, database schema, grants, migration history, or deployed service was changed in this review. No tests or application builds were run.
 
 - Additional static query review: literal `.select(...)` projections and nested embedded-relation column names across 29 reviewed Flutter app/feature Dart files were checked against live `information_schema.columns`; zero unknown selected columns or relation names were found. This does not cover dynamic projections, filters, write payloads, RLS runtime behavior, or result decoding.
+
+- Static write-contract check: 111 literal `insert`/`update`/`upsert` payload keys across the reviewed Flutter app/feature sources matched live public-table columns. The sole computed profile key was inspected and is constrained to `avatar_url` or `cover_url`. Runtime grants/RLS and dynamic payloads remain unverified.
