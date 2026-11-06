@@ -246,7 +246,7 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 
 - Message attachment upload now requires an active authenticated user and rechecks that the same account remains active before Storage upload, message insertion, and attachment metadata insertion. This reduces cross-account writes during asynchronous send flows; physical-device/network-switch tests and orphan-object cleanup remain pending.
 
-- Flutter CI run `42229683958` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on commit `cb5121df7294528699f7d6f90f5ded24acdb87a9`. This run includes the FCM per-FID FIFO ownership helper and its delayed-callback/account-switch unit tests. The later changes in this PR after that commit are documentation-only; no APK/AAB/Web build was run.
+- Flutter CI run `42229683958` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on commit `cb5121df7294528699f7d6f90f5ded24acdb87a9`, including the FCM per-FID FIFO ownership helper and delayed-callback/account-switch unit tests. Subsequent source changes cover message attachment session continuity, story session/video handling, Flutter framework error privacy, and report input/session validation; their latest CI run is tracked separately. No APK/AAB/Web build was run.
 
 - Story flow hardening: publishing now handles an expired session before entering the busy state, rechecks account identity before inserting story metadata, and avoids null-session crashes when marking views or rendering owner-only actions. Video initialization errors now show a recoverable message instead of attempting to render an uninitialized player. Real-device media playback remains unverified.
 
