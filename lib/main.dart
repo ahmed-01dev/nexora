@@ -1044,44 +1044,89 @@ class _HomeScreenState extends State<HomeScreen> {
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(28),
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(22),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(28),
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topRight, end: Alignment.bottomLeft,
-                                  colors: [Color(0xCC245B86), Color(0xAA172C55), Color(0xAA392B70)],
-                                ),
-                                border: Border.all(color: const Color(0x667EDCFF)),
-                                boxShadow: const [BoxShadow(color: Color(0x3319BFEA), blurRadius: 30, offset: Offset(0, 12))],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: NexoraColors.surface,
+                            borderRadius: BorderRadius.circular(NexoraRadius.sheet),
+                            border: Border.all(color: NexoraColors.hairline),
+                            gradient: const LinearGradient(
+                              begin: Alignment.topRight,
+                              end: Alignment.bottomLeft,
+                              colors: [
+                                Color(0xFF1B142D),
+                                NexoraColors.surface,
+                                Color(0xFF101018),
+                              ],
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
                                 children: [
-                                  Row(children: [
-                                    Container(width: 42, height: 42, decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(14),
-                                      gradient: const LinearGradient(colors: [Color(0xFF75E2FF), Color(0xFF9383FF)]),
-                                    ), child: const Icon(Icons.bolt_rounded, color: Color(0xFF071321), size: 26)),
-                                    const SizedBox(width: 12),
-                                    const Text('N E X O R A', style: TextStyle(color: Color(0xFFD8F5FF), fontWeight: FontWeight.w900, letterSpacing: 2.2, fontSize: 13)),
-                                    const Spacer(),
-                                    const Icon(Icons.auto_awesome_rounded, color: Color(0xFF9BEAFF)),
-                                  ]),
-                                  const SizedBox(height: 22),
-                                  const Text('مساحتك. صوتك. عالمك.', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
-                                  const SizedBox(height: 7),
-                                  const Text('خلّي حضورك يُحكى.', style: TextStyle(color: Colors.white, fontSize: 27, height: 1.15, fontWeight: FontWeight.w900)),
-                                  const SizedBox(height: 8),
-                                  const Text('شارك لحظاتك واكتشف ناس شبهك.', style: TextStyle(color: Color(0xFFD5E7FA), fontSize: 13)),
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(13),
+                                      gradient: const LinearGradient(
+                                        colors: NexoraColors.brandGradient,
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.auto_awesome_rounded,
+                                      color: Colors.white,
+                                      size: 23,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 11),
+                                  const Text(
+                                    'N E X O R A',
+                                    style: TextStyle(
+                                      color: NexoraColors.text,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 2,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  const Icon(
+                                    Icons.bolt_rounded,
+                                    color: NexoraColors.amber,
+                                  ),
                                 ],
                               ),
-                            ),
+                              const SizedBox(height: 20),
+                              const Text(
+                                'مساحتك. صوتك. عالمك.',
+                                style: TextStyle(
+                                  color: NexoraColors.textMuted,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 7),
+                              const Text(
+                                'خلّي حضورك يُحكى.',
+                                style: TextStyle(
+                                  color: NexoraColors.text,
+                                  fontSize: 26,
+                                  height: 1.18,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'شارك لحظاتك واكتشف ناس شبهك.',
+                                style: TextStyle(
+                                  color: NexoraColors.textMuted,
+                                  fontSize: 13,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 16),
