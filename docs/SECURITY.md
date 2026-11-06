@@ -139,3 +139,7 @@ Message image upload and deletion now keep subsequent database/Storage operation
 ### Community-channel session continuity
 
 Community channel screens now require a live user for reads and creation. Reads discard results if the viewer changes while the request is in flight. Creation rechecks the original owner between each database write and limits rollback to the original authenticated session, never a newly signed-in account. A switch after a partial insert can leave a conversation orphan; server-side reconciliation and real-device multi-account tests remain pending.
+
+### Community member action session binding
+
+The member list stores the viewer ID associated with its successful load. If the current session no longer matches, the previous member list is hidden and role/removal actions are blocked. Actions recheck the actor after database completion before refreshing or mutating local state. This is UI race protection; RLS and community-role policies remain the security boundary.
