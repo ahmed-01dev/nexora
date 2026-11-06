@@ -21,6 +21,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
   bool _hasMore = true;
   bool _loadingMore = false;
   int _nextOffset = 0;
+  int _requestGeneration = 0;
   static const int _pageSize = 100;
 
   SupabaseClient get _db => Supabase.instance.client;
@@ -38,6 +39,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
   }
 
   Future<List<Map<String, dynamic>>> _load({int offset = 0}) async {
+    final generation = ++_requestGeneration;
     final rows = await _db
         .from('comments')
         .select('id,post_id,user_id,content,parent_id,created_at,edited_at,deleted_at,profiles!comments_user_id_fkey(id,username,display_name,avatar_url)')
@@ -45,7 +47,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
         .order('created_at', ascending: false)
         .order('id', ascending: false)
         .range(offset, offset + _pageSize - 1);
-    if (mounted) {
+    if (mounted && generation == _requestGeneration) {
       setState(() {
         _hasMore = rows.length == _pageSize;
         _nextOffset = offset + rows.length;
@@ -56,6 +58,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
   Future<void> _loadMore(List<Map<String, dynamic>> current) async {
     if (_loadingMore || !_hasMore) return;
+    final generation = _requestGeneration;
     setState(() => _loadingMore = true);
     try {
       final rows = await _db
@@ -65,7 +68,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
           .order('created_at', ascending: false)
           .order('id', ascending: false)
           .range(_nextOffset, _nextOffset + _pageSize - 1);
-      if (!mounted) return;
+      if (!mounted || generation != _requestGeneration) return;
       final knownIds = current.map((comment) => comment['id']).toSet();
       final additions = List<Map<String, dynamic>>.from(rows)
           .where((comment) => !knownIds.contains(comment['id']))
@@ -78,9 +81,13 @@ class _CommentsScreenState extends State<CommentsScreen> {
       });
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'load_more_comments');
-      if (mounted) {
+      if (mounted && generation == _requestGeneration) {
         setState(() => _loadingMore = false);
         _notice(AppErrorService.message(error));
+      }
+    } finally {
+      if (mounted && generation == _requestGeneration && _loadingMore) {
+        setState(() => _loadingMore = false);
       }
     }
   }
@@ -89,6 +96,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
     final next = _load();
     setState(() {
       _nextOffset = 0;
+      _loadingMore = false;
       _future = next;
     });
     try {
