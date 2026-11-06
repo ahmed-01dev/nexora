@@ -113,3 +113,7 @@ FCM device cleanup is also triggered by Supabase `signedOut` auth events, not on
 ### Late FCM registration callback after sign-out
 
 The Android push listener no longer overwrites the captured installation owner when a delayed `onRegistered` event arrives while signed out or while registration is suspended. Such callbacks do not start a device-row upsert. `unregisterCurrentDevice()` also short-circuits the duplicate invocation caused by both the account-screen sign-out path and the global `signedOut` auth listener. Cleanup remains best-effort and requires physical-device/offline/account-switch testing.
+
+### Media upload account-switch handling
+
+`MediaUploadService` verifies that the requested owner matches the active Supabase user before remote writes and re-checks after profile/story Storage uploads and around each post-media Storage/metadata operation. On a failed bulk upload, client cleanup is attempted only while the original owner remains the active session; it is not attempted with a newly signed-in account. This prevents cross-account cleanup attempts but cannot guarantee removal of an object uploaded just before a session change. Add server-side orphan cleanup and test sign-out/account-switch timing on a device. Client-side signature checks remain bypassable and are not malware scanning.
