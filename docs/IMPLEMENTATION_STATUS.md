@@ -315,3 +315,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Community discovery and membership/invite/create flows now capture the viewer ID, reject stale page results (including empty pages), and suppress old-session UI updates. Community creation is still a multi-request flow; a session switch after the community insert can leave an orphan community row, so a transactional server-side create operation remains a follow-up.
 
 - Story feed queries and signed media URL generation now verify the original viewer across fetch batches; stale feed rows cannot be opened after account changes. Story composer publishing is bound to the account that opened the composer. Signed URLs may remain usable until expiry; device-level session-switch tests remain pending.
+
+- Moderation report queue reads, target previews, assignment, and dismissal are now bound to the reviewer ID that loaded the queue; stale data/actions are suppressed after reviewer account changes. Moderator-role/RLS integration tests remain pending.
