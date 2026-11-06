@@ -21,6 +21,7 @@
 | Feed page | `lib/main.dart` around lines 718 onward | RPC `get_feed_page` | Client uses server-paged feed contract; exact deployed definition must be compared with migration and database |
 | Follow request lifecycle | `lib/main.dart`; `lib/features/friends/follow_requests_screen.dart` | RPCs `request_follow`, `cancel_follow`; incoming reads from `follows`; recipient updates only `status = 'accepted'` | Incoming requests are paged and can be accepted under the live recipient-only UPDATE policy; recipient-side decline is not available in the current backend contract |
 | Hashtag feed lookup | `lib/main.dart` around lines 945 onward | Join query across `post_hashtags`, `posts`, `hashtags`, `profiles` | Source proves this query path, not ranking/search safety or a full search service |
+| Accepted followers/following | `FriendsScreen` in `lib/main.dart` | Directional reads from `follows` with `profiles` joins through the two live FK constraints; reuses `request_follow` / `cancel_follow` | First 100 accepted relationships only; profile RLS can hide a private user's joined details, and no list pagination beyond 100 is implemented |
 | Hashtag service | `lib/features/search/hashtag_service.dart` | Reads/writes hashtag association objects | Unit test exists at `test/hashtag_service_test.dart`; integration/RLS behavior remains distinct |
 
 ## 3. Comments, friendships and communities
