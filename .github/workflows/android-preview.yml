@@ -97,6 +97,31 @@ jobs:
           print("Google Services plugin applied and Firebase package ID verified.")
           PY
 
+      - name: Declare Android runtime permissions
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          if not manifest.is_file():
+              raise SystemExit("Generated AndroidManifest.xml is missing.")
+          source = manifest.read_text()
+          permissions = [
+              '    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />',
+              '    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />',
+              '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />',
+          ]
+          missing = [item for item in permissions if item not in source]
+          if missing:
+              anchor = "    <application"
+              if anchor not in source:
+                  raise SystemExit("Could not find the Android application manifest element.")
+              source = source.replace(anchor, "\\n".join(missing) + "\\n" + anchor, 1)
+              manifest.write_text(source)
+          print("Location and Android 13+ notification permissions are declared.")
+          PY
+
       - name: Install dependencies
         run: flutter pub get
 
