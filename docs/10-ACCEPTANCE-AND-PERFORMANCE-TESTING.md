@@ -209,3 +209,5 @@ The client inbox currently supports accepting incoming pending follow requests o
 | MOD-001 | Submit a report with an unsupported target type, malformed target UUID, or reason outside the live `reports` CHECK constraints | Client rejects the invalid payload before network submission; PostgreSQL constraints and RLS remain authoritative for bypassed clients | P1 |
 
 | MOD-002 | Account changes while report submission is in flight | The client does not show success in the new session; it explains that the result may need reconciliation and does not blindly resubmit | P1 |
+
+| APP-025 | Start loading more comments, then refresh or submit a new comment before the older page returns | The stale page response cannot replace the refreshed list or overwrite the current offset/loading state | P1 |
