@@ -14,7 +14,7 @@ Required Supabase setup:
 1. Open Supabase Dashboard → Authentication → Sign In / Providers → Email.
 2. Enable email/password sign-in and require email confirmation for new accounts.
 3. Configure the project email/SMTP delivery settings and sender identity.
-4. Configure the Site URL and allowed redirect URLs for the production app before enabling password-recovery links or email deep links.
+4. Add `nexora://auth-callback/` to Supabase Authentication → URL Configuration → Redirect URLs. Keep the production Site URL set to the real website; do not replace it with the custom scheme.
 5. Test signup, confirmation delivery, expired/invalid confirmation links, resend, sign-in before and after confirmation, password-reset delivery, and completed password recovery.
 
 Do not claim email delivery is production-ready until a real inbox receives the messages and the confirmation/recovery flows are tested end to end. Provider limits, deliverability, and sender-domain verification remain external dependencies.
