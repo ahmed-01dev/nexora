@@ -141,3 +141,18 @@ These edits reconcile documentation wording only. They do **not** establish sour
 6. Reconcile remaining implementation-status claims against code and test artifacts.
 
 No Supabase writes, migrations, builds, provider activation, or release actions were performed as part of this documentation pass.
+
+
+## Addendum — static source traceability pass (2026-11-06)
+
+A new `SOURCE-TO-CONTRACT-TRACEABILITY.md` records inspected source locations and observed client operations for authentication, feed/follows, hashtags, comments, friendships, communities, media, messaging, nearby discovery, notifications/push, privacy and moderation.
+
+### Scope and limits
+
+- The source snapshot inspected was the default `main` branch; this is a static source audit, not a claim that those source files were modified in this documentation PR.
+- Concrete client call sites and RPC/table names are recorded where observed. No unverified SQL signatures, return schemas or deployed-state claims were invented.
+- The push Edge Function source reads service secrets at runtime and sends through FCM HTTP v1; deployment secrets and actual delivery remain unverified.
+- Nearby client code sends coordinates to a trusted RPC. The returned result shape and SQL implementation still require inspection to confirm approximate-only disclosure.
+- Media signature checks and upload size limits exist in client code; they do not replace server-side scanning or server-enforced quotas.
+
+The traceability file is linked from README. The next gate remains read-only inspection of SQL function definitions, grants, RLS/Storage policies and migration history. No database writes, migrations, provider activation, builds or packaging were performed.
