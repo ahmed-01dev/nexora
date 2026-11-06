@@ -112,3 +112,11 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Performance Advisor reports 43 unused-index informational findings. The project is newly active; do not remove indexes solely from this signal without workload evidence and query-plan review.
 - Production migration history currently contains 43 records while the repository contains 42 SQL migration files. Version/name alignment remains incomplete. Do not run bulk migration push, reset, or replay. Reconcile each remote migration to its exact SQL and take a verified backup before any history repair.
 - No production database schema or data was modified during this read-only verification.
+
+## Latest read-only contract review — 2026-11-06
+
+- Compared the Flutter RPC call sites in the app entry point and feature screens with the live PostgreSQL function catalog.
+- Snapshot: 18 distinct RPC names across 19 call sites; every reviewed client call has a matching live `public` function and matching named argument keys/types. The inventory and source paths are recorded in `docs/API.md`.
+- This is static contract parity only. It does not prove RLS behavior, grants, returned JSON decoding, error-path correctness, or end-to-end execution under real user identities.
+- The push service lifecycle was re-read. Device registration/deletion remains best-effort and can leave stale device rows when cleanup fails; physical-device notification display/tap behavior remains unverified.
+- No code behavior, database schema, grants, migration history, or deployed service was changed in this review. No tests or application builds were run.
