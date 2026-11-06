@@ -44,7 +44,7 @@ Severity:
 | SOC-009 | Recipient opens incoming follow-request inbox | Only pending requests addressed to the authenticated recipient are listed; private requester details remain hidden unless normal profile RLS permits them | P0 |
 | SOC-010 | Recipient accepts a follow request | Only the recipient may change their own incoming pending row to accepted; the status column is the only direct client-updatable field | P0 |
 | SOC-011 | Request is cancelled or either side blocks before acceptance | Acceptance affects zero rows or is denied; no relationship is created after the block | P0 |
-| SOC-012 | Open accepted followers/following lists | Correct direction and accepted-only rows; no blocked relationship leaks; hidden private profile details remain hidden; ordering is deterministic and first-page cap is 100 | P1 |
+| SOC-012 | Open accepted followers/following lists | Correct direction and accepted-only rows; no blocked relationship leaks; hidden private profile details remain hidden; deterministic 30-row pagination, load-more, and refresh | P1 |
 
 ## 4. Content and media tests
 | ID | Scenario | Expected result | Severity |
