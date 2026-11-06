@@ -136,7 +136,7 @@ class _MyModerationScreenState extends State<MyModerationScreen> {
           .from('moderation_appeals')
           .insert({
             'action_id': actionId,
-            'user_id': uid,
+            'user_id': actorId,
             'message': message,
           })
           .select('id,action_id,message,status,created_at,resolved_at')
