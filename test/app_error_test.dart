@@ -32,6 +32,32 @@ void main() {
       );
     });
 
+    test('Flutter framework handler does not print raw exception details', () {
+      final messages = <String>[];
+      final previousDebugPrint = debugPrint;
+      final previousFlutterHandler = FlutterError.onError;
+      final previousPlatformHandler = PlatformDispatcher.instance.onError;
+      debugPrint = (message, {wrapWidth}) {
+        if (message != null) messages.add(message);
+      };
+      try {
+        AppErrorService.install();
+        FlutterError.onError!(
+          FlutterErrorDetails(
+            exception: Exception('user@example.com secret-response-token'),
+            stack: StackTrace.current,
+          ),
+        );
+      } finally {
+        FlutterError.onError = previousFlutterHandler;
+        PlatformDispatcher.instance.onError = previousPlatformHandler;
+        debugPrint = previousDebugPrint;
+      }
+      expect(messages.join(' '), contains('Exception'));
+      expect(messages.join(' '), isNot(contains('user@example.com')));
+      expect(messages.join(' '), isNot(contains('secret-response-token')));
+    });
+
     test('does not write raw exception text to debug logs', () {
       final messages = <String>[];
       final previousDebugPrint = debugPrint;
