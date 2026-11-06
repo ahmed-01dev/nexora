@@ -1212,7 +1212,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         }
                         return _searchPosts
                             ? PostCard(post: people[index])
-                            : PersonTile(profile: people[index], follow: true);
+                            : PersonTile(key: ValueKey(people[index]['id']), profile: people[index], follow: true);
                       },
                     ),
                   );
@@ -1340,9 +1340,20 @@ class _FriendsScreenState extends State<FriendsScreen> {
         ),
       );
     }
+    final profileMap = Map<String, dynamic>.from(profile);
     return PersonTile(
-      profile: Map<String, dynamic>.from(profile),
+      key: ValueKey(profileMap['id']),
+      profile: profileMap,
       follow: true,
+      onUnfollow: _showFollowers
+          ? null
+          : () {
+              setState(() {
+                _rows.removeWhere(
+                  (item) => item['following_id'] == profileMap['id'],
+                );
+              });
+            },
     );
   }
 
@@ -2274,9 +2285,10 @@ class _PostCardState extends State<PostCard> {
 }
 
 class PersonTile extends StatefulWidget {
-  const PersonTile({super.key, required this.profile, required this.follow});
+  const PersonTile({super.key, required this.profile, required this.follow, this.onUnfollow});
   final Map<String, dynamic> profile;
   final bool follow;
+  final VoidCallback? onUnfollow;
   @override
   State<PersonTile> createState() => _PersonTileState();
 }
@@ -2360,11 +2372,15 @@ class _PersonTileState extends State<PersonTile> {
         );
         if (mounted) setState(() => _followStatus = status.toString());
       } else {
+        final wasAccepted = _followStatus == 'accepted';
         await Supabase.instance.client.rpc(
           'cancel_follow',
           params: {'p_target_user_id': other},
         );
-        if (mounted) setState(() => _followStatus = null);
+        if (mounted) {
+          setState(() => _followStatus = null);
+          if (wasAccepted) widget.onUnfollow?.call();
+        }
       }
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'follow');
