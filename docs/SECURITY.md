@@ -169,3 +169,7 @@ Story feed queries and bounded signed-URL batches are bound to the viewer that i
 The moderation report queue now captures the reviewer identity for report-page reads, target previews, assignment, and dismissal. Stale queue data is hidden after account changes, and decision UI updates are suppressed if the reviewer changes during the request. Server-side moderator role/RLS policies remain authoritative; real-device moderator account-switch tests are pending.
 
 Block confirmation and report-submission dialogs now capture the authenticated actor when opened and reject confirmation/submission if the account changes before the write. This prevents an in-progress dialog from silently applying its action under a newly signed-in account.
+
+### Accessibility and visual-layer safeguards
+
+The reusable `NexoraGlass` component is restricted to floating overlays and controls, with a low-data/reduced-transparency opaque fallback. Production navigation uses a single floating glass surface and its selection animation becomes immediate when the OS reduced-motion preference is enabled. See `docs/DESIGN-AND-MOTION-SPEC.md` for the visual/performance acceptance contract; device verification is still pending.
