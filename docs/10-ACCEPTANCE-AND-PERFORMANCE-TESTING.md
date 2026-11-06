@@ -238,3 +238,5 @@ The client inbox currently supports accepting incoming pending follow requests o
 
 | APP-041 | Switch accounts while story feed queries or private media URLs are loading | Story rows and signed media URLs from the previous viewer are discarded; stale rows cannot be opened | P1 |
 | APP-042 | Open the story composer as one account, then switch accounts before publishing | The composer refuses to publish the prior account's draft/media under a different account | P1 |
+
+| APP-043 | Switch reviewer accounts while the moderation report queue loads, a target preview is open, or a report decision is submitted | Old reviewer data is hidden; assignment/dismissal/target preview is bound to the reviewer who loaded the queue | P1 |
