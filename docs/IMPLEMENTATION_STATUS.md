@@ -224,3 +224,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - FCM lifecycle follow-up: late `onRegistered` callbacks received while signed out or registration-suspended preserve the prior owner and do not upsert a device row; duplicate unregister calls from the account action plus `signedOut` listener are short-circuited. Physical-device, offline-cleanup and multi-account tests remain pending.
 
 - Nearby discovery permission UX: location-service-disabled, permission-denied, and permission-denied-forever errors now retain actionable Arabic recovery instructions instead of collapsing into the generic backend error message. Physical Android permission flows still require device verification.
+
+- Flutter CI run `42228718941` passed on commit `6c03db5a5e116e609ce3738579e3bfe08a4274a7`, covering the current FCM signed-out cleanup, privacy-safe error handling/tests, and friendship inbox refresh behavior. No Android APK/AAB/Web build was run.
