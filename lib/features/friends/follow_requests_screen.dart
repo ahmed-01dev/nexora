@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
+import '../../core/theme/nexora_theme.dart';
 
 class FollowRequestsScreen extends StatefulWidget {
   const FollowRequestsScreen({super.key});
@@ -226,7 +227,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
                         physics: const AlwaysScrollableScrollPhysics(),
                         children: const [
                           SizedBox(height: 140),
-                          Icon(Icons.person_add_alt_1_outlined, size: 52, color: Colors.grey),
+                          Icon(Icons.person_add_alt_1_outlined, size: 52, color: NexoraColors.textMuted),
                           SizedBox(height: 16),
                           Center(
                             child: Text(
