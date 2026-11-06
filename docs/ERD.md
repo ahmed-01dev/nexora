@@ -211,3 +211,13 @@ The 67 foreign keys and 106 indexes are structural counts only. Their names, ref
 ### Migration safety
 
 The implementation audit records a mismatch between remote migration history and local migration files. Until every remote version is mapped to exact source SQL and a recoverable backup is verified, do not run `supabase db push`, reset, replay, or any schema-changing operation. This ERD update does not authorize database changes.
+
+### Detailed machine-readable catalog snapshots
+
+For exact deployed definitions captured read-only on 2026-11-06, see:
+
+- `docs/ERD-LIVE-COLUMNS.md` — all 254 deployed columns with PostgreSQL type, nullability, and default.
+- `docs/ERD-LIVE-CONSTRAINTS.md` — all 166 primary-key, foreign-key, unique, and check constraints with PostgreSQL-rendered definitions.
+- `docs/ERD-LIVE-INDEXES.md` — all 106 deployed index definitions.
+
+These snapshots are descriptive only. They do not replace local migration source or authorize schema changes.
