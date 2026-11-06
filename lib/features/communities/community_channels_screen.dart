@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/nexora_theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
@@ -105,7 +106,7 @@ class _CommunityChannelsScreenState extends State<CommunityChannelsScreen> {
                   decoration: const InputDecoration(labelText: 'معرّف القناة بالإنجليزية'),
                 ),
                 if (validation != null)
-                  Text(validation!, style: const TextStyle(color: Colors.redAccent)),
+                  Text(validation!, style: const TextStyle(color: NexoraColors.danger)),
               ],
             ),
             actions: [
