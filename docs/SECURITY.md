@@ -71,6 +71,7 @@
 - Direct-conversation creators cannot remove the other participant from a 1:1 conversation; group/community creators retain member-management permissions.
 - Moderation appeal INSERT is restricted to `user_id`, `action_id`, and `message`; appeal status, reviewer, and resolution metadata remain staff-controlled.
 - Device registration upserts have owner-scoped UPDATE privileges for the device identity fields, with the existing RLS ownership policy still enforced.
+- The account-screen logout action now calls `_signOutNexora()` to delete the current user's FID row and unregister Firebase Messaging before Supabase sign-out. This cleanup is best-effort if the network/database operation fails; multi-account and offline logout tests remain required.
 - Client-side media signature checks and a 100 MiB aggregate post upload limit are implemented. These do not replace server-side media signature verification, malware scanning, or server-side storage quotas.
 - The following-feed query now uses a SECURITY INVOKER paged RPC that includes accepted follows and accepted friendships while preserving table RLS.
 - Supabase Security Advisor's only remaining finding is leaked-password protection disabled. The project currently cannot enable this feature on its Free plan; the email signup UI's 12-character rule is client-side only and is not a substitute.
