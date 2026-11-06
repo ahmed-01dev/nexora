@@ -181,3 +181,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Follow-inbox operation serialization: refresh is held while an accept action is running; load-more is held while acceptance is running; acceptance is held while load-more or refresh is active. This prevents offset changes from racing with an in-flight page. Flutter CI run `42223590469` passed on implementation commit `2849ff786797e96dc02358c689ff4885c68ad7f9`. Multi-user backend concurrency tests remain pending.
 
 - Added `docs/SECURITY-DEFINER-INVENTORY.md`: 32 live SECURITY DEFINER functions (2 public, 30 private), all owned by postgres; records signatures, settings, and anon/authenticated/PUBLIC EXECUTE flags. This is an inventory, not a complete function-body security sign-off.
+
+- Accepted following-list behavior: successful unfollow now removes the account from the current following list immediately; the followers direction remains unchanged. Relationship tiles use stable profile keys so list/search updates do not reuse another person's follow/block state. Acceptance case SOC-015 added; Flutter CI validation for this latest source change is pending.
