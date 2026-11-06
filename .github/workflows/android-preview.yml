@@ -2,15 +2,12 @@ name: NEXORA Android Preview APK
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
-    paths:
-      - "lib/**"
-      - "pubspec.yaml"
-      - "pubspec.lock"
-      - "firebase/android/google-services.json"
-      - ".github/workflows/android-preview.yml"
-
+    inputs:
+      confirm_source_complete:
+        description: "Confirm source, configuration, and security review are complete and approve a debug APK build"
+        required: true
+        type: boolean
+        default: false
 permissions:
   contents: read
 
@@ -20,6 +17,7 @@ concurrency:
 
 jobs:
   build-debug-apk:
+    if: inputs.confirm_source_complete == true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
