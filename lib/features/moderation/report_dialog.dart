@@ -52,6 +52,13 @@ class _ReportDialogState extends State<ReportDialog> {
   String _reason = 'spam';
   bool _sending = false;
   String? _error;
+  late final String? _reporterId;
+
+  @override
+  void initState() {
+    super.initState();
+    _reporterId = Supabase.instance.client.auth.currentUser?.id;
+  }
 
   @override
   void dispose() {
@@ -62,8 +69,8 @@ class _ReportDialogState extends State<ReportDialog> {
   Future<void> _submit() async {
     if (_sending) return;
     final uid = Supabase.instance.client.auth.currentUser?.id;
-    if (uid == null) {
-      setState(() => _error = 'انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
+    if (uid == null || uid != _reporterId) {
+      setState(() => _error = 'تغير الحساب. أغلق نافذة البلاغ وافتحها من الحساب الحالي.');
       return;
     }
     if (!ReportSubmissionValidation.isValidTarget(
@@ -110,7 +117,10 @@ class _ReportDialogState extends State<ReportDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
+  Widget build(BuildContext context) {
+    final viewerMatches = Supabase.instance.client.auth.currentUser?.id != null &&
+        Supabase.instance.client.auth.currentUser?.id == _reporterId;
+    return AlertDialog(
         title: Text(switch (widget.targetType) {
           'user' => 'الإبلاغ عن الحساب',
           'comment' => 'الإبلاغ عن التعليق',
@@ -163,7 +173,9 @@ class _ReportDialogState extends State<ReportDialog> {
                   alignLabelWithHint: true,
                 ),
               ),
-              if (_error != null)
+              if (!viewerMatches)
+                const Text('تغير الحساب. لن يتم إرسال البلاغ من الحساب الجديد.', style: TextStyle(color: Colors.redAccent))
+              else if (_error != null)
                 Text(_error!, style: const TextStyle(color: Colors.redAccent)),
             ],
           ),
@@ -174,7 +186,7 @@ class _ReportDialogState extends State<ReportDialog> {
             child: const Text('إلغاء'),
           ),
           FilledButton(
-            onPressed: _sending ? null : _submit,
+            onPressed: _sending || !viewerMatches ? null : _submit,
             child: _sending
                 ? const SizedBox.square(
                     dimension: 18,
@@ -184,4 +196,5 @@ class _ReportDialogState extends State<ReportDialog> {
           ),
         ],
       );
+  }
 }
