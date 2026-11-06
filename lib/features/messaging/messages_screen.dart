@@ -14,6 +14,7 @@ class MessagesScreen extends StatefulWidget {
 
 class _MessagesScreenState extends State<MessagesScreen> {
   late Future<List<Map<String, dynamic>>> _future;
+  String? _loadedUserId;
 
   @override
   void initState() {
@@ -31,6 +32,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     if (client.auth.currentUser?.id != userId) {
       throw StateError('تغير الحساب أثناء تحميل المحادثات.');
     }
+    _loadedUserId = userId;
     return List<Map<String, dynamic>>.from(
       (rows as List).map((raw) {
         final row = Map<String, dynamic>.from(raw as Map);
@@ -119,7 +121,14 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   void _open(Map<String, dynamic> item) {
-    if (Supabase.instance.client.auth.currentUser == null) return;
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+    if (_loadedUserId != userId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تغير الحساب. حدّث قائمة المحادثات أولًا.')),
+      );
+      return;
+    }
     final peer = item['peer'] as Map<String, dynamic>;
     final conversation = item['conversation'] as Map<String, dynamic>;
     final title = conversation['conversation_type'] == 'group'
