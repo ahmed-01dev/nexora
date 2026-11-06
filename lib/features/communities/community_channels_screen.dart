@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/nexora_theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../core/theme/nexora_theme.dart';
 
 import '../../core/app_error.dart';
 import '../messaging/messages_screen.dart';
