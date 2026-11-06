@@ -119,3 +119,25 @@ The following artifacts now exist on the documentation branch:
 - The older 1–50 master prompt numbering is a separate catalog and must not be merged with Document 02's 1–118 numbering.
 - Migration history reconciliation remains a hard stop for schema writes.
 - This addendum authorizes no Supabase mutation, migration, provider activation, application build, or artifact release.
+
+
+## Addendum — API, architecture and ERD reconciliation (2026-11-06)
+
+Three documentation corrections were committed on this branch after comparing the files with the dated implementation-status record:
+
+- `API.md` now separates documented client-used operations, database foundations, and proposed endpoints. It explicitly marks planned endpoints as not deployed and adds a contract-change evidence checklist.
+- `ARCHITECTURE.md` no longer describes the current Flutter implementation as only email/password + basic profiles + text posts + follows + simple feed. It points to the dated implementation status and records the verified partial-feature boundaries and provider limitations.
+- `ERD.md` now explicitly identifies itself as a partial conceptual diagram and defines the fields required for a future read-only live-schema inventory.
+
+### Remaining verification work
+
+These edits reconcile documentation wording only. They do **not** establish source-level traceability or runtime correctness. Still outstanding:
+
+1. Inspect the Flutter source tree and map each API operation to exact Dart file/method and request shape.
+2. Read-only inspect deployed PostgreSQL tables, columns, functions, grants, RLS policies and Storage policies.
+3. Map every remote migration record to the exact local SQL file; current history mismatch remains a hard stop.
+4. Generate a complete ERD and inventory from the verified live schema, not from this conceptual document.
+5. Run authenticated integration tests with separate synthetic users only after test identities/environment are safely prepared and without weakening production policies.
+6. Reconcile remaining implementation-status claims against code and test artifacts.
+
+No Supabase writes, migrations, builds, provider activation, or release actions were performed as part of this documentation pass.
