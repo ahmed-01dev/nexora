@@ -1,6 +1,9 @@
 name: NEXORA Android Preview APK
 
 on:
+  push:
+    branches:
+      - docs/specs-i-j-k
   workflow_dispatch:
     inputs:
       confirm_source_complete:
@@ -17,7 +20,7 @@ concurrency:
 
 jobs:
   build-debug-apk:
-    if: inputs.confirm_source_complete == true
+    if: github.event_name == 'push' || inputs.confirm_source_complete == true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
