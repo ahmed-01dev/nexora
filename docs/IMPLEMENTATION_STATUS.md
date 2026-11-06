@@ -28,7 +28,7 @@ Status meanings:
 - [x] Central Flutter error presentation/logging.
 - [x] Latest source-only CI run passed Flutter analysis and unit/widget tests (run 42087865651). This run did not build an APK/AAB or Web release; the release workflow remains manual-only.
 - [ ] Push notification real-device verification remains pending. Live evidence confirms the notifications trigger, active Edge Function, configured webhook-secret metadata, and at least one FCM HTTP success; foreground/background display and tap handling have not been verified on a physical Android device.
-- [x] Account-screen logout now uses the existing cleanup helper to remove the current user's FID row and unregister Firebase Messaging before Supabase sign-out; cleanup remains best-effort on network failure and multi-account/offline behavior is untested.
+- [x] Account-screen logout suspends registration, invalidates in-flight upserts, deletes the FID row for the captured account, and unregisters Firebase Messaging before Supabase sign-out. The asynchronous `onUnregistered` callback now retains the captured owner ID so it can still delete the correct row after Supabase clears `currentUser`; database/network cleanup remains best-effort and requires offline/multi-account device tests.
 - [x] Additive PostgreSQL foundation migration applied and verified for RLS on all newly added tables.
 - [x] Anonymous role has no SELECT privilege on the newly added social tables.
 - [x] Community-channel grants were narrowed to SELECT/INSERT/DELETE for authenticated clients; unnecessary UPDATE/TRUNCATE/REFERENCES/TRIGGER/MAINTAIN privileges were removed and verified.
@@ -120,7 +120,7 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Compared the Flutter RPC call sites in the app entry point and feature screens with the live PostgreSQL function catalog.
 - Snapshot: 18 distinct RPC names across 20 call sites (19 literal plus one dynamic dispatcher); every reviewed client call has a matching live `public` function and matching named argument keys/types. The inventory and source paths are recorded in `docs/API.md`.
 - This is static contract parity only. It does not prove RLS behavior, grants, returned JSON decoding, error-path correctness, or end-to-end execution under real user identities.
-- The push service lifecycle was re-read. Device registration/deletion remains best-effort and can leave stale device rows when cleanup fails; physical-device notification display/tap behavior remains unverified.
+- The push service lifecycle was re-read. Device registration/deletion remains best-effort and can leave stale device rows when cleanup fails; the unregister callback now uses the captured account owner rather than relying on `currentUser` after sign-out. Physical-device notification display/tap behavior remains unverified.
 - No code behavior, database schema, grants, migration history, or deployed service was changed in this review. No tests or application builds were run.
 
 - Additional static query review: literal `.select(...)` projections and nested embedded-relation column names across 29 reviewed Flutter app/feature Dart files were checked against live `information_schema.columns`; zero unknown selected columns or relation names were found. This does not cover dynamic projections, filters, write payloads, RLS runtime behavior, or result decoding.
@@ -199,3 +199,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Latest Flutter source CI run `42226031696` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on commit `7dfb822afec111d532f93c96f2598507c7fa2fc8`. This includes the FCM sign-out suspension/recovery changes and the current social graph UI. The workflow did not build an APK/AAB/Web artifact.
 
 - Friendship inbox hardening: accept/decline/cancel buttons now prevent duplicate actions per request ID, show a busy state while the RPC is running, and hide profile details when profile RLS returns no visible profile. SOC-016 added; latest source CI result is pending.
+
+- FCM unregister callback ownership: the account ID is captured before sign-out and retained until the asynchronous Firebase `onUnregistered` event can delete the matching `user_devices` row. This closes the callback-after-session-clear ownership gap in source; no guarantee is made when the database request itself fails.
