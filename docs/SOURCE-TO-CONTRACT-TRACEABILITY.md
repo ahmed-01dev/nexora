@@ -122,3 +122,5 @@ No source code, database schema, deployed function, provider configuration, or b
 | Profile friendship control session binding | `lib/features/friends/friend_requests_screen.dart` (`FriendRequestAction`) | Reads and friendship RPC actions use the captured viewer and are suppressed/disabled when the session changes | Authenticated multi-user RPC and real-device tests remain pending |
 
 | Nearby, notification, and moderation session continuity | `nearby_discovery_screen.dart`, `notification_preferences_screen.dart`, `my_moderation_screen.dart`, `moderation_appeals_screen.dart` | Viewer/reviewer identity is captured across async reads, permission flows, writes, and appeal decisions | Real-device location/permission and authenticated moderator integration tests remain pending |
+
+| Community discovery and management session continuity | `lib/features/communities/communities_screen.dart` | Page and membership queries, join/leave, invite actions, and community creation are checked against the captured viewer | Transactional orphan prevention and real-device multi-account tests remain pending |
