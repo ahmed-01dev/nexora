@@ -160,3 +160,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Profile joins remain subject to ordinary RLS. If a private profile is not visible, the list shows a generic privacy-safe placeholder rather than bypassing authorization.
 - Follow/unfollow actions reuse the existing server RPCs. Pagination beyond the first 100 rows and real multi-user RLS tests remain pending.
 - GitHub Actions Flutter CI run `42220627564` passed on commit `b1ee0c0de6aa2adadddaaaf4543227fb051ece84`: dependency installation, analysis, and tests succeeded. No APK/AAB/Web build was run.
+
+- ERD refresh: read-only PostgreSQL catalog queries confirmed 38 public tables, one private table, no views/materialized views in those schemas, and 57 foreign-key constraints. `docs/ERD.md` now records the complete table-name inventory and all 57 FK source/target column mappings; the high-level Mermaid diagram remains conceptual rather than a full column-level ERD.
