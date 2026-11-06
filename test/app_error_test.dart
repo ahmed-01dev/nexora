@@ -30,5 +30,25 @@ void main() {
         'حصلت مشكلة أثناء تنفيذ الطلب. حاول مرة تانية.',
       );
     });
+
+    test('does not write raw exception text to debug logs', () {
+      final messages = <String>[];
+      final previousDebugPrint = debugPrint;
+      debugPrint = (message, {wrapWidth}) {
+        if (message != null) messages.add(message);
+      };
+      try {
+        AppErrorService.report(
+          Exception('user@example.com secret-response-token'),
+          null,
+          source: 'privacy_test',
+        );
+      } finally {
+        debugPrint = previousDebugPrint;
+      }
+      expect(messages.join(' '), contains('Exception'));
+      expect(messages.join(' '), isNot(contains('user@example.com')));
+      expect(messages.join(' '), isNot(contains('secret-response-token')));
+    });
   });
 }
