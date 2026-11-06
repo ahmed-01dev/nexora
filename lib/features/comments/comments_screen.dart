@@ -115,7 +115,6 @@ class _CommentsScreenState extends State<CommentsScreen> {
         _replyName = null;
         _future = _load();
       });
-      await _future;
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'create_comment');
       _notice(AppErrorService.message(error));
