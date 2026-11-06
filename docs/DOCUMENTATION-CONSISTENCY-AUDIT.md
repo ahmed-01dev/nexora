@@ -171,3 +171,14 @@ Notable contract evidence:
 - Push dispatch is trigger → Vault webhook secret → Edge Function → FCM HTTP v1; successful real-device delivery remains unverified.
 
 These are local-source findings only. No live database catalog query, schema write, migration, secret change, provider activation or build was performed.
+
+## Addendum — media Storage authorization regression found (2026-11-06)
+
+A line-by-line static comparison of local migrations found a security-relevant regression: `20261105225000_hide_deleted_message_attachments.sql` replaces `private.can_read_media_path(text)` with an older version that omits friend-only post access, private-account story gating, and soft-deleted-post media denial for non-owners.
+
+Actions taken on this branch:
+1. Added proposed corrective migration `supabase/migrations/20261106003000_restore_media_visibility_invariants.sql`, based on the prior complete helper definition.
+2. Added `docs/SQL-SECURITY-REGRESSION-MATRIX.md` with owner/follower/friend/unrelated/blocked identity cases across posts, stories, message attachments and community covers.
+3. Updated `docs/SQL-CONTRACT-TRACEABILITY.md` to record the regression and static predicate checks.
+
+Verification is limited to source comparison and checking that the proposed SQL contains the required predicates. No live Storage request, authenticated RLS test, database catalog query, migration application or build was performed. This source correction must not be applied until remote/local migration history is reconciled and the live function definition is inspected.
