@@ -253,3 +253,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Story list loading now signs private media URLs in bounded batches of eight and isolates per-story signing failures, avoiding up to 100 sequential Storage round-trips and preventing one inaccessible media object from failing the entire story list.
 
 - Flutter framework error handler no longer calls `FlutterError.presentError`, which could print raw backend/plugin exception text. Framework errors use the privacy-conscious central reporter; a regression test checks that sample email/token-like exception values are absent from debug logs. This is local debug-log protection, not a substitute for reviewed production crash telemetry.
+
+- Report submission now checks for an active session and validates the target type against the live `reports.target_type` constraint set before attempting an insert, avoiding null-session crashes and invalid target writes.
