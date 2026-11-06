@@ -108,3 +108,5 @@ No source code, database schema, deployed function, provider configuration, or b
 | Comment pagination refresh race | `lib/features/comments/comments_screen.dart` | Refresh/reload advances a request generation; stale load-more completions cannot overwrite the newer list or its pagination state | Backend concurrent-insert behavior and authenticated integration tests remain pending |
 
 | Notification account-switch safety | `lib/features/notifications/notifications_screen.dart` | Page results, read updates, and target navigation are bound to the captured viewer ID and stopped if the session changes | Authenticated multi-user and device session-switch tests remain pending |
+
+| Followers/following session continuity | `lib/main.dart` (`FriendsScreen._fetchPage`) | Page query captures the viewer ID and rejects results if the authenticated user changes before completion | Device-level account-switch and authenticated RLS integration tests remain pending |
