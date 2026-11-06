@@ -193,3 +193,10 @@ Static inspection found repeated references to `private.is_blocked_between(...)`
 This does not prove the live database lacks the function. It may be present in the remote schema or in the unmatched remote migration record. The missing source provenance could be related to the 43-remote/42-main-local migration discrepancy, but that relationship is not yet established.
 
 Do not create a guessed replacement. Recover the exact live function definition, owner, SECURITY mode, `search_path`, ACL and source migration through read-only catalog inspection, then map it to the remote migration history. This is a hard stop before migration replay or policy changes.
+## Addendum — CI/build workflow inventory and guard (2026-11-06)
+
+Static inspection of `.github/workflows/` on `main` found only `flutter-ci.yml` and `android-preview.yml`. README previously referred to a non-existent `android-web-build.yml` and described APK/AAB/Web release packaging that is not present in the inspected workflow directory.
+
+The existing `android-preview.yml` had both `workflow_dispatch` and an automatic `push` trigger for source/config paths. To honor the source-completion-before-build rule, the work branch removes the automatic push trigger and adds a required boolean `confirm_source_complete` input; the job runs only when that input is true. This is a workflow configuration change only. No workflow was dispatched and no build was run.
+
+README now describes the actual CI and debug-APK workflows and explicitly notes that no AAB/Web release workflow was found in the inspected directory. Re-check the repository workflow inventory before any future release claims.
