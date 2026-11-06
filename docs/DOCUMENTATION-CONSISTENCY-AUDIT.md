@@ -211,3 +211,7 @@ Read-only advisors returned:
 Static inspection found only `.github/workflows/flutter-ci.yml` and `.github/workflows/android-preview.yml`; no AAB/Web release workflow was present. The work branch removes the preview workflow's automatic push trigger and adds a required `confirm_source_complete` boolean input. It also sets `permissions: contents: read` on Flutter CI. No workflow was dispatched and no build was run.
 
 All Supabase checks in this addendum were read-only. No database mutation, migration, secret change, Auth setting change, provider activation, CI dispatch or APK/AAB/Web build was performed.
+
+### Live object-presence cross-check
+
+Read-only catalog checks also confirmed that `public.community_channels`, `public.community_invites`, the community-invite RPC family, `get_my_conversation_previews`, `get_feed_page`, `get_my_notification_page`, `reposts_user_post_unique_idx`, and `profiles_username_lower_key` exist in the live database. This shows that some local-only/timestamp-mismatched migration names correspond to objects already present remotely; it does not prove exact source-file provenance. Do not apply them again based on filenames alone.
