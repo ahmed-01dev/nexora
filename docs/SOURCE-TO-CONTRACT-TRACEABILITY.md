@@ -100,3 +100,5 @@ No source code, database schema, deployed function, provider configuration, or b
 | Flutter framework exception privacy | `lib/core/app_error.dart`; `test/app_error_test.dart` | Framework errors are routed to the central type-only reporter without invoking the raw default Flutter exception presenter | Production telemetry privacy and redaction require separate provider/configuration review |
 
 | Report input validation | `lib/features/moderation/report_submission_validation.dart`; `lib/features/moderation/report_dialog.dart`; `test/report_submission_validation_test.dart` | Client validates six live target types, eleven live reason codes, and UUID-shaped target IDs before insert | PostgreSQL CHECK constraints and RLS remain authoritative; authenticated multi-user report tests are pending |
+
+| Report completion across session change | `lib/features/moderation/report_dialog.dart` | The dialog confirms the reporter session still matches after the insert before showing success; changed sessions receive a reconciliation warning | Request outcome reconciliation and duplicate prevention require a server-side idempotency contract |
