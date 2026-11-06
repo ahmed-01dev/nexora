@@ -215,3 +215,7 @@ All Supabase checks in this addendum were read-only. No database mutation, migra
 ### Live object-presence cross-check
 
 Read-only catalog checks also confirmed that `public.community_channels`, `public.community_invites`, the community-invite RPC family, `get_my_conversation_previews`, `get_feed_page`, `get_my_notification_page`, `reposts_user_post_unique_idx`, and `profiles_username_lower_key` exist in the live database. This shows that some local-only/timestamp-mismatched migration names correspond to objects already present remotely; it does not prove exact source-file provenance. Do not apply them again based on filenames alone.
+
+### Live RLS and Storage baseline
+
+Read-only catalog checks found RLS enabled on all 38 ordinary `public` tables and the 1 ordinary `private` table. The `nexora-media` bucket is private, has a 50 MiB object limit, and allows a wider MIME set than the restrictive message-attachment policy. Selected live policies enforce post visibility/block checks, story visibility, non-deleted message attachment reads, image-only message attachment inserts up to 10 MiB, denied direct invite-table access, and owner-only nearby-location rows. This is a policy-definition review, not authenticated integration testing.
