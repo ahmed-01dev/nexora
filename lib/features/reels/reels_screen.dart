@@ -68,11 +68,17 @@ class _ReelsScreenState extends State<ReelsScreen> {
   }
 
   Future<void> _refresh() async {
+    final next = _load();
     setState(() {
       _activeIndex = 0;
-      _future = _load();
+      _future = next;
     });
-    await _future;
+    try {
+      await next;
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'reels_refresh');
+      // FutureBuilder renders the error state; keep the refresh action resolved.
+    }
   }
 
   @override
