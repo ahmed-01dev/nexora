@@ -64,8 +64,14 @@ class _StoriesScreenState extends State<StoriesScreen> {
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = _load());
-    await _future;
+    final next = _load();
+    setState(() => _future = next);
+    try {
+      await next;
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'stories_refresh');
+      // FutureBuilder owns the error state; do not leak a failed refresh future.
+    }
   }
 
   void _open(Map<String, dynamic> story) {
@@ -97,7 +103,16 @@ class _StoriesScreenState extends State<StoriesScreen> {
           }
           final stories = snapshot.data ?? [];
           if (stories.isEmpty) {
-            return const Center(child: Text('مفيش قصص متاحة. شارك أول قصة مع متابعينك.'));
+            return RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 140),
+                  Center(child: Text('مفيش قصص متاحة. شارك أول قصة مع متابعينك.')),
+                ],
+              ),
+            );
           }
           return RefreshIndicator(
             onRefresh: _refresh,
