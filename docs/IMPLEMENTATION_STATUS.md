@@ -25,6 +25,8 @@ Status meanings:
 - [x] Basic follow insertion/deletion.
 - [x] Central Flutter error presentation/logging.
 - [x] Latest source-only CI run passed Flutter analysis and unit/widget tests (run 42087865651). This run did not build an APK/AAB or Web release; the release workflow remains manual-only.
+- [ ] Push notification real-device verification remains pending. Live evidence confirms the notifications trigger, active Edge Function, configured webhook-secret metadata, and at least one FCM HTTP success; foreground/background display and tap handling have not been verified on a physical Android device.
+- [x] Account-screen logout now uses the existing cleanup helper to remove the current user's FID row and unregister Firebase Messaging before Supabase sign-out; cleanup remains best-effort on network failure and multi-account/offline behavior is untested.
 - [x] Additive PostgreSQL foundation migration applied and verified for RLS on all newly added tables.
 - [x] Anonymous role has no SELECT privilege on the newly added social tables.
 - [x] Community-channel grants were narrowed to SELECT/INSERT/DELETE for authenticated clients; unnecessary UPDATE/TRUNCATE/REFERENCES/TRIGGER/MAINTAIN privileges were removed and verified.
