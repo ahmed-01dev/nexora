@@ -193,6 +193,7 @@ class _NexoraAppState extends State<NexoraApp> {
           },
         ),
       );
+}
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});

@@ -51,6 +51,12 @@ The `supabase/migrations/` directory contains the schema and security changes ap
 - `.github/workflows/android-web-build.yml` is a manual release workflow. It builds Android APK/AAB and Flutter Web only when explicitly dispatched.
 - Do not run the release workflow until the source/configuration audit is complete and release is explicitly approved.
 
+## Project engineering documents
+
+- [08 — Zero-budget costs, dependencies and risks](docs/08-ZERO-BUDGET-COSTS-RISKS.md)
+- [09 — Implementation roadmap](docs/09-IMPLEMENTATION-ROADMAP.md)
+- [10 — Acceptance, quality and performance testing](docs/10-ACCEPTANCE-AND-PERFORMANCE-TESTING.md)
+
 ## Development principles
 
 - PostgreSQL RLS and trusted server functions are the authorization boundary.
