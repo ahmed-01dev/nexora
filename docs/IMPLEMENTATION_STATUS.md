@@ -241,3 +241,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Supabase client configuration check: the project is `ACTIVE_HEALTHY`; the URL embedded in the Flutter client matches the live project URL, and its configured client key matches an enabled Supabase publishable key. No service-role/secret key is used in the Flutter client. This validates client connection identifiers only, not Auth provider/SMS delivery settings.
 
 - Flutter CI run `42229412550` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on commit `390144c5179fa23fb922bd0923212ff05f8dbc55`. This validates the latest friendship-action target-switch generation guards and all earlier source tests. No APK/AAB/Web build was run.
+
+- FCM callback ownership now queues the owner for each pending unregister by FID. A delayed callback from a prior account cannot clear a newer account's tracked registration even when Firebase reuses the same FID. Pure ownership logic has dedicated FIFO, owner-mismatch, unknown-owner, and failed-unregister unit tests; real Firebase callback ordering still requires physical-device/account-switch verification.
