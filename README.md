@@ -55,15 +55,16 @@ The `supabase/migrations/` directory contains the schema and security changes ap
 
 ## Android preview APK
 
-- A manual debug-APK workflow may exist for preview purposes, but it is **not authorized to run during the source/specification completion phase**.
-- Do not dispatch APK/AAB/Web build workflows until the source files, configuration, security review, and acceptance evidence are complete and a separate build approval is given.
+- `.github/workflows/android-preview.yml` is a debug-APK workflow, not a release workflow.
+- Its automatic `push` trigger has been removed on the current work branch. It now requires manual dispatch and an explicit `confirm_source_complete` approval input before the job can run.
+- Do not dispatch it until source files, configuration, security review, and acceptance evidence are complete.
 - A debug APK, if produced later, is for installation/testing only; it is not signed for Google Play and does not make provider-dependent features production-ready.
 
 ## CI and release builds
 
-- `.github/workflows/flutter-ci.yml` runs Flutter dependency installation, static analysis, and tests on pushes and pull requests.
-- `.github/workflows/android-web-build.yml` is a manual release workflow. It builds Android APK/AAB and Flutter Web only when explicitly dispatched.
-- Do not run the release workflow until the source/configuration audit is complete and release is explicitly approved.
+- `.github/workflows/flutter-ci.yml` runs dependency installation, static analysis, and Flutter tests on pushes to `main` and pull requests targeting `main`.
+- The inspected repository currently has no `android-web-build.yml` workflow. The available Android workflow builds only a debug APK; no AAB or Flutter Web release workflow was found.
+- No build workflow was dispatched as part of this audit.
 
 ## Project engineering documents
 
