@@ -111,6 +111,7 @@ class NexoraPushService {
   Future<void> unregisterCurrentDevice() async {
     if (!supported) return;
     // Invalidate registrations already in flight before deleting the row.
+    _registrationSuspended = true;
     _registrationGeneration++;
     final ownerId = Supabase.instance.client.auth.currentUser?.id;
     final fid = _lastInstallationId;
