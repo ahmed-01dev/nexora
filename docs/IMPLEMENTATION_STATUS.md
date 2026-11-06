@@ -213,3 +213,6 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Android preview workflow now inserts release INTERNET/ACCESS_NETWORK_STATE plus nearby-location and Android 13+ notification permissions (`ACCESS_COARSE_LOCATION`, `ACCESS_FINE_LOCATION`, `POST_NOTIFICATIONS`) into the generated manifest. This is workflow source validation only; the preview APK has not been built or device-tested.
 
 - Startup failure UI now displays a safe generic error message instead of the raw Supabase initialization exception, reducing accidental disclosure of backend response details on the setup screen.
+
+- Relationship tiles now invalidate pending reads when recycled to a different profile and guard follow/block action completions by profile generation and target ID. Added acceptance case SOC-020. Flutter CI for the latest guard is pending.
+- Followers/following page deduplication acceptance case is SOC-019 (renumbered to avoid collision with the friendship refresh case SOC-017).
