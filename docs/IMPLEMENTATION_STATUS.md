@@ -263,3 +263,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Report submission validation now mirrors the live `reports` CHECK constraints for all six target types and eleven reason codes, and rejects malformed UUID target IDs before network submission. The accepted values were compared with the deployed PostgreSQL constraint definitions; pure unit tests cover every allowed type/reason and malformed inputs. Database constraints remain authoritative.
 
 - Reels now sign private video URLs in bounded batches of eight and skip only media items whose URL signing fails, rather than failing the entire feed or making 40 sequential Storage calls. Reel refresh catches failures while leaving the FutureBuilder responsible for its visible error state. Stories use the same bounded URL-signing and resolved-refresh pattern.
+
+- Messaging/story refresh hardening: failed refresh futures are now contained and reported while FutureBuilder owns the visible error state; empty messages and stories lists support pull-to-refresh. Acceptance case APP-022 added. Flutter CI validation for these latest refresh changes is pending.
