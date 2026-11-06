@@ -135,3 +135,7 @@ Report submission also checks that the same authenticated user remains active af
 ### Message attachment account-switch handling
 
 Message image upload and deletion now keep subsequent database/Storage operations scoped to the original authenticated user. Rollback is skipped if the session has changed, and signed URLs are not returned after a viewer switch. This avoids using the new account's session for old-account cleanup or exposing a stale signed URL to a new viewer. If a message commit completes while the client session changes, the UI outcome may be ambiguous; do not blindly retry without reconciliation. Device tests and an idempotent send contract remain pending.
+
+### Community-channel session continuity
+
+Community channel screens now require a live user for reads and creation. Reads discard results if the viewer changes while the request is in flight. Creation rechecks the original owner between each database write and limits rollback to the original authenticated session, never a newly signed-in account. A switch after a partial insert can leave a conversation orphan; server-side reconciliation and real-device multi-account tests remain pending.
