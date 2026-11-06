@@ -43,6 +43,7 @@ final _nexoraMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 final _url = String.fromEnvironment('SUPABASE_URL', defaultValue: 'https://wwdeexgkwpftyavbhiff.supabase.co').trim();
 const _key = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: 'sb_publishable_vJpkaM72QMGLykLFU5m44g_kwuPCi-Y');
+const _authRedirectUrl = 'nexora://auth-callback/';
 
 Future<void> _signOutNexora() async {
   await NexoraPushService.instance.unregisterCurrentDevice();
@@ -466,6 +467,7 @@ class _AuthScreenState extends State<AuthScreen> {
         final result = await auth.signUp(
           email: email,
           password: _password.text,
+          emailRedirectTo: _authRedirectUrl,
           data: {'display_name': _name.text.trim()},
         );
         if (!mounted) return;
@@ -544,7 +546,7 @@ class _AuthScreenState extends State<AuthScreen> {
       _clearFeedback();
     });
     try {
-      await Supabase.instance.client.auth.resetPasswordForEmail(email);
+      await Supabase.instance.client.auth.resetPasswordForEmail(email, redirectTo: _authRedirectUrl);
       if (mounted) {
         setState(() {
           _notice = 'إذا كان البريد مرتبطًا بحساب، فستصلك رسالة لاستعادة كلمة المرور. راجع Spam أيضًا.';
