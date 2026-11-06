@@ -316,3 +316,7 @@ The database-side `current_setting('pgrst.db_schemas', true)` inspection returne
 ### Private schema exposure is a release-critical configuration check
 
 A fresh privilege query confirms `authenticated` has `USAGE` on schema `private` (but not `CREATE`); `anon` and `PUBLIC` have no `USAGE`. Authenticated also has EXECUTE on several SECURITY DEFINER helpers in that schema, including block, staff, conversation/community, media, and nearby-discovery helpers. This is intentional for RLS policies and trusted public wrapper functions, so revoking EXECUTE blindly could break authorization. However, if `private` is included in PostgREST's exposed schemas, those helpers may become directly callable RPCs. The database setting query returned NULL and cannot confirm the hosted API configuration. **Verify Dashboard → API → Exposed schemas excludes `private` before release.** No grants or API settings were changed.
+
+### Trigger inventory snapshot
+
+`docs/ERD-LIVE-TRIGGERS.md` records 21 non-internal triggers across `auth`, `public`, and `storage` (including 9 public application triggers, the auth user profile-creation trigger, and 11 Supabase Storage platform triggers). This records definitions only; it does not prove runtime success or complete side-effect behavior.
