@@ -137,7 +137,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
   Future<void> _accept(Map<String, dynamic> request) async {
     final followerId = request['follower_id']?.toString();
     final userId = Supabase.instance.client.auth.currentUser?.id;
-    if (followerId == null || userId == null || _accepting.contains(followerId)) {
+    if (followerId == null || userId == null || _refreshing || _initialLoading || _accepting.contains(followerId)) {
       return;
     }
 
@@ -264,7 +264,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
                               ),
                               subtitle: Text(profileHidden ? 'الملف الشخصي غير متاح · $followerLabel' : '@$username'),
                               trailing: FilledButton.tonalIcon(
-                                onPressed: _accepting.contains(followerId)
+                                onPressed: _refreshing || _accepting.contains(followerId)
                                     ? null
                                     : () => _accept(request),
                                 icon: _accepting.contains(followerId)
