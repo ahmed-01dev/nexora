@@ -49,7 +49,7 @@ Store server-side credentials in Supabase Edge Function secrets or a dedicated s
 
 ## Database
 
-A proposed media-authorization correction is under review at `supabase/migrations/20261106003000_restore_media_visibility_invariants.sql`. It is not applied; do not run migrations until remote/local history is reconciled.
+Read-only verification of the live Supabase media authorization function found the expected friend/private/deleted-content checks. The local migration history still differs from remote; do not run migrations until the exact source/version mapping is reconciled.
 
 The `supabase/migrations/` directory contains the schema and security changes applied during development. Public tables have RLS enabled; verify grants and policies after every schema change. Nearby discovery is opt-in, stores rounded coordinates in a private schema, returns coarse distance bands, and expires stale presence after 24 hours.
 
