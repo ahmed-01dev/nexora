@@ -27,3 +27,10 @@ The build workflow copies `firebase/android/google-services.json` into the gener
 The manual preview workflow generates the Android Kotlin-DSL platform using the pinned Flutter 3.47.9 template. It now explicitly declares Google Services Gradle plugin `com.google.gms.google-services` version `4.5.0` in `settings.gradle.kts` and applies it in `app/build.gradle.kts`, then verifies that the Gradle `applicationId` matches a package entry in `google-services.json`. This is required for the JSON configuration to be converted into Android resources used by default native Firebase initialization.
 
 The checked-in Firebase configuration currently matches `com.example.nexora`. Replace that placeholder-style package ID and register the corresponding Android app in Firebase before public release.
+
+## Device registration lifecycle and verification
+
+- FCM registration is suspended before explicit sign-out. In-flight `user_devices` upserts carry the original owner and a generation number; if they complete after logout/account switching, the row is removed for that original owner.
+- Auth-state changes resume registration only for initial-session or newly signed-in events. Arbitrary token refresh/user-update events do not cancel an in-progress sign-out suspension.
+- If Supabase sign-out fails after device cleanup, the still-authenticated account resumes registration.
+- These are source-level race protections. Physical Android tests are still required for permission denied/granted, first registration, FID rotation, sign-out while registration is in flight, account switch, offline cleanup, foreground notification display, background display, and notification tap routing.
