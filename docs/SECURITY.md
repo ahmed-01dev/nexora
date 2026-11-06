@@ -80,3 +80,7 @@
 ## Live Storage policy snapshot — 2026-11-06
 
 See `docs/STORAGE-SECURITY-INVENTORY.md` for the deployed bucket and `storage.objects` policy definitions. The only bucket, `nexora-media`, is private with a 50 MiB object limit. Authenticated uploads/deletes are owner-folder scoped; reads are owner-folder or `private.can_read_media_path(name)` authorized. There is no Storage UPDATE policy, and current client uploads use `upsert: false` with unique paths. The bucket MIME allowlist is broader than the app's actual upload support. Server-side media scanning/processing remains a release blocker.
+
+### SECURITY DEFINER function inventory
+
+See `docs/SECURITY-DEFINER-INVENTORY.md` for the 32 live SECURITY DEFINER functions across `public` and `private`, their signatures, owners, function-level settings, and anon/authenticated/PUBLIC EXECUTE flags. This is an inventory, not a blanket approval; review each function body, caller authorization, schema exposure, and grants before release.
