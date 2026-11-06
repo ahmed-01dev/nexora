@@ -11,6 +11,7 @@ abstract final class NexoraColors {
 }
 abstract final class NexoraSpacing { static const xs=4.0,sm=8.0,md=12.0,lg=16.0,xl=20.0,xxl=24.0,xxxl=32.0,screen=16.0; }
 abstract final class NexoraRadius { static const input=12.0,card=20.0,sheet=28.0,pill=999.0; }
+abstract final class NexoraMotion { static const fast=Duration(milliseconds:160),standard=Duration(milliseconds:240),emphasized=Duration(milliseconds:320); }
 abstract final class NexoraTheme {
  static ThemeData get amoled=>_build(Brightness.dark,NexoraColors.bg,NexoraColors.surface,NexoraColors.surfaceRaised,NexoraColors.violet);
  static ThemeData get light=>_build(Brightness.light,const Color(0xFFF4F4F8),Colors.white,const Color(0xFFECECF3),NexoraColors.violet);
