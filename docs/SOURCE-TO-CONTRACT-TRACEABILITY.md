@@ -104,3 +104,5 @@ No source code, database schema, deployed function, provider configuration, or b
 | Report completion across session change | `lib/features/moderation/report_dialog.dart` | The dialog confirms the reporter session still matches after the insert before showing success; changed sessions receive a reconciliation warning | Request outcome reconciliation and duplicate prevention require a server-side idempotency contract |
 
 | Message attachment session continuity | `lib/features/messaging/message_attachment_service.dart`; `docs/10-ACCEPTANCE-AND-PERFORMANCE-TESTING.md` | Upload/delete operations re-check owner before follow-up writes; rollback is limited to the original session; signed URL is discarded after viewer change | Ambiguous completed send, orphan cleanup, and real-device session-switch tests remain pending |
+
+| Comment pagination refresh race | `lib/features/comments/comments_screen.dart` | Refresh/reload advances a request generation; stale load-more completions cannot overwrite the newer list or its pagination state | Backend concurrent-insert behavior and authenticated integration tests remain pending |
