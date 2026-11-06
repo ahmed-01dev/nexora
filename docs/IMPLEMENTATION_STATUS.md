@@ -191,3 +191,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Flutter CI run `42225073974` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on commit `11896cc52659f875be399f9371fe8182136311ed`, covering the FCM in-flight registration guard and the current followers/following UI source. No APK/AAB/Web build was run.
 
 - FCM auth-event hardening: registration is suspended before logout, stale in-flight upserts are reconciled against the original account, and registration resumes only on initial/new sign-in events. Permission prompts recheck session/suspension state before registering. Source CI validation for this latest auth-event change is pending.
+
+- Sign-out failure recovery: if Supabase rejects sign-out after device cleanup, the app resumes FCM registration for the still-authenticated account before surfacing the error. This path is covered by source logic only; network-failure behavior still needs a device test.
