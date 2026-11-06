@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/nexora_theme.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -423,7 +424,7 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
                   const SizedBox(height: 8),
                   const Text(
                     'المجتمعات الخاصة وغير المدرجة لا تظهر في الاستكشاف، ويمكن للمالك دعوة الأعضاء برمز محدود الاستخدام.',
-                    style: TextStyle(fontSize: 12, color: Colors.white70),
+                    style: TextStyle(fontSize: 12, color: NexoraColors.textMuted),
                   ),
                 ],
               ),
@@ -610,7 +611,7 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
                                                 ),
                                                 Text(
                                                   '/${community['slug']}',
-                                                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                                  style: const TextStyle(color: NexoraColors.textMuted, fontSize: 12),
                                                 ),
                                               ],
                                             ),
