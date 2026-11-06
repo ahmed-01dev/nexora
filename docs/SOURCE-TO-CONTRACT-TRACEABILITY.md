@@ -118,3 +118,5 @@ No source code, database schema, deployed function, provider configuration, or b
 | Conversation preview session binding | `lib/features/messaging/messages_screen.dart` | Preview rows are hidden and taps blocked when the active user differs from the user who loaded the list; new-conversation flow rechecks the captured user | Device-level account-switch and conversation RLS integration tests remain pending |
 
 | Block/privacy/request session continuity | `block_account_service.dart`, `blocked_accounts_screen.dart`, `privacy_settings_screen.dart`, `friend_requests_screen.dart`, `follow_requests_screen.dart` | Read/write sequences verify the captured authenticated viewer; stale lists/actions are rejected after account changes | Device-level multi-account and RLS integration tests remain pending |
+
+| Profile friendship control session binding | `lib/features/friends/friend_requests_screen.dart` (`FriendRequestAction`) | Reads and friendship RPC actions use the captured viewer and are suppressed/disabled when the session changes | Authenticated multi-user RPC and real-device tests remain pending |
