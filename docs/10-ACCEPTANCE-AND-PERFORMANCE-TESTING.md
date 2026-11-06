@@ -46,6 +46,7 @@ Severity:
 | SOC-011 | Request is cancelled or either side blocks before acceptance | Acceptance affects zero rows or is denied; no relationship is created after the block | P0 |
 | SOC-014 | Refresh, load more, or accept in the follow-request inbox concurrently | Refresh is held while acceptance is in flight; acceptance and refresh are held while paging is in flight; stale pages cannot overwrite refreshed state; offsets count fetched rows and decrement when accepted rows leave the pending set | P1 |
 | SOC-015 | Unfollow an account from the accepted following list | Successful unfollow removes that account from the current following list; the followers list remains unchanged; any in-flight page is invalidated and the backend offset is adjusted; relationship tile state is not reused for a different profile | P1 |
+| SOC-016 | Accept/decline/cancel a friendship request repeatedly | Only one action per request ID is in flight; controls show a busy state; success reloads both request directions and failure leaves the row actionable | P1 |
 | SOC-012 | Open accepted followers/following lists | Correct direction and accepted-only rows; no blocked relationship leaks; hidden private profile details and internal user-ID fragments remain hidden; deterministic 30-row pagination, load-more, and refresh | P1 |
 | SOC-013 | Measure follower/following page performance | Capture representative EXPLAIN ANALYZE and latency at realistic relationship counts; verify whether the explicit created_at/user-ID sort needs a reconciled composite index before proposing DDL | P1 |
 
