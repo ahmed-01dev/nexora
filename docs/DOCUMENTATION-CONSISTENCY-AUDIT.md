@@ -213,3 +213,11 @@ The same read-only catalog query confirmed the live `private.is_blocked_between(
 A direct comparison of current remote history and `main` migration files now gives: 43 remote records, 42 local files, 21 exact version/name matches, 14 same-name/different-version records, 8 remote-only names and 7 local-only names. The detailed mapping is in `docs/SQL-CONTRACT-TRACEABILITY.md`. This replaces the earlier count-only description.
 
 These were read-only checks. No database mutation, migration, secret change, provider activation, CI dispatch, or APK/AAB/Web build was performed.
+## Addendum — live Supabase advisors (2026-11-06)
+
+Read-only Supabase advisors returned:
+
+- **Security warning:** Leaked Password Protection is disabled in Supabase Auth. Enable it in the Auth password security settings after reviewing product impact. [Supabase remediation guide](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). No Auth setting was changed.
+- **Performance info:** 43 indexes were reported as unused at the advisor observation time. This is not an instruction to drop them: the project is early/low-traffic, and several indexes protect expected future query patterns. Measure query plans and workload after realistic traffic before considering any index removal. [Unused-index guidance](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
+
+No advisor remediation or database mutation was executed.
