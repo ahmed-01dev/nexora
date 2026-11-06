@@ -21,6 +21,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
   int _nextOffset = 0;
   int _requestGeneration = 0;
   String? _error;
+  String? _loadedUserId;
   final Set<String> _accepting = {};
 
   @override
@@ -43,6 +44,10 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
         .order('follower_id', ascending: true)
         .range(offset, offset + _pageSize - 1);
 
+    if (client.auth.currentUser?.id != userId) {
+      throw StateError('تغير الحساب أثناء تحميل طلبات المتابعة.');
+    }
+    _loadedUserId = userId;
     return List<Map<String, dynamic>>.from(rows);
   }
 
@@ -136,14 +141,17 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
 
   Future<void> _accept(Map<String, dynamic> request) async {
     final followerId = request['follower_id']?.toString();
-    final userId = Supabase.instance.client.auth.currentUser?.id;
-    if (followerId == null || userId == null || _refreshing || _initialLoading || _loadingMore || _accepting.contains(followerId)) {
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser?.id;
+    if (followerId == null || userId == null || userId != _loadedUserId ||
+        _refreshing || _initialLoading || _loadingMore ||
+        _accepting.contains(followerId)) {
       return;
     }
 
     setState(() => _accepting.add(followerId));
     try {
-      final updated = await Supabase.instance.client
+      final updated = await client
           .from('follows')
           .update({'status': 'accepted'})
           .eq('follower_id', followerId)
@@ -155,7 +163,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
       if (updated == null) {
         throw StateError('تعذر قبول الطلب. ربما ألغاه صاحبه أو تم حظره.');
       }
-      if (!mounted) return;
+      if (!mounted || client.auth.currentUser?.id != userId) return;
       setState(() {
         final previousLength = _requests.length;
         _requests.removeWhere((row) => row['follower_id'] == followerId);
@@ -181,6 +189,9 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final viewerChanged = currentUserId == null ||
+        (_loadedUserId != null && currentUserId != _loadedUserId);
     return Scaffold(
       appBar: AppBar(
         title: const Text('طلبات المتابعة'),
@@ -192,7 +203,14 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
           ),
         ],
       ),
-      body: _initialLoading
+      body: viewerChanged
+          ? Center(
+              child: TextButton(
+                onPressed: _loadFirstPage,
+                child: const Text('تغير الحساب. حدّث طلبات المتابعة.'),
+              ),
+            )
+          : _initialLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? AppErrorView(
