@@ -221,3 +221,8 @@ The client inbox currently supports accepting incoming pending follow requests o
 | APP-029 | Switch accounts while viewing or managing community members | The previous account's member list is hidden; role/remove actions require the same viewer that loaded the list and stop after session change | P1 |
 
 | APP-030 | Switch accounts while the conversation list is visible | Previous account conversation previews are hidden until a fresh page loads for the new viewer; stale taps cannot open old conversations | P1 |
+
+| APP-031 | Switch accounts after confirming a block but before its database insert | Block creation stops when the confirmed viewer is no longer authenticated; it never retries as the new account | P1 |
+| APP-032 | Switch accounts while the blocked-account list is loading or before unblocking | Stale rows are hidden; unblock is allowed only for the viewer who loaded the list | P1 |
+| APP-033 | Switch accounts while privacy settings load or save | Settings from the previous viewer are not displayed or saved under the new session | P1 |
+| APP-034 | Switch accounts while friend/follow requests load or while an action completes | Old request lists are hidden and stale actions do not mutate the new viewer's UI | P1 |
