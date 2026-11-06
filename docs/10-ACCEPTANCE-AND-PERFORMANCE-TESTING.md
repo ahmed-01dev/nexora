@@ -41,6 +41,7 @@ Severity:
 | SOC-006 | Search private/blocked account | Only permitted discovery fields returned | P0 |
 | SOC-007 | Nearby discovery disabled | No location stored or returned | P0 |
 | SOC-008 | Nearby discovery enabled | Coarse, consent-based results only | P1 |
+| SOC-018 | Nearby discovery on Android 13+ with location/notification permissions denied or granted | Generated manifest declares coarse/fine location and notification permissions; location consent remains opt-in; denied/denied-forever states show recovery guidance without writing coordinates | P1 |
 | SOC-009 | Recipient opens incoming follow-request inbox | Only pending requests addressed to the authenticated recipient are listed; private requester details remain hidden unless normal profile RLS permits them | P0 |
 | SOC-010 | Recipient accepts a follow request | Only the recipient may change their own incoming pending row to accepted; the status column is the only direct client-updatable field | P0 |
 | SOC-011 | Request is cancelled or either side blocks before acceptance | Acceptance affects zero rows or is denied; no relationship is created after the block | P0 |
