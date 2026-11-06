@@ -88,3 +88,7 @@ See `docs/SECURITY-DEFINER-INVENTORY.md` for the 32 live SECURITY DEFINER functi
 ### FCM device-registration race protection
 
 `NexoraPushService` now increments a registration generation before explicit sign-out cleanup. A registration upsert captures the current user and generation; if the request completes after sign-out or account change, it deletes the just-written row for the original owner. This reduces stale device rows caused by an in-flight registration racing with logout. Cleanup remains best-effort under network/database failure and still requires offline, multi-account, and physical-device tests.
+
+### FCM device-registration race protection
+
+`NexoraPushService` now increments a registration generation before explicit sign-out cleanup. A registration upsert captures the current user and generation; if the request completes after sign-out or account change, it deletes the just-written row for the original owner. This reduces stale device rows caused by an in-flight registration racing with logout. Cleanup remains best-effort under network/database failure and still requires offline, multi-account, and physical-device tests.
