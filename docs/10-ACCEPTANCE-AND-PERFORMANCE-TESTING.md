@@ -213,3 +213,5 @@ The client inbox currently supports accepting incoming pending follow requests o
 | APP-025 | Start loading more comments, then refresh or submit a new comment before the older page returns | The stale page response cannot replace the refreshed list or overwrite the current offset/loading state | P1 |
 
 | APP-026 | Switch accounts while notification page loading, marking read, or opening a notification | Old-session data is not rendered into the new account and navigation to the old notification target is stopped | P1 |
+
+| APP-027 | Switch accounts while the followers/following list page is loading | A page fetched for the previous user is discarded and cannot populate the new session's list | P1 |
