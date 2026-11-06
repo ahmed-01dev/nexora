@@ -117,7 +117,7 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 ## Latest read-only contract review — 2026-11-06
 
 - Compared the Flutter RPC call sites in the app entry point and feature screens with the live PostgreSQL function catalog.
-- Snapshot: 19 distinct RPC names across 20 call sites; every reviewed client call has a matching live `public` function and matching named argument keys/types. The inventory and source paths are recorded in `docs/API.md`.
+- Snapshot: 18 distinct RPC names across 20 call sites; every reviewed client call has a matching live `public` function and matching named argument keys/types. The inventory and source paths are recorded in `docs/API.md`.
 - This is static contract parity only. It does not prove RLS behavior, grants, returned JSON decoding, error-path correctness, or end-to-end execution under real user identities.
 - The push service lifecycle was re-read. Device registration/deletion remains best-effort and can leave stale device rows when cleanup fails; physical-device notification display/tap behavior remains unverified.
 - No code behavior, database schema, grants, migration history, or deployed service was changed in this review. No tests or application builds were run.
@@ -151,4 +151,4 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - The live backend contract has no recipient-side decline operation, so the UI intentionally does not attempt an unauthorized DELETE or fabricate a decline RPC.
 - GitHub Actions Flutter CI run `42219653552` passed on source commit `135b533bdebb7a80e1132cc3db799d2d934742ce`: dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` all succeeded. This validates source analysis/tests only; no APK/AAB/Web build was run.
 
-- RPC inventory correction: the first literal-string scan did not count the dynamic dispatcher in `FriendRequestsScreen._act`. Its `decline_friend_request` target was separately verified in the live catalog: public wrapper is SECURITY INVOKER and authenticated-only; the private SECURITY DEFINER helper requires the current user to be the pending request addressee, uses an empty search path, and denies anon/PUBLIC execution. The API inventory now records 19 RPC names and 20 source call sites, including this dynamic dispatch.
+- RPC inventory correction: the first literal-string scan did not count the dynamic dispatcher in `FriendRequestsScreen._act`. Its `decline_friend_request` target was separately verified in the live catalog: public wrapper is SECURITY INVOKER and authenticated-only; the private SECURITY DEFINER helper requires the current user to be the pending request addressee, uses an empty search path, and denies anon/PUBLIC execution. The API inventory now records 18 RPC names and 20 source call sites, including this dynamic dispatch.
