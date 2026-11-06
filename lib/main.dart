@@ -1289,7 +1289,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
     final client = Supabase.instance.client;
     final id = client.auth.currentUser?.id;
     if (id == null) throw StateError('يجب تسجيل الدخول لعرض القائمة.');
-    final profileRelation = _showFollowers;
+    final profileRelation = _showFollowers
         ? 'profiles!follows_follower_id_fkey'
         : 'profiles!follows_following_id_fkey';
     final profileFields =
