@@ -128,3 +128,5 @@ No source code, database schema, deployed function, provider configuration, or b
 | Story feed/composer session binding | `lib/features/stories/stories_screen.dart` | Story rows and signed URLs are discarded on viewer change; composer publishes only for its opening account | Signed-URL expiry and real-device multi-account tests remain pending |
 
 | Moderation report queue reviewer binding | `lib/features/moderation/moderation_queue_screen.dart` | Report pages, target previews, assignment, and dismissal verify the captured reviewer | Authenticated moderator role/RLS tests remain pending |
+
+| Confirmation-dialog actor binding | `block_account_service.dart`, `report_dialog.dart` | Block/report dialogs capture the opening user and reject stale confirmation after account changes | Multi-account UI integration tests remain pending |
