@@ -237,3 +237,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - FCM diagnostics now log only exception runtime types, not raw plugin/backend error strings. `test/app_error_test.dart` also asserts that shared error reporting does not emit sample email/token values.
 
 - Friendship action buttons now capture the target profile and invalidate in-flight actions when the widget is recycled to a different profile. Old completions cannot clear a newer action's busy state or refresh/show errors against the wrong target. Added acceptance case SOC-021; backend two-user tests remain pending.
+
+- Supabase client configuration check: the project is `ACTIVE_HEALTHY`; the URL embedded in the Flutter client matches the live project URL, and its configured client key matches an enabled Supabase publishable key. No service-role/secret key is used in the Flutter client. This validates client connection identifiers only, not Auth provider/SMS delivery settings.
