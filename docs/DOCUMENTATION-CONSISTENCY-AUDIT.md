@@ -172,55 +172,42 @@ Notable contract evidence:
 
 These are local-source findings only. No live database catalog query, schema write, migration, secret change, provider activation or build was performed.
 
-## Addendum — media Storage authorization regression found (2026-11-06)
+## Addendum — live Supabase and migration-source reconciliation (2026-11-06)
 
-A line-by-line static comparison of local migrations found a security-relevant regression: `20261105225000_hide_deleted_message_attachments.sql` replaces `private.can_read_media_path(text)` with an older version that omits friend-only post access, private-account story gating, and soft-deleted-post media denial for non-owners.
+### Media authorization: live state versus local source
 
-Actions taken on this branch:
-1. Added proposed corrective migration `supabase/migrations/20261106003000_restore_media_visibility_invariants.sql`, based on the prior complete helper definition.
-2. Added `docs/SQL-SECURITY-REGRESSION-MATRIX.md` with owner/follower/friend/unrelated/blocked identity cases across posts, stories, message attachments and community covers.
-3. Updated `docs/SQL-CONTRACT-TRACEABILITY.md` to record the regression and static predicate checks.
+A read-only catalog query against the connected NEXORA Supabase project confirmed that the live `private.can_read_media_path(text)` definition contains friend-only post access, private-account story gating, soft-deleted-post denial for non-owners, block checks, and non-deleted-message/conversation-membership checks.
 
-Verification is limited to source comparison and checking that the proposed SQL contains the required predicates. No live Storage request, authenticated RLS test, database catalog query, migration application or build was performed. This source correction must not be applied until remote/local migration history is reconciled and the live function definition is inspected.
-### Migration-count clarification
+The local GitHub migration `20261105225000_hide_deleted_message_attachments.sql` contains an older/different replacement that omits some of those checks. Therefore this is **local migration source/history drift**, not a demonstrated current live Storage vulnerability. The temporary manually drafted migration was removed from this branch; no new migration should be created until source history is reconciled using the proper local Supabase CLI workflow.
 
-The 42 local SQL files were counted on `main` before the proposed correction was added. The work branch now has 43 SQL files because it adds the new proposed `20261106003000` migration. That additional file is not evidence that the previously observed remote-history mismatch is reconciled; the original 42 local migrations still require exact version-to-source mapping against the 43 remote records.
+The live helper is owned by `postgres`, is `SECURITY DEFINER`, uses an empty `search_path`, and its ACL lists `postgres` and `authenticated`. Archived/expired story filtering occurs before the owner/viewer branch, so such media is denied to everyone, including the owner.
 
-## Addendum — unresolved block-helper source dependency (2026-11-06)
+### Block helper and private schema exposure
 
-Static inspection found repeated references to `private.is_blocked_between(...)` in local policies and security functions, but no matching `CREATE FUNCTION` definition was located in the inspected local migration sources; the foundation migration's function inventory also does not define it.
+The live database contains `private.is_blocked_between(a uuid, b uuid)`. It is owned by `postgres`, `SECURITY DEFINER`, uses an empty `search_path`, and checks `public.blocks` in both directions. Its ACL grants EXECUTE to `authenticated`.
 
-This does not prove the live database lacks the function. It may be present in the remote schema or in the unmatched remote migration record. The missing source provenance could be related to the 43-remote/42-main-local migration discrepancy, but that relationship is not yet established.
+The local foundation migration grants authenticated USAGE on schema `private`, while RLS policies call this helper. This is expected only if the `private` schema is not exposed through PostgREST. A read-only `current_setting('pgrst.db_schemas', true)` query returned NULL, so the configured exposed-schema list was not verified. Confirm in Supabase Data API settings that `private` is excluded. Do not revoke EXECUTE blindly because policy evaluation depends on it.
 
-Do not create a guessed replacement. Recover the exact live function definition, owner, SECURITY mode, `search_path`, ACL and source migration through read-only catalog inspection, then map it to the remote migration history. This is a hard stop before migration replay or policy changes.
-## Addendum — CI/build workflow inventory and guard (2026-11-06)
+### Remote/local migration inventory
 
-Static inspection of `.github/workflows/` on `main` found only `flutter-ci.yml` and `android-preview.yml`. README previously referred to a non-existent `android-web-build.yml` and described APK/AAB/Web release packaging that is not present in the inspected workflow directory.
+Read-only listings returned **43 remote migration records** and **42 SQL files on GitHub main**. Name/version comparison found:
 
-The existing `android-preview.yml` had both `workflow_dispatch` and an automatic `push` trigger for source/config paths. To honor the source-completion-before-build rule, the work branch removes the automatic push trigger and adds a required boolean `confirm_source_complete` input; the job runs only when that input is true. This is a workflow configuration change only. No workflow was dispatched and no build was run.
+- 21 exact version-and-name matches.
+- 14 same-name migrations with different timestamps.
+- 8 remote-only names.
+- 7 local-only names.
 
-README now describes the actual CI and debug-APK workflows and explicitly notes that no AAB/Web release workflow was found in the inspected directory. Re-check the repository workflow inventory before any future release claims.
-The work branch also sets `permissions: contents: read` on `flutter-ci.yml`, limiting the workflow token to repository read access. This is a static configuration change; no CI run was manually dispatched.
+The full names and 14 timestamp mappings are recorded in `docs/SQL-CONTRACT-TRACEABILITY.md`. Remote-only foundation/security migrations may contain the original source for helpers missing from the local source tree, but that is not yet proven. Do not run `db push`, reset, replay, repair migration history or apply new migrations until exact SQL source and version mapping are recovered and a recoverable backup is verified.
 
-## Correction — live Supabase verification supersedes the preliminary media-regression finding (2026-11-06)
+### Supabase advisors
 
-A read-only catalog query against the connected NEXORA Supabase project confirmed that the **live** `private.can_read_media_path(text)` definition contains the friend-only post, private-account story, soft-deleted-post, deleted-message and block checks. The live helper is owned by `postgres`, uses `SECURITY DEFINER` with an empty `search_path`, and its ACL lists `postgres` and `authenticated`.
+Read-only advisors returned:
 
-Therefore the earlier addendum describing a current live media authorization regression is superseded: the discrepancy is in the local GitHub migration source/history, not a demonstrated live vulnerability. The temporary manually drafted migration `20261106003000_restore_media_visibility_invariants.sql` was removed from the work branch; no new migration should be created until the proper local Supabase CLI migration workflow and source-history reconciliation are available.
+- **Security warning:** Leaked Password Protection is disabled in Supabase Auth. Review and enable it in Auth password security settings. [Remediation guide](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). No Auth setting was changed.
+- **Performance info:** 43 indexes were reported unused at the observation time. This is not a deletion recommendation; measure query plans under realistic workload before considering removal. [Unused-index guidance](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
 
-The same read-only catalog query confirmed the live `private.is_blocked_between(a uuid, b uuid)` helper exists, is owned by `postgres`, is `SECURITY DEFINER` with an empty `search_path`, and checks blocks in both directions. Its original local migration source remains unlocated.
+### CI/build workflow guard
 
-A direct comparison of current remote history and `main` migration files now gives: 43 remote records, 42 local files, 21 exact version/name matches, 14 same-name/different-version records, 8 remote-only names and 7 local-only names. The detailed mapping is in `docs/SQL-CONTRACT-TRACEABILITY.md`. This replaces the earlier count-only description.
+Static inspection found only `.github/workflows/flutter-ci.yml` and `.github/workflows/android-preview.yml`; no AAB/Web release workflow was present. The work branch removes the preview workflow's automatic push trigger and adds a required `confirm_source_complete` boolean input. It also sets `permissions: contents: read` on Flutter CI. No workflow was dispatched and no build was run.
 
-These were read-only checks. No database mutation, migration, secret change, provider activation, CI dispatch, or APK/AAB/Web build was performed.
-## Addendum — live Supabase advisors (2026-11-06)
-
-Read-only Supabase advisors returned:
-
-- **Security warning:** Leaked Password Protection is disabled in Supabase Auth. Enable it in the Auth password security settings after reviewing product impact. [Supabase remediation guide](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). No Auth setting was changed.
-- **Performance info:** 43 indexes were reported as unused at the advisor observation time. This is not an instruction to drop them: the project is early/low-traffic, and several indexes protect expected future query patterns. Measure query plans and workload after realistic traffic before considering any index removal. [Unused-index guidance](https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index).
-
-No advisor remediation or database mutation was executed.
-### Additional private-schema exposure check
-
-The live `private.is_blocked_between(a uuid, b uuid)` ACL grants `authenticated` EXECUTE, and the local foundation migration grants `authenticated` USAGE on schema `private`. This is required by current RLS expressions, but if `private` is exposed through the Supabase Data API, the helper may be callable directly with arbitrary user IDs and reveal pairwise block status. A read-only `current_setting('pgrst.db_schemas', true)` query returned NULL and did not establish the configured exposed-schema list. Verify the Data API exposed schemas in project settings and ensure `private` is excluded. Do not revoke EXECUTE blindly because policies depend on it.
+All Supabase checks in this addendum were read-only. No database mutation, migration, secret change, Auth setting change, provider activation, CI dispatch or APK/AAB/Web build was performed.
