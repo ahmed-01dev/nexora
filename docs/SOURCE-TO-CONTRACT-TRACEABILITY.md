@@ -90,3 +90,5 @@
 No source code, database schema, deployed function, provider configuration, or build workflow was changed by this traceability document.
 
 | Startup failure presentation | `lib/main.dart`; `lib/core/app_error.dart` | Supabase initialization failures are reported centrally and the setup screen receives a generic Arabic message | Provider configuration and retry/recovery behavior still require device validation |
+
+| Late FCM registration / duplicate sign-out callback | `lib/features/notifications/nexora_push_service.dart`; `lib/main.dart` | Suspended or signed-out registration callbacks do not overwrite the captured owner or upsert; duplicate unregister invocation is skipped | Firebase timing, offline cleanup and account-switch behavior require physical Android testing |
