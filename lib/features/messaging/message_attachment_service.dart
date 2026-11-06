@@ -4,11 +4,18 @@ import '../media/media_upload_service.dart';
 
 class MessageAttachmentService {
   final ImagePicker _picker = ImagePicker();
+
+  void _requireCurrentUser(String userId) {
+    if (Supabase.instance.client.auth.currentUser?.id != userId) {
+      throw StateError('انتهت جلسة الدخول أو تغير الحساب. سجّل الدخول مرة تانية.');
+    }
+  }
   Future<XFile?> pickImage() => _picker.pickImage(source: ImageSource.gallery, imageQuality: 88, maxWidth: 2048, maxHeight: 2048);
 
   Future<String> sendImage(String conversationId, XFile file) async {
     final client = Supabase.instance.client;
-    final uid = client.auth.currentUser!.id;
+    final uid = client.auth.currentUser?.id;
+    if (uid == null) throw StateError('يجب تسجيل الدخول لإرسال المرفقات.');
     final ext = file.name.split('.').last.toLowerCase();
     final type = switch (ext) { 'jpg' || 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', _ => null };
     if (type == null) throw const FormatException('صيغة الصورة غير مدعومة.');
@@ -17,11 +24,14 @@ class MessageAttachmentService {
       throw const FormatException('الصورة غير صالحة أو أكبر من 10 ميجابايت.');
     }
     final path = '$uid/$conversationId/messages/${DateTime.now().microsecondsSinceEpoch}.$ext';
+    _requireCurrentUser(uid);
     await client.storage.from('nexora-media').uploadBinary(path, bytes, fileOptions: FileOptions(contentType: type, upsert: false));
     String? messageId;
     try {
+      _requireCurrentUser(uid);
       final row = await client.from('messages').insert({'conversation_id': conversationId, 'sender_id': uid, 'message_type': 'image', 'body': null, 'encryption_mode': 'server_readable'}).select('id').single();
       messageId = row['id'] as String;
+      _requireCurrentUser(uid);
       await client.from('message_attachments').insert({'message_id': messageId, 'uploader_id': uid, 'storage_path': path, 'mime_type': type, 'size_bytes': bytes.length});
       return messageId;
     } catch (_) {
