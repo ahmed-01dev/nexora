@@ -51,6 +51,52 @@ jobs:
             cp firebase/android/google-services.json android/app/google-services.json
           fi
 
+      - name: Configure Firebase Android Gradle plugin
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          settings = Path("android/settings.gradle.kts")
+          app = Path("android/app/build.gradle.kts")
+          config = Path("android/app/google-services.json")
+          if not settings.is_file() or not app.is_file() or not config.is_file():
+              raise SystemExit("Generated Android Gradle files or google-services.json are missing.")
+
+          settings_text = settings.read_text()
+          settings_marker = 'plugins {\\n    id("dev.flutter.flutter-plugin-loader")'
+          settings_plugin = 'plugins {\\n    id("com.google.gms.google-services") version "4.5.0" apply false\\n    id("dev.flutter.flutter-plugin-loader")'
+          if 'id("com.google.gms.google-services") version "4.5.0" apply false' not in settings_text:
+              if settings_marker not in settings_text:
+                  raise SystemExit("Could not find the expected Flutter settings Gradle plugin block.")
+              settings_text = settings_text.replace(settings_marker, settings_plugin, 1)
+              settings.write_text(settings_text)
+
+          app_text = app.read_text()
+          app_marker = 'plugins {\\n    id("com.android.application")'
+          app_plugin = 'plugins {\\n    id("com.android.application")\\n    id("com.google.gms.google-services")'
+          if 'id("com.google.gms.google-services")' not in app_text:
+              if app_marker not in app_text:
+                  raise SystemExit("Could not find the expected Android app Gradle plugin block.")
+              app_text = app_text.replace(app_marker, app_plugin, 1)
+              app.write_text(app_text)
+
+          firebase = json.loads(config.read_text())
+          configured = {
+              item.get("client_info", {}).get("android_client_info", {}).get("package_name")
+              for item in firebase.get("client", [])
+          }
+          match = re.search(r'applicationId\\s*=\\s*"([^"]+)"', app_text)
+          if not match or match.group(1) not in configured:
+              raise SystemExit(
+                  f"Firebase package mismatch: app={match.group(1) if match else None}, "
+                  f"configured={sorted(x for x in configured if x)}"
+              )
+          print("Google Services plugin applied and Firebase package ID verified.")
+          PY
+
       - name: Install dependencies
         run: flutter pub get
 
