@@ -110,3 +110,5 @@ No source code, database schema, deployed function, provider configuration, or b
 | Notification account-switch safety | `lib/features/notifications/notifications_screen.dart` | Page results, read updates, and target navigation are bound to the captured viewer ID and stopped if the session changes | Authenticated multi-user and device session-switch tests remain pending |
 
 | Followers/following session continuity | `lib/main.dart` (`FriendsScreen._fetchPage`) | Page query captures the viewer ID and rejects results if the authenticated user changes before completion | Device-level account-switch and authenticated RLS integration tests remain pending |
+
+| Community channel account-switch safety | `lib/features/communities/community_channels_screen.dart` | Reads are bound to the captured viewer; creation rechecks owner before follow-up writes and limits rollback to original session | Partial insert orphan reconciliation and authenticated device tests remain pending |
