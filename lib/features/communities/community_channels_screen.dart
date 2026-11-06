@@ -49,7 +49,15 @@ class _CommunityChannelsScreenState extends State<CommunityChannelsScreen> {
           .eq('community_id', widget.communityId)
           .order('created_at')
           .order('id');
-      if (!mounted || client.auth.currentUser?.id != userId) return;
+      if (!mounted) return;
+      if (client.auth.currentUser?.id != userId) {
+        setState(() {
+          _channels = [];
+          _error = 'تغير الحساب أثناء تحميل القنوات.';
+          _loading = false;
+        });
+        return;
+      }
       setState(() {
         _channels = List<Map<String, dynamic>>.from(rows);
         _loading = false;
