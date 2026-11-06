@@ -442,7 +442,11 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
     if (result == null || !mounted) return;
     try {
       final db = Supabase.instance.client;
-      final uid = db.auth.currentUser!.id;
+      final uid = db.auth.currentUser?.id;
+      if (uid == null) {
+        _showError(StateError('انتهت جلسة الدخول. سجّل الدخول مرة تانية.'));
+        return;
+      }
       final created = await db.from('communities').insert({
         'owner_id': uid,
         'name': result['name'],
@@ -548,7 +552,7 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
                               final community = _communities[index];
                               final id = community['id'] as String;
                               final isOwner = community['owner_id'] ==
-                                  Supabase.instance.client.auth.currentUser!.id;
+                                  Supabase.instance.client.auth.currentUser?.id;
                               final joined = _joined.contains(id);
                               final role = _roles[id] ?? (isOwner ? 'owner' : 'member');
                               final canManageChannels = isOwner || role == 'moderator';
