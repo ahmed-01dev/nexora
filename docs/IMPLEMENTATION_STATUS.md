@@ -271,3 +271,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Comments screen: fixed load-more to retain the same descending `(created_at, id)` order as the first page, added safe handling for expired sessions across create/edit/delete/like actions, and separated successful comment creation from the subsequent list refresh so a refresh failure cannot be reported as a failed comment submission.
 
 - Notification pagination now tracks the backend offset independently from the visible deduplicated row count, so relationship/notification inserts between pages do not cause repeated-page loops. Refresh errors are contained by the FutureBuilder state rather than escaping the refresh callback.
+
+- Comment pagination now tracks the backend offset independently of the deduplicated visible list, preventing repeated or skipped pages when new comments arrive during paging. The first-page and load-more queries retain identical descending timestamp/ID ordering.
