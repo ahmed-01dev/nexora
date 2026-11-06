@@ -77,7 +77,7 @@ Future<void> main() async {
     startupError = 'إعدادات الاتصال غير مكتملة. تحقق من عنوان Supabase ومفتاح Publishable/Anon.';
   } else {
     try {
-      await Supabase.initialize(url: _url, anonKey: _key.trim());
+      await Supabase.initialize(url: _url, publishableKey: _key.trim());
       ready = true;
       await NexoraPushService.instance.initialize();
     } catch (e, s) {
