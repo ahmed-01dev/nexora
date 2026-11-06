@@ -1317,8 +1317,14 @@ class _FriendsScreenState extends State<FriendsScreen> {
     try {
       final rows = await _fetchPage(_offset);
       if (!mounted || generation != _requestGeneration) return;
+      final relationshipKey = _showFollowers ? 'follower_id' : 'following_id';
+      final knownIds = _rows.map((row) => row[relationshipKey]).toSet();
+      final additions = rows.where(
+        (row) => !knownIds.contains(row[relationshipKey]),
+      );
       setState(() {
-        _rows.addAll(rows);
+        _rows.addAll(additions);
+        // Offset tracks backend rows fetched, not only newly visible rows.
         _offset += rows.length;
         _hasMore = rows.length == _pageSize;
       });
