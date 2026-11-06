@@ -188,3 +188,7 @@ The subsequently added `lib/features/friends/follow_requests_screen.dart` was ch
 - Embedded profile relationships use the live foreign keys `follows_following_id_fkey` and `follows_follower_id_fkey`. Live catalog inspection confirmed both reference `profiles(id)`.
 - Results are loaded in 30-row pages, newest-first with the opposite user ID as a stable tie-breaker. The UI shows a privacy-safe placeholder when profile RLS hides the embedded profile; it does not bypass profile authorization. Pull-to-refresh resets the selected direction to page one.
 - Follow/unfollow controls reuse the existing `request_follow` and `cancel_follow` RPCs. The list supports explicit load-more pagination in 30-row ranges.
+
+### Followers/following pagination query-plan note
+
+Read-only `EXPLAIN` checks for both directional page queries show the expected composite index scan (`follows_follower_status_idx` or `follows_following_status_idx`) followed by an explicit sort on `created_at DESC` and the opposite user ID. The current indexes do not satisfy that full ordering. This is a plan-shape observation using a non-existent UUID and does not measure production latency or row-volume behavior. Do not add an index until migration-history reconciliation and representative workload/EXPLAIN ANALYZE evidence are available.
