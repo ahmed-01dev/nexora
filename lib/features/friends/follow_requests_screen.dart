@@ -70,8 +70,27 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
   Future<void> _refresh() async {
     if (_refreshing) return;
     setState(() => _refreshing = true);
-    await _loadFirstPage();
-    if (mounted) setState(() => _refreshing = false);
+    try {
+      final rows = await _fetchPage(0);
+      if (!mounted) return;
+      setState(() {
+        _requests = rows;
+        _hasMore = rows.length == _pageSize;
+        _error = null;
+      });
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'follow_requests_refresh');
+      if (!mounted) return;
+      if (_requests.isEmpty) {
+        setState(() => _error = AppErrorService.message(error));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppErrorService.message(error))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
+    }
   }
 
   Future<void> _loadMore() async {
