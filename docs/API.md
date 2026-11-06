@@ -171,7 +171,7 @@ A static scan of recognized Supabase query-builder filter/order calls across the
 ## 11. Incoming follow-request workflow
 
 - Source: `lib/features/friends/follow_requests_screen.dart`, opened from the discovery screen.
-- Read path: `public.follows` where `following_id = auth.uid()` and `status = 'pending'`, with the requester profile joined through `follows_follower_id_fkey`; pages are ordered newest-first in 30-row ranges.
+- Read path: `public.follows` where `following_id = auth.uid()` and `status = 'pending'`, with the requester profile joined through `follows_follower_id_fkey`; pages are ordered newest-first with `follower_id` as a deterministic tie-breaker in 30-row ranges.
 - Accept path: update only `status = 'accepted'`, filtered by the exact `follower_id`, current `following_id`, and pending status. Live privileges grant authenticated users UPDATE on the `status` column only (not table-wide UPDATE or ownership columns); the live UPDATE policy restricts recipients to their own incoming pending rows and rechecks block state.
 - No recipient-side decline operation exists in the current live RPC/policy contract. The UI therefore offers accept only; it does not attempt a client-side DELETE or invent a decline RPC.
 - This is source/schema contract evidence, not a multi-user RLS integration test.
