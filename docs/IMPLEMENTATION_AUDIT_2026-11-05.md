@@ -1,3 +1,5 @@
+> **Superseded authentication note (2026-11-06):** This dated audit records an earlier implementation snapshot. Its historical phone-authentication findings are not current requirements. The active product and client now use email/password authentication only; phone-number, SMS OTP, and WhatsApp OTP code and tests have been removed.
+
 # NEXORA — Repository and Supabase Audit
 Date: 2026-11-05
 Repository: ahmed-01dev/nexora
