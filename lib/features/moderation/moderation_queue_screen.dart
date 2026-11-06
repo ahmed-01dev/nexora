@@ -259,13 +259,14 @@ class _ModerationQueueScreenState extends State<ModerationQueueScreen> {
 
   Future<void> _assignToMe(Map<String, dynamic> report) async {
     final id = report['id'] as String;
-    if (!_canReview || _busyIds.contains(id)) return;
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (!_canReview || userId == null || _busyIds.contains(id)) return;
     setState(() => _busyIds.add(id));
     try {
       await Supabase.instance.client
           .from('reports')
           .update({
-            'assigned_to': Supabase.instance.client.auth.currentUser!.id,
+            'assigned_to': userId,
             'status': 'reviewing',
           })
           .eq('id', id);
@@ -307,6 +308,10 @@ class _ModerationQueueScreenState extends State<ModerationQueueScreen> {
     final resolution = note.text.trim();
     note.dispose();
     if (confirmed != true || !mounted) return;
+    if (!_canReview || Supabase.instance.client.auth.currentUser == null) {
+      _showError(StateError('انتهت جلسة الدخول أو لم تعد تملك صلاحية المراجعة.'));
+      return;
+    }
 
     final id = report['id'] as String;
     if (_busyIds.contains(id)) return;
