@@ -176,3 +176,14 @@ This is a concrete mismatch inventory, not a safe repair plan. The remote-only f
 The live ACL grants `authenticated` EXECUTE on `private.is_blocked_between(a uuid, b uuid)`, and the local foundation migration grants `authenticated` USAGE on the `private` schema. This is needed for RLS expressions that call the helper, but it also means the function could be directly callable through PostgREST **if** `private` is included in the project's exposed Data API schemas.
 
 A read-only query of `current_setting('pgrst.db_schemas', true)` returned NULL, so the exposed-schema configuration was not established by that query. Verify the Supabase Data API exposed-schema setting in project configuration/dashboard and ensure `private` is excluded. Do not revoke the function EXECUTE grant without first designing a safe RLS-compatible alternative; doing so could break policy evaluation.
+
+### Live object-presence cross-check
+
+Additional read-only catalog checks confirmed that several objects associated with local-only or timestamp-mismatched source filenames are present in the live database:
+
+- Tables: `public.community_channels`, `public.community_invites`.
+- Functions: `public.get_my_conversation_previews()`, `public.create_community_invite(...)`, `public.accept_community_invite(...)`, `public.revoke_community_invites(...)`, `public.get_feed_page(...)`, and `public.get_my_notification_page(...)`.
+- Internal invite functions: `private.create_community_invite_internal(...)`, `private.accept_community_invite_internal(...)`, `private.revoke_community_invites_internal(...)`.
+- Indexes: `public.reposts_user_post_unique_idx` and `public.profiles_username_lower_key`.
+
+This proves these objects exist live; it does not prove the local SQL file is byte-for-byte the source that created them. The reconciliation task is therefore to recover exact migration provenance/content, not to blindly apply every local-only filename.
