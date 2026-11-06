@@ -143,3 +143,7 @@ Community channel screens now require a live user for reads and creation. Reads 
 ### Community member action session binding
 
 The member list stores the viewer ID associated with its successful load. If the current session no longer matches, the previous member list is hidden and role/removal actions are blocked. Actions recheck the actor after database completion before refreshing or mutating local state. This is UI race protection; RLS and community-role policies remain the security boundary.
+
+### Conversation-list viewer binding
+
+The conversation list is associated with the authenticated viewer ID that loaded its previews. If the current viewer changes, old previews are hidden and stale rows cannot open a chat. The new-conversation flow also verifies that the original viewer remains active after the picker and after conversation creation. This protects against stale UI/session races; conversation membership RLS remains authoritative.
