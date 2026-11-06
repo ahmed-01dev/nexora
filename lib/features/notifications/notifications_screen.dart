@@ -19,6 +19,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   bool _hasMore = true;
   bool _loadingMore = false;
   int _nextOffset = 0;
+  int _generation = 0;
 
   @override
   void initState() {
@@ -26,12 +27,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     _future = _load();
   }
 
-  Future<List<Map<String, dynamic>>> _load({int offset = 0}) async {
+  Future<List<Map<String, dynamic>>> _load({int offset = 0, int? generation}) async {
+    final requestGeneration = generation ?? _generation;
     final rows = await Supabase.instance.client.rpc(
       'get_my_notification_page',
       params: {'p_offset': offset, 'p_limit': _pageSize},
     );
-    if (mounted) {
+    if (mounted && requestGeneration == _generation) {
       setState(() {
         _hasMore = rows.length == _pageSize;
         _nextOffset = offset + rows.length;
@@ -42,10 +44,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> _loadMore(List<Map<String, dynamic>> current) async {
     if (_loadingMore || !_hasMore) return;
+    final generation = _generation;
     setState(() => _loadingMore = true);
     try {
-      final additions = await _load(offset: _nextOffset);
-      if (!mounted) return;
+      final additions = await _load(offset: _nextOffset, generation: generation);
+      if (!mounted || generation != _generation) return;
       final known = current.map((row) => row['id']).toSet();
       final unique = additions.where((row) => !known.contains(row['id']));
       setState(() {
@@ -54,7 +57,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       });
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'load_more_notifications');
-      if (mounted) {
+      if (mounted && generation == _generation) {
         setState(() => _loadingMore = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AppErrorService.message(error))),
@@ -78,7 +81,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           .update({'read_at': DateTime.now().toUtc().toIso8601String()})
           .eq('recipient_id', Supabase.instance.client.auth.currentUser!.id)
           .isFilter('read_at', null);
-      if (mounted) setState(() { _hasMore = true; _future = _load(); });
+      if (mounted) await _refresh();
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'mark_all_notifications_read');
       if (mounted) {
@@ -91,7 +94,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     try {
       await _markRead(row['id'] as String);
       if (!mounted) return;
-      setState(() => _future = _load());
+      await _refresh();
+      if (!mounted) return;
       final type = row['notification_type'] as String? ?? '';
       final payload = row['payload'] is Map
           ? Map<String, dynamic>.from(row['payload'] as Map)
@@ -134,7 +138,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   };
 
   Future<void> _refresh() async {
-    final next = _load();
+    final generation = ++_generation;
+    final next = _load(generation: generation);
     setState(() {
       _hasMore = true;
       _loadingMore = false;
