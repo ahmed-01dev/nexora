@@ -329,17 +329,17 @@ class _FriendRequestActionState extends State<FriendRequestAction> {
           params: {'p_addressee_id': targetId},
         );
       } else if (request['status'] == 'accepted') {
-        await Supabase.instance.client.rpc(
+        await client.rpc(
           'remove_friend',
           params: {'p_other_user_id': targetId},
         );
       } else if (request['requester_id'] == _myId) {
-        await Supabase.instance.client.rpc(
+        await client.rpc(
           'cancel_friend_request',
           params: {'p_request_id': request['id']},
         );
       } else {
-        await Supabase.instance.client.rpc(
+        await client.rpc(
           'accept_friend_request',
           params: {'p_request_id': request['id']},
         );
