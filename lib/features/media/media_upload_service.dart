@@ -114,6 +114,7 @@ class MediaUploadService {
       throw const FormatException('محتوى الصورة لا يطابق امتداد الملف. اختر صورة JPG أو PNG أو WebP سليمة.');
     }
     final path = '$userId/profile/${imageType}_${DateTime.now().microsecondsSinceEpoch}.$extension';
+    _requireCurrentUser(userId);
     await Supabase.instance.client.storage.from('nexora-media').uploadBinary(
       path,
       bytes,
@@ -177,12 +178,14 @@ class MediaUploadService {
           throw FormatException('محتوى الملف لا يطابق نوعه: ${file.name}');
         }
         final path = '$userId/$postId/${DateTime.now().microsecondsSinceEpoch}_$i.$extension';
+        _requireCurrentUser(userId);
         await client.storage.from('nexora-media').uploadBinary(
           path,
           bytes,
           fileOptions: FileOptions(contentType: details.$2, upsert: false),
         );
         uploaded.add(path);
+        _requireCurrentUser(userId);
         await client.from('media').insert({
           'post_id': postId,
           'user_id': userId,
@@ -236,6 +239,7 @@ class MediaUploadService {
       throw FormatException('محتوى الملف لا يطابق نوعه: ${file.name}');
     }
     final path = '$userId/stories/${DateTime.now().microsecondsSinceEpoch}.$extension';
+    _requireCurrentUser(userId);
     await Supabase.instance.client.storage.from('nexora-media').uploadBinary(
       path,
       bytes,
