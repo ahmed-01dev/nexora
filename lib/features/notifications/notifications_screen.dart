@@ -29,17 +29,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<List<Map<String, dynamic>>> _load({int offset = 0, int? generation}) async {
     final requestGeneration = generation ?? _generation;
-    final rows = await Supabase.instance.client.rpc(
+    final response = await Supabase.instance.client.rpc(
       'get_my_notification_page',
       params: {'p_offset': offset, 'p_limit': _pageSize},
     );
+    final rows = response as List;
     if (mounted && requestGeneration == _generation) {
       setState(() {
         _hasMore = rows.length == _pageSize;
         _nextOffset = offset + rows.length;
       });
     }
-    return List<Map<String, dynamic>>.from(rows as List);
+    return List<Map<String, dynamic>>.from(rows);
   }
 
   Future<void> _loadMore(List<Map<String, dynamic>> current) async {
