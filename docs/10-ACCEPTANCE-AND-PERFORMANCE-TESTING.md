@@ -233,3 +233,5 @@ The client inbox currently supports accepting incoming pending follow requests o
 | APP-037 | Switch accounts while notification preferences load, save, or request push permission | Previous account settings are hidden; preference writes are bound to the viewer who loaded them | P1 |
 | APP-038 | Switch accounts while viewing personal moderation history or submitting an appeal | The previous account's actions are hidden and appeal insertion is bound to the captured account | P1 |
 | APP-039 | Switch reviewer accounts while moderation appeals load or a decision dialog is open | Stale appeal rows are hidden and decisions are accepted only for the reviewer who loaded the queue | P1 |
+
+| APP-040 | Switch accounts while community discovery, membership, invite acceptance, invite management, or community creation is in progress | Previous-account community rows are hidden; membership/invite actions are bound to the loaded viewer and stale results are discarded | P1 |
