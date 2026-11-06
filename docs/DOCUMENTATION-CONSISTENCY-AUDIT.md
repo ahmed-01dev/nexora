@@ -292,3 +292,7 @@ A second read-only catalog pass extended the ERD inventory:
 - A request-generation guard prevents a response from an older direction or pre-refresh request from being appended to the current list.
 - Source CI run `42222087355` passed analysis and tests on the implementation commit. No device-level scrolling, large-account load, or multi-user RLS test has been performed.
 - Both directional query plans use the existing composite filter index and then sort by `created_at DESC` plus the opposite user ID. This warrants representative performance testing; no index DDL was applied.
+
+### Follow-request inbox offset correction
+
+The incoming follow-request list now advances its backend offset by rows fetched, not by the number of visible deduplicated rows. When a pending row is accepted and leaves the filtered result set, the offset is decremented so the next page does not skip the row shifted into that position. A generation guard blocks stale page responses after refresh, and accept actions are disabled during refresh to prevent stale pending rows reappearing. Source CI run `42222964161` passed analysis and tests on the implementation commit; concurrent authenticated integration testing remains NOT RUN.
