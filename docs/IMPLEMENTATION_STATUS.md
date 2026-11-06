@@ -205,3 +205,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Followers/following pagination now deduplicates relationship IDs when new relationships alter the ordered result set between page requests, while advancing the offset by the number of backend rows fetched. Added acceptance case SOC-017; authenticated concurrent-change integration testing remains pending.
 
 - Latest Flutter CI run `42226624301` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on PR head `cf6f4d83b568023319c53aefcccb5881446aa267`. This includes the current FCM registration/sign-out lifecycle and friendship inbox refresh handling. It did not produce an APK/AAB/Web artifact.
+
+- Friendship action widget now invalidates stale asynchronous profile relationship reads when the target user changes, preventing a previous profile's friendship state from overwriting the currently displayed profile. Latest Flutter CI is pending for this final guard.
