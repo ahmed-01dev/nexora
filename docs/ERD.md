@@ -50,14 +50,9 @@ All newly added public tables have RLS enabled. Anonymous SELECT is revoked. Use
 
 This ERD is a **partial conceptual diagram**, not a generated inventory of the deployed database. It does not prove that every table, column, foreign key, index, policy, grant, or migration mapping is represented. Do not use it alone to write migrations or infer exact client payloads.
 
-The documentation audit has already identified omitted or incompletely represented areas, including:
-- `reposts`, `hashtags`, and `post_hashtags`;
-- user-device registration and push-token records;
-- moderation actions and appeals;
-- private/approximate nearby-location storage;
-- supporting notification, invitation, and operational objects.
+The live inventory and table groups below now name these supporting areas, but the Mermaid relationship diagram remains conceptual and does not draw every FK or operational relationship. In particular, the diagram does not yet show all relationships for reposts, hashtags, collections, user-device registration, moderation actions/appeals, nearby-location storage, notification preferences, community invites, or audit records.
 
-This list is an audit reminder, not a claim that every object has been freshly re-queried or that these names exhaust the live schema.
+This is an ERD completeness limitation, not evidence that those live objects are absent.
 
 ## Live table inventory snapshot — 2026-11-06
 
