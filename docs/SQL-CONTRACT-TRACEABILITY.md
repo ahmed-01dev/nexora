@@ -170,3 +170,9 @@ The 14 same-name/different-version mappings are:
 This is a concrete mismatch inventory, not a safe repair plan. The remote-only foundation/security migrations may contain the source for live helpers such as `private.is_blocked_between`; that is a candidate to investigate, not an established mapping. Recover those exact source files and compare their effects before deciding how to reconcile.
 
 **Hard stop:** no `db push`, reset, replay, migration repair, or new corrective migration until the exact remote/local history and SQL content have been reconciled and a recoverable backup is verified.
+
+### Private-schema API exposure check remains open
+
+The live ACL grants `authenticated` EXECUTE on `private.is_blocked_between(a uuid, b uuid)`, and the local foundation migration grants `authenticated` USAGE on the `private` schema. This is needed for RLS expressions that call the helper, but it also means the function could be directly callable through PostgREST **if** `private` is included in the project's exposed Data API schemas.
+
+A read-only query of `current_setting('pgrst.db_schemas', true)` returned NULL, so the exposed-schema configuration was not established by that query. Verify the Supabase Data API exposed-schema setting in project configuration/dashboard and ensure `private` is excluded. Do not revoke the function EXECUTE grant without first designing a safe RLS-compatible alternative; doing so could break policy evaluation.
