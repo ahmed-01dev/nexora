@@ -165,3 +165,5 @@ Community discovery now checks the authenticated viewer after the community quer
 ### Story feed and composer session binding
 
 Story feed queries and bounded signed-URL batches are bound to the viewer that initiated the load; results are discarded after a session change. Opening a story from a stale feed is blocked. The story composer also records the account that opened it and refuses to publish its draft/media under a different account. Story-view tracking uses the viewer captured at viewer initialization. Signed URLs already issued may remain valid until expiry, so revocation/short-lived URL behavior remains a separate Storage concern.
+
+The moderation report queue now captures the reviewer identity for report-page reads, target previews, assignment, and dismissal. Stale queue data is hidden after account changes, and decision UI updates are suppressed if the reviewer changes during the request. Server-side moderator role/RLS policies remain authoritative; real-device moderator account-switch tests are pending.
