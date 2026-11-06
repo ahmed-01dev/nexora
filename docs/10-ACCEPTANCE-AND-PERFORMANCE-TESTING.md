@@ -228,3 +228,8 @@ The client inbox currently supports accepting incoming pending follow requests o
 | APP-034 | Switch accounts while friend/follow requests load or while an action completes | Old request lists are hidden and stale actions do not mutate the new viewer's UI | P1 |
 
 | APP-035 | Switch accounts while a profile friendship control is loading or an RPC is running | The control stops showing the previous viewer's state and disables actions for a mismatched session | P1 |
+
+| APP-036 | Switch accounts while nearby presence, location, or nearby messaging is in progress | Location/presence writes and conversation creation stop when the captured viewer changes; stale nearby results are discarded | P1 |
+| APP-037 | Switch accounts while notification preferences load, save, or request push permission | Previous account settings are hidden; preference writes are bound to the viewer who loaded them | P1 |
+| APP-038 | Switch accounts while viewing personal moderation history or submitting an appeal | The previous account's actions are hidden and appeal insertion is bound to the captured account | P1 |
+| APP-039 | Switch reviewer accounts while moderation appeals load or a decision dialog is open | Stale appeal rows are hidden and decisions are accepted only for the reviewer who loaded the queue | P1 |
