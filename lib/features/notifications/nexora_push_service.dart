@@ -28,8 +28,13 @@ class NexoraPushService {
     final messaging = FirebaseMessaging.instance;
     _registrationSubscription = messaging.onRegistered.listen((fid) {
       _lastInstallationId = fid;
-      _installationOwnerUserId =
+      final currentUserId =
           Supabase.instance.client.auth.currentUser?.id;
+      // A late Firebase registration callback can arrive after sign-out.
+      // Preserve the previous owner for the pending unregister callback and
+      // never associate a signed-out installation with an unknown account.
+      if (currentUserId == null || _registrationSuspended) return;
+      _installationOwnerUserId = currentUserId;
       saveInstallationId(fid);
     }, onError: (Object error) {
       debugPrint('NEXORA FCM registration failed: ${error.runtimeType}');
@@ -125,6 +130,9 @@ class NexoraPushService {
   /// Remove this account's installation before signing out.
   Future<void> unregisterCurrentDevice() async {
     if (!supported) return;
+    // The account-screen path unregisters before sign-out; the auth listener
+    // also observes signedOut. Avoid issuing a duplicate Firebase unregister.
+    if (_registrationSuspended && _lastInstallationId == null) return;
     // Invalidate registrations already in flight before deleting the row.
     _registrationSuspended = true;
     _registrationGeneration++;
