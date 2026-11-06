@@ -166,3 +166,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Follow graph pagination update: accepted followers/following lists now use explicit 30-row load-more pages with deterministic ordering and pull-to-refresh. The earlier first-page-only limitation is resolved in source; integration/performance tests remain pending.
 
 - Followers/following hardening: paginated requests now use a generation guard so a stale in-flight page cannot append results after the user switches direction or refreshes. Source CI run `42222087355` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on commit `0c42d17bb5fba7184aef73f01bd9e6c75248f744`. This is source validation, not a real-device or authenticated multi-user test.
+
+- Added three read-only schema snapshots: 254 column definitions, 166 constraints (39 PK / 67 FK / 9 unique / 51 check), and 106 index definitions. These are documentation artifacts only; no migration or schema changes were applied.
