@@ -6,11 +6,20 @@ class MediaUploadService {
 
   final ImagePicker _picker;
 
-  void _requireCurrentUser(String userId) {
-    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
-    if (currentUserId == null || currentUserId != userId) {
+  static void validateUploadOwner({
+    required String? authenticatedUserId,
+    required String requestedUserId,
+  }) {
+    if (authenticatedUserId == null || authenticatedUserId != requestedUserId) {
       throw StateError('يجب استخدام الحساب المسجل حاليًا لرفع الملفات.');
     }
+  }
+
+  void _requireCurrentUser(String userId) {
+    validateUploadOwner(
+      authenticatedUserId: Supabase.instance.client.auth.currentUser?.id,
+      requestedUserId: userId,
+    );
   }
 
   static const int maxBytes = 50 * 1024 * 1024;
