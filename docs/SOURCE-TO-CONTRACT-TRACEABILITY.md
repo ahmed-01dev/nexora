@@ -92,3 +92,5 @@ No source code, database schema, deployed function, provider configuration, or b
 | Startup failure presentation | `lib/main.dart`; `lib/core/app_error.dart` | Supabase initialization failures are reported centrally and the setup screen receives a generic Arabic message | Provider configuration and retry/recovery behavior still require device validation |
 
 | Late FCM registration / duplicate sign-out callback | `lib/features/notifications/nexora_push_service.dart`; `lib/main.dart` | Suspended or signed-out registration callbacks do not overwrite the captured owner or upsert; duplicate unregister invocation is skipped | Firebase timing, offline cleanup and account-switch behavior require physical Android testing |
+
+| Media upload during account switch | `lib/features/media/media_upload_service.dart` | Profile/story uploads re-check owner after Storage; post uploads re-check before each file, before Storage, and before metadata insert; rollback runs only under the original active owner | A just-uploaded object can remain orphaned if the session changes before cleanup; server-side cleanup and physical-device testing remain pending |
