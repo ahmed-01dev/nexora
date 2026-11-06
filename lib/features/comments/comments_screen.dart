@@ -394,6 +394,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
 class _CommentTile extends StatefulWidget {
   const _CommentTile({
+    super.key,
     required this.comment,
     required this.mine,
     required this.onReply,
