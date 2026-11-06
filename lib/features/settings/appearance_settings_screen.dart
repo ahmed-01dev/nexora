@@ -41,10 +41,6 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
     NexoraColors.cyan,
     NexoraColors.pink,
     NexoraColors.amber,
-    Color(0xFF38E8A5),
-    Color(0xFF4F8CFF),
-    Color(0xFFFF7043),
-    Color(0xFFB388FF),
   ];
 
   Future<void> _save({required String theme, required Color accent}) async {
@@ -124,8 +120,8 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
                       height: 34,
                       decoration: BoxDecoration(
                         color: entry.key == 'light'
-                            ? const Color(0xFFF7F7F8)
-                            : const Color(0xFF000000),
+                            ? const Color(0xFFF4F4F8)
+                            : NexoraColors.bg,
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: entry.key == 'pink_amoled'
@@ -133,8 +129,8 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
                               : entry.key == 'custom'
                                   ? nexoraAccentNotifier.value
                                   : entry.key == 'light'
-                                      ? const Color(0xFFBBBBBB)
-                                      : const Color(0xFF555555),
+                                      ? NexoraColors.textMuted
+                                      : NexoraColors.textFaint,
                           width: 3,
                         ),
                       ),
