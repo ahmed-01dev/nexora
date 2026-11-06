@@ -16,6 +16,7 @@ class _MyModerationScreenState extends State<MyModerationScreen> {
   List<Map<String, dynamic>> _actions = [];
   final Map<String, Map<String, dynamic>> _appealsByAction = {};
   final Set<String> _busyIds = {};
+  String? _loadedUserId;
 
   static const Map<String, String> _actionLabels = {
     'warn': 'تحذير',
@@ -41,7 +42,8 @@ class _MyModerationScreenState extends State<MyModerationScreen> {
     });
     try {
       final db = Supabase.instance.client;
-      final uid = db.auth.currentUser!.id;
+      final uid = db.auth.currentUser?.id;
+      if (uid == null) throw StateError('انتهت جلسة الدخول.');
       final actions = await db
           .from('moderation_actions')
           .select('id,action,reason,created_at,expires_at')
@@ -49,6 +51,7 @@ class _MyModerationScreenState extends State<MyModerationScreen> {
           .eq('target_id', uid)
           .order('created_at', ascending: false)
           .limit(100);
+      if (db.auth.currentUser?.id != uid) throw StateError('تغير الحساب أثناء تحميل الإجراءات.');
       final rows = List<Map<String, dynamic>>.from(actions);
       if (rows.isNotEmpty) {
         final ids = rows.map((row) => row['id'] as String).toList();
@@ -57,12 +60,15 @@ class _MyModerationScreenState extends State<MyModerationScreen> {
             .select('id,action_id,message,status,created_at,resolved_at')
             .eq('user_id', uid)
             .inFilter('action_id', ids);
+        if (db.auth.currentUser?.id != uid) throw StateError('تغير الحساب أثناء تحميل الاستئنافات.');
         for (final appeal in appeals) {
           _appealsByAction[appeal['action_id'] as String] =
               Map<String, dynamic>.from(appeal);
         }
       }
       if (!mounted) return;
+      if (db.auth.currentUser?.id != uid) return;
+      _loadedUserId = uid;
       setState(() {
         _actions = rows;
         _loading = false;
@@ -86,6 +92,9 @@ class _MyModerationScreenState extends State<MyModerationScreen> {
       return;
     }
 
+    final client = Supabase.instance.client;
+    final actorId = client.auth.currentUser?.id;
+    if (actorId == null || actorId != _loadedUserId) return;
     final controller = TextEditingController();
     final message = await showDialog<String>(
       context: context,
@@ -118,12 +127,12 @@ class _MyModerationScreenState extends State<MyModerationScreen> {
       ),
     );
     controller.dispose();
-    if (message == null || !mounted) return;
+    if (message == null || !mounted ||
+        client.auth.currentUser?.id != actorId) return;
 
     setState(() => _busyIds.add(actionId));
     try {
-      final uid = Supabase.instance.client.auth.currentUser!.id;
-      final inserted = await Supabase.instance.client
+      final inserted = await client
           .from('moderation_appeals')
           .insert({
             'action_id': actionId,
@@ -132,7 +141,7 @@ class _MyModerationScreenState extends State<MyModerationScreen> {
           })
           .select('id,action_id,message,status,created_at,resolved_at')
           .single();
-      if (mounted) {
+      if (mounted && client.auth.currentUser?.id == actorId) {
         setState(() {
           _appealsByAction[actionId] = Map<String, dynamic>.from(inserted);
         });
@@ -153,7 +162,11 @@ class _MyModerationScreenState extends State<MyModerationScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final viewerChanged = currentUserId == null ||
+        (_loadedUserId != null && currentUserId != _loadedUserId);
+    return Scaffold(
         appBar: AppBar(
           title: const Text('إجراءاتي والاستئنافات'),
           actions: [
@@ -164,7 +177,9 @@ class _MyModerationScreenState extends State<MyModerationScreen> {
             ),
           ],
         ),
-        body: _loading
+        body: viewerChanged
+            ? Center(child: TextButton(onPressed: _load, child: const Text('تغير الحساب. أعد تحميل الإجراءات.')))
+            : _loading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
                 ? Center(
@@ -278,4 +293,6 @@ class _MyModerationScreenState extends State<MyModerationScreen> {
                           ),
                   ),
       );
+  }
+};
 }
