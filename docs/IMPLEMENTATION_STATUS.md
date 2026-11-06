@@ -243,3 +243,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Flutter CI run `42229412550` passed dependency installation, `flutter analyze --no-fatal-infos`, and `flutter test` on commit `390144c5179fa23fb922bd0923212ff05f8dbc55`. This validates the latest friendship-action target-switch generation guards and all earlier source tests. No APK/AAB/Web build was run.
 
 - FCM callback ownership now queues the owner for each pending unregister by FID. A delayed callback from a prior account cannot clear a newer account's tracked registration even when Firebase reuses the same FID. Pure ownership logic has dedicated FIFO, owner-mismatch, unknown-owner, and failed-unregister unit tests; real Firebase callback ordering still requires physical-device/account-switch verification.
+
+- Message attachment upload now requires an active authenticated user and rechecks that the same account remains active before Storage upload, message insertion, and attachment metadata insertion. This reduces cross-account writes during asynchronous send flows; physical-device/network-switch tests and orphan-object cleanup remain pending.
