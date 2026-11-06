@@ -165,13 +165,13 @@ class _StoryComposerScreenState extends State<StoryComposerScreen> {
       setState(() => _error = 'أضف نصًا أو صورة أو فيديو.');
       return;
     }
-    setState(() { _busy = true; _error = null; });
     final client = Supabase.instance.client;
     final userId = client.auth.currentUser?.id;
     if (userId == null) {
       setState(() => _error = 'انتهت جلسة الدخول. سجّل الدخول مرة تانية.');
       return;
     }
+    setState(() { _busy = true; _error = null; });
     String? path;
     try {
       if (_file != null) {
