@@ -76,6 +76,7 @@
 | CNT017-T27 | Composer is used in Arabic RTL | Reading order, cursor movement, mixed Arabic/Latin text, and controls remain correct | P1 |
 | CNT017-T28 | Composer is used with screen reader and large text | Controls have meaningful labels, focus order is logical, and errors are announced | P1 |
 | CNT017-T29 | Upload is in progress or fails | Status is communicated in text, not color alone | P1 |
+| CNT017-T30 | User signs out or switches accounts during profile, post, or story media upload | No further metadata write is made for the previous owner; cleanup is attempted only under the original authenticated owner; any residual object is recorded for server-side orphan cleanup | P0 |
 
 ## 3. Required evidence for each test
 
