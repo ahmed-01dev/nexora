@@ -1332,15 +1332,11 @@ class _FriendsScreenState extends State<FriendsScreen> {
   Widget _buildPerson(Map<String, dynamic> row) {
     final profile = row['profiles'];
     if (profile is! Map) {
-      final hiddenId =
-          (row[_showFollowers ? 'follower_id' : 'following_id'] ?? '').toString();
-      final shortId =
-          hiddenId.length > 6 ? hiddenId.substring(0, 6) : hiddenId;
       return Card(
         child: ListTile(
           leading: const CircleAvatar(child: Icon(Icons.lock_outline)),
           title: const Text('حساب خاص'),
-          subtitle: Text('الملف الشخصي غير متاح · $shortId'),
+          subtitle: const Text('الملف الشخصي غير متاح'),
         ),
       );
     }
