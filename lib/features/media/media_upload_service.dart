@@ -5,6 +5,14 @@ class MediaUploadService {
   MediaUploadService({ImagePicker? picker}) : _picker = picker ?? ImagePicker();
 
   final ImagePicker _picker;
+
+  void _requireCurrentUser(String userId) {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    if (currentUserId == null || currentUserId != userId) {
+      throw StateError('يجب استخدام الحساب المسجل حاليًا لرفع الملفات.');
+    }
+  }
+
   static const int maxBytes = 50 * 1024 * 1024;
   static const int maxFiles = 10;
   static const int maxPostTotalBytes = 100 * 1024 * 1024;
@@ -73,6 +81,7 @@ class MediaUploadService {
     required XFile file,
     required String imageType,
   }) async {
+    _requireCurrentUser(userId);
     if (imageType != 'avatar' && imageType != 'cover') {
       throw const FormatException('نوع صورة الملف الشخصي غير صالح.');
     }
@@ -130,6 +139,7 @@ class MediaUploadService {
     required String postId,
     required List<XFile> files,
   }) async {
+    _requireCurrentUser(userId);
     if (files.length > maxFiles) {
       throw const FormatException('الحد الأقصى 10 ملفات في المنشور.');
     }
@@ -201,6 +211,7 @@ class MediaUploadService {
     required String userId,
     required XFile file,
   }) async {
+    _requireCurrentUser(userId);
     final extension = file.name.contains('.')
         ? file.name.split('.').last.toLowerCase()
         : '';
@@ -226,6 +237,11 @@ class MediaUploadService {
 
   Future<void> removeUploaded(List<String> paths) async {
     if (paths.isEmpty) return;
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null ||
+        paths.any((path) => !path.startsWith('$userId/'))) {
+      throw StateError('لا يمكن حذف ملفات لا تخص الحساب الحالي.');
+    }
     await Supabase.instance.client.storage.from('nexora-media').remove(paths);
   }
 
