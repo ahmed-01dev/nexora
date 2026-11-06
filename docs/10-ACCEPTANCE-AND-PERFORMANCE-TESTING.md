@@ -205,3 +205,5 @@ The client inbox currently supports accepting incoming pending follow requests o
 | SEC-022 | A delayed FCM `onUnregistered` callback for account A arrives after account B registers the same FID | The queued callback is attributed to A, removes only A's device row, and does not clear B's in-memory registration; repeated unregister events preserve FIFO ownership | P1 |
 
 | MOD-001 | Submit a report with an unsupported target type, malformed target UUID, or reason outside the live `reports` CHECK constraints | Client rejects the invalid payload before network submission; PostgreSQL constraints and RLS remain authoritative for bypassed clients | P1 |
+
+| MOD-002 | Account changes while report submission is in flight | The client does not show success in the new session; it explains that the result may need reconciliation and does not blindly resubmit | P1 |
