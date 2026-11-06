@@ -109,3 +109,7 @@ The shared Flutter error reporter logs the source and exception runtime type rat
 The startup fallback screen now receives a generic Arabic error message from `AppErrorService.message` rather than rendering the raw Supabase initialization exception. Detailed exception values are not displayed to the user; the central reporter logs the error type and stack for local diagnostics. Provider-side configuration and startup recovery still require device validation.
 
 FCM device cleanup is also triggered by Supabase `signedOut` auth events, not only the account-screen sign-out button. The service preserves the last known installation owner when the auth session has already been cleared, so remote revocation/session invalidation can still target the correct `user_devices` row. Cleanup remains best-effort and must be verified on a physical device and under offline conditions.
+
+### Late FCM registration callback after sign-out
+
+The Android push listener no longer overwrites the captured installation owner when a delayed `onRegistered` event arrives while signed out or while registration is suspended. Such callbacks do not start a device-row upsert. `unregisterCurrentDevice()` also short-circuits the duplicate invocation caused by both the account-screen sign-out path and the global `signedOut` auth listener. Cleanup remains best-effort and requires physical-device/offline/account-switch testing.
