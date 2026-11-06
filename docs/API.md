@@ -101,3 +101,43 @@ The following client calls were extracted from the current Flutter source on bra
 **Result of this snapshot:** 18 distinct RPC names and 19 call sites were found in the reviewed feature screens and app entry point. Each listed name has a matching live public function with the listed identity-argument types; no missing-function or parameter-key mismatch was found in these call sites. This does not validate runtime grants, RLS outcomes, business rules, returned row decoding, or error handling. Re-run this comparison whenever a client RPC or database function changes.
 
 **Safety boundary:** this was read-only inspection. No function, grant, schema, migration, or database object was changed. No app build or test suite was run.
+
+## 7. Flutter table and Storage-bucket reference parity
+
+A static scan of the Flutter `lib/` Dart files found 31 distinct literal table names used through Supabase `.from(...)` calls. All 31 names were present in the read-only live table inventory for the project at the time of review:
+
+- `blocks`
+- `comments`
+- `comment_likes`
+- `communities`
+- `community_members`
+- `community_channels`
+- `conversations`
+- `conversation_members`
+- `friendships`
+- `media`
+- `messages`
+- `message_attachments`
+- `profiles`
+- `moderation_appeals`
+- `reports`
+- `moderation_actions`
+- `user_devices`
+- `notification_preferences`
+- `notifications`
+- `hashtags`
+- `post_hashtags`
+- `user_preferences`
+- `user_private_settings`
+- `stories`
+- `story_views`
+- `posts`
+- `follows`
+- `staff_members`
+- `saves`
+- `reposts`
+- `likes`
+
+The same scan found the Storage bucket literal `nexora-media`; the live bucket inventory identifies that bucket as private. Repeated call sites are intentionally collapsed in this list.
+
+**Scope limit:** object-name existence is not column/relationship parity. This scan does not validate selected columns, filters, inserts/updates, JSON decoding, grants, RLS decisions for each identity, or Storage object-path authorization. Those require per-operation contract review and authenticated integration tests. No schema or Storage configuration was changed.
