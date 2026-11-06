@@ -223,3 +223,7 @@ Read-only catalog checks found RLS enabled on all 38 ordinary `public` tables an
 ### Live push Edge Function parity
 
 Supabase reports `send-push-notification` as ACTIVE version 6 with `verify_jwt = false`. The deployed `index.ts` content was fetched read-only and compared with `main/supabase/functions/send-push-notification/index.ts`; the files match exactly (7,677 characters). The function performs its own authentication: trusted webhook-secret path or bearer-token `auth.getUser` path, with the user path restricted to notifications where the caller is the actor. Flutter uses Firebase Messaging `onRegistered` to obtain a Firebase Installation ID (FID), stores it in `user_devices.push_token`, and the Edge Function sends with FCM HTTP v1 `message.fid`, which matches the FID registration model. Secret values and actual device delivery were not tested.
+
+### Nearby-location expiry worker verification
+
+The live `cron.job` catalog contains active job `nexora-cleanup-expired-nearby-locations`, scheduled every 15 minutes. The five most recent entries in `cron.job_run_details` were all `succeeded` (each returned `DELETE 0` at the time inspected). This confirms the scheduled cleanup is active and executing; it does not prove a stale-row fixture was deleted in this audit.
