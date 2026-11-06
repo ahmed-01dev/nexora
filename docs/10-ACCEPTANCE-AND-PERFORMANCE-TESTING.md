@@ -41,6 +41,9 @@ Severity:
 | SOC-006 | Search private/blocked account | Only permitted discovery fields returned | P0 |
 | SOC-007 | Nearby discovery disabled | No location stored or returned | P0 |
 | SOC-008 | Nearby discovery enabled | Coarse, consent-based results only | P1 |
+| SOC-009 | Recipient opens incoming follow-request inbox | Only pending requests addressed to the authenticated recipient are listed; private requester details remain hidden unless normal profile RLS permits them | P0 |
+| SOC-010 | Recipient accepts a follow request | Only the recipient may change their own incoming pending row to accepted; the status column is the only direct client-updatable field | P0 |
+| SOC-011 | Request is cancelled or either side blocks before acceptance | Acceptance affects zero rows or is denied; no relationship is created after the block | P0 |
 
 ## 4. Content and media tests
 | ID | Scenario | Expected result | Severity |
@@ -177,3 +180,7 @@ Retest result:
 
 ## 14. No-go conditions
 Do not release if any P0 authorization/privacy defect remains; a core flow silently loses data; secrets are in the client or repository; provider-dependent features are advertised without end-to-end proof; account deletion/privacy behavior is misleading; or a required P0/P1 test is failing or unexecuted without approved exclusion.
+
+
+### Follow-request inbox implementation note
+The client inbox currently supports accepting incoming pending follow requests only. Recipient-side decline is not part of the live backend contract; do not test or claim a decline action until a trusted, authorized server operation is added. SOC-009 through SOC-011 are acceptance criteria and remain NOT RUN until authenticated multi-user integration tests execute.
