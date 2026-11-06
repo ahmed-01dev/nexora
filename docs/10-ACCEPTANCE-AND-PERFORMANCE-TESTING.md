@@ -215,3 +215,5 @@ The client inbox currently supports accepting incoming pending follow requests o
 | APP-026 | Switch accounts while notification page loading, marking read, or opening a notification | Old-session data is not rendered into the new account and navigation to the old notification target is stopped | P1 |
 
 | APP-027 | Switch accounts while the followers/following list page is loading | A page fetched for the previous user is discarded and cannot populate the new session's list | P1 |
+
+| APP-028 | Sign out or switch accounts while loading or creating a community channel | Stale channel rows are cleared; follow-up membership/channel writes stop after owner change; rollback is attempted only under the original owner | P1 |
