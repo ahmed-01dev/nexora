@@ -42,3 +42,39 @@ erDiagram
 
 ## Security model
 All newly added public tables have RLS enabled. Anonymous SELECT is revoked. User-scoped data is filtered by auth.uid() or a narrowly scoped membership helper. Column-level update grants are used on sensitive membership, conversation, message, notification, and call fields.
+
+
+## Completeness and provenance warning
+
+This ERD is a **partial conceptual diagram**, not a generated inventory of the deployed database. It does not prove that every table, column, foreign key, index, policy, grant, or migration mapping is represented. Do not use it alone to write migrations or infer exact client payloads.
+
+The documentation audit has already identified omitted or incompletely represented areas, including:
+- `reposts`, `hashtags`, and `post_hashtags`;
+- user-device registration and push-token records;
+- moderation actions and appeals;
+- private/approximate nearby-location storage;
+- supporting notification, invitation, and operational objects.
+
+This list is an audit reminder, not a claim that every object has been freshly re-queried or that these names exhaust the live schema.
+
+## Required live-schema inventory (not yet completed)
+
+For every deployed object, a future read-only inventory must record:
+
+| Field | Required evidence |
+|---|---|
+| Schema and exact object name | Live PostgreSQL catalog query |
+| Object type | Table, view, materialized view, function or trigger |
+| Columns and constraints | Live catalog definition, including nullability and defaults |
+| Foreign keys and indexes | Live catalog definitions |
+| RLS enabled/forced | Live table flags |
+| Policies | Exact policy expressions and command scope |
+| Grants | Role and operation/column-level privileges |
+| Migration provenance | Exact remote migration version mapped to local SQL source |
+| Client usage | Dart source file and call-site reference |
+| Feature owner/status | Matching entry in IMPLEMENTATION_STATUS.md |
+| Test evidence | Reproducible test identifier and result |
+
+### Migration safety
+
+The implementation audit records a mismatch between remote migration history and local migration files. Until every remote version is mapped to exact source SQL and a recoverable backup is verified, do not run `supabase db push`, reset, replay, or any schema-changing operation. This ERD update does not authorize database changes.
