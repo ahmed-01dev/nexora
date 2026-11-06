@@ -4,7 +4,7 @@
 
 ## Client-callable public RPCs
 
-All 17 listed functions exist in `public`. Each has EXECUTE for `authenticated` and no EXECUTE for `anon`. Each public wrapper is `SECURITY INVOKER` (not SECURITY DEFINER). The app call argument names match the deployed signatures.
+All 18 listed functions exist in `public`. Each has EXECUTE for `authenticated` and no EXECUTE for `anon`. Each public wrapper is `SECURITY INVOKER` (not SECURITY DEFINER). The app call argument names match the deployed signatures.
 
 | Public RPC | Deployed arguments | Implementation / authorization evidence |
 |---|---|---|
@@ -14,6 +14,7 @@ All 17 listed functions exist in `public`. Each has EXECUTE for `authenticated` 
 | `cancel_friend_request` | `p_request_id uuid` | Delegates to `private.cancel_friend_request_impl`, SECURITY DEFINER; helper checks `auth.uid()` and caller ownership of pending request |
 | `create_community_invite` | `p_community_id uuid, p_expires_in_hours integer, p_max_uses integer` | Delegates to `private.create_community_invite_internal`, SECURITY DEFINER; helper checks authentication, bounded expiry/use limits, and community ownership |
 | `create_direct_conversation` | `p_other_user_id uuid` | Delegates to `private.create_direct_conversation_impl`, SECURITY DEFINER; helper checks authentication, recipient validity, blocks, and messaging privacy |
+| `decline_friend_request` | `p_request_id uuid` | Delegates to `private.decline_friend_request_impl`, SECURITY DEFINER; helper checks `auth.uid()` and updates only the caller's incoming pending request to declined |
 | `find_nearby_people` | `p_limit integer` | Public invoker wrapper delegates to private SECURITY DEFINER helper; helper scopes origin to `auth.uid()`, excludes private profiles and either-direction blocks, expires stale location rows, caps result limit at 50 and distance at 25 km |
 | `get_feed_page` | `p_mode text, p_limit integer, p_offset integer` | Public invoker function; body explicitly checks `auth.uid()` and validates feed mode |
 | `get_my_conversation_previews` | no arguments | Public invoker function; body explicitly scopes rows to `auth.uid()` |
