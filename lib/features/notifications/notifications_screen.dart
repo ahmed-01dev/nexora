@@ -139,6 +139,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   };
 
   Future<void> _refresh() async {
+    if (!mounted) return;
     final generation = ++_generation;
     final next = _load(generation: generation);
     setState(() {
