@@ -1,7 +1,7 @@
 # NEXORA Source-to-Contract Traceability
 
 **Audit date:** 2026-11-06  
-**Source snapshot:** repository default branch `main` at the time of inspection.  
+**Source snapshot:** working branch `docs/specs-i-j-k` at the time of this update; changes remain in open PR #3 and are not yet merged to `main`.  
 **Purpose:** map documented feature claims to source files and concrete Supabase operations without implying runtime verification.
 
 > This is a static source inspection. It does not prove deployed SQL matches local migrations, that provider credentials are configured, or that workflows pass on a real device. Source files are cited by path and symbol/operation so the next audit can reproduce the trace.
