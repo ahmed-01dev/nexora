@@ -57,14 +57,61 @@ The documentation audit has already identified omitted or incompletely represent
 
 This list is an audit reminder, not a claim that every object has been freshly re-queried or that these names exhaust the live schema.
 
-## Required live-schema inventory (not yet completed)
+## Live table inventory snapshot — 2026-11-06
 
-For every deployed object, a future read-only inventory must record:
+A read-only query of `information_schema.tables` returned **38 ordinary tables in `public` and one ordinary table in `private`**. The same query returned no views or materialized views in those two schemas.
+
+### Public tables (38)
+
+- `audit_logs`
+- `blocks`
+- `call_participants`
+- `call_sessions`
+- `collection_items`
+- `collections`
+- `comment_likes`
+- `comments`
+- `communities`
+- `community_channels`
+- `community_invites`
+- `community_members`
+- `conversation_members`
+- `conversations`
+- `follows`
+- `friendships`
+- `hashtags`
+- `likes`
+- `media`
+- `message_attachments`
+- `message_reactions`
+- `messages`
+- `moderation_actions`
+- `moderation_appeals`
+- `notification_preferences`
+- `notifications`
+- `post_hashtags`
+- `posts`
+- `profiles`
+- `reports`
+- `reposts`
+- `saves`
+- `staff_members`
+- `stories`
+- `story_views`
+- `user_devices`
+- `user_preferences`
+- `user_private_settings`
+
+### Private tables (1)
+
+- `profile_discovery_locations`
+
+### Remaining ERD evidence gaps
+
+This inventory records object names and types only. It does not replace the detailed per-object inventory of:
 
 | Field | Required evidence |
 |---|---|
-| Schema and exact object name | Live PostgreSQL catalog query |
-| Object type | Table, view, materialized view, function or trigger |
 | Columns and constraints | Live catalog definition, including nullability and defaults |
 | Foreign keys and indexes | Live catalog definitions |
 | RLS enabled/forced | Live table flags |
