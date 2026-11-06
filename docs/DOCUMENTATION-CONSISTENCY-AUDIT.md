@@ -200,3 +200,4 @@ Static inspection of `.github/workflows/` on `main` found only `flutter-ci.yml` 
 The existing `android-preview.yml` had both `workflow_dispatch` and an automatic `push` trigger for source/config paths. To honor the source-completion-before-build rule, the work branch removes the automatic push trigger and adds a required boolean `confirm_source_complete` input; the job runs only when that input is true. This is a workflow configuration change only. No workflow was dispatched and no build was run.
 
 README now describes the actual CI and debug-APK workflows and explicitly notes that no AAB/Web release workflow was found in the inspected directory. Re-check the repository workflow inventory before any future release claims.
+The work branch also sets `permissions: contents: read` on `flutter-ci.yml`, limiting the workflow token to repository read access. This is a static configuration change; no CI run was manually dispatched.
