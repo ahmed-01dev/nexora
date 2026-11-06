@@ -141,3 +141,12 @@ A static scan of the Flutter `lib/` Dart files found 31 distinct literal table n
 The same scan found the Storage bucket literal `nexora-media`; the live bucket inventory identifies that bucket as private. Repeated call sites are intentionally collapsed in this list.
 
 **Scope limit:** object-name existence is not column/relationship parity. This scan does not validate selected columns, filters, inserts/updates, JSON decoding, grants, RLS decisions for each identity, or Storage object-path authorization. Those require per-operation contract review and authenticated integration tests. No schema or Storage configuration was changed.
+
+## 8. Selected-column and embedded-relation name check
+
+A static parser compared literal PostgREST `.select(...)` projections in 29 Flutter app/feature Dart source files with the live `information_schema.columns` inventory, recursively checking embedded relation projections (including named foreign-key relations).
+
+- Result: **zero unknown selected columns and zero unknown embedded relation names** in the reviewed literal projections.
+- This is a name-existence check only. It does not prove that the caller is allowed to read a column/row, that relationship cardinality matches UI assumptions, or that filters/order clauses and write payloads are correct.
+- Dynamic/computed select strings, runtime authorization, authenticated RLS behavior, and result decoding remain outside this static check.
+- No database or client source was changed by this inspection.
