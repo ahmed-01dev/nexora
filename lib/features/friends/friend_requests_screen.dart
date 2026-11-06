@@ -13,6 +13,7 @@ class FriendRequestsScreen extends StatefulWidget {
 class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
   late Future<Map<String, List<Map<String, dynamic>>>> _future;
   final Set<String> _busyIds = {};
+  String? _loadedUserId;
 
   @override
   void initState() {
@@ -30,12 +31,19 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
         .eq('addressee_id', me)
         .eq('status', 'pending')
         .order('created_at', ascending: false);
+    if (client.auth.currentUser?.id != me) {
+      throw StateError('تغير الحساب أثناء تحميل طلبات الصداقة.');
+    }
     final outgoing = await client
         .from('friendships')
         .select('id,addressee_id,profiles!friendships_addressee_id_fkey(id,username,display_name)')
         .eq('requester_id', me)
         .eq('status', 'pending')
         .order('created_at', ascending: false);
+    if (client.auth.currentUser?.id != me) {
+      throw StateError('تغير الحساب أثناء تحميل طلبات الصداقة.');
+    }
+    _loadedUserId = me;
     return {
       'incoming': List<Map<String, dynamic>>.from(incoming),
       'outgoing': List<Map<String, dynamic>>.from(outgoing),
@@ -43,11 +51,20 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
   }
 
   Future<void> _act(String function, String id) async {
-    if (_busyIds.contains(id)) return;
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null || userId != _loadedUserId || _busyIds.contains(id)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تغير الحساب. حدّث طلبات الصداقة أولًا.')),
+      );
+      return;
+    }
     setState(() => _busyIds.add(id));
     try {
-      await Supabase.instance.client.rpc(function, params: {'p_request_id': id});
-      if (mounted) setState(() => _future = _load());
+      await client.rpc(function, params: {'p_request_id': id});
+      if (mounted && client.auth.currentUser?.id == userId) {
+        setState(() => _future = _load());
+      }
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'friend_request_action');
       if (mounted) {
@@ -79,6 +96,16 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
       body: FutureBuilder<Map<String, List<Map<String, dynamic>>>>(
         future: _future,
         builder: (context, snapshot) {
+          final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+          if (currentUserId == null ||
+              (_loadedUserId != null && currentUserId != _loadedUserId)) {
+            return Center(
+              child: TextButton(
+                onPressed: _refresh,
+                child: const Text('تغير الحساب. حدّث طلبات الصداقة.'),
+              ),
+            );
+          }
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
