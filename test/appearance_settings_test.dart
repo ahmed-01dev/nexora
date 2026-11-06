@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nexora/core/theme/nexora_theme.dart';
 import 'package:nexora/features/settings/appearance_settings_screen.dart';
 
 void main() {
@@ -16,6 +17,18 @@ void main() {
       expect(parseNexoraAccent('GGGGGG'), isNull);
       expect(parseNexoraAccent('#12345678'), isNull);
     });
+  });
+
+  test('exposes only the four canonical Aurora accent colors', () {
+    expect(
+      nexoraAccentPalette.map((color) => color.toARGB32()).toList(),
+      [
+        NexoraColors.violet.toARGB32(),
+        NexoraColors.cyan.toARGB32(),
+        NexoraColors.pink.toARGB32(),
+        NexoraColors.amber.toARGB32(),
+      ],
+    );
   });
 
   test('serializes accent colors as uppercase RGB hex', () {
