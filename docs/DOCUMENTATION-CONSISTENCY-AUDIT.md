@@ -156,3 +156,18 @@ A new `SOURCE-TO-CONTRACT-TRACEABILITY.md` records inspected source locations an
 - Media signature checks and upload size limits exist in client code; they do not replace server-side scanning or server-enforced quotas.
 
 The traceability file is linked from README. The next gate remains read-only inspection of SQL function definitions, grants, RLS/Storage policies and migration history. No database writes, migrations, provider activation, builds or packaging were performed.
+
+
+## Addendum — focused SQL contract trace (2026-11-06)
+
+Added `SQL-CONTRACT-TRACEABILITY.md` after static inspection of the feed paging, nearby discovery, community invite, and push-notification migrations plus the corresponding client/Edge Function files.
+
+Confirmed from the local `main` migration directory listing: **42 SQL files**. The previously recorded remote migration history count is **43**. The mismatch therefore remains; this pass does not identify or repair the missing mapping.
+
+Notable contract evidence:
+- Feed paging is a SECURITY INVOKER RPC with bounded page size and authenticated-only execute.
+- Nearby discovery persists rounded coordinates in a private table and returns coarse distance bands; public wrappers are SECURITY INVOKER.
+- Community invite direct table access is revoked; trusted functions enforce owner, expiry and use limits.
+- Push dispatch is trigger → Vault webhook secret → Edge Function → FCM HTTP v1; successful real-device delivery remains unverified.
+
+These are local-source findings only. No live database catalog query, schema write, migration, secret change, provider activation or build was performed.
