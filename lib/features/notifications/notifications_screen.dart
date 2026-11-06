@@ -18,6 +18,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   static const int _pageSize = 50;
   bool _hasMore = true;
   bool _loadingMore = false;
+  int _nextOffset = 0;
 
   @override
   void initState() {
@@ -30,7 +31,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       'get_my_notification_page',
       params: {'p_offset': offset, 'p_limit': _pageSize},
     );
-    if (mounted) setState(() => _hasMore = rows.length == _pageSize);
+    if (mounted) {
+      setState(() {
+        _hasMore = rows.length == _pageSize;
+        _nextOffset = offset + rows.length;
+      });
+    }
     return List<Map<String, dynamic>>.from(rows as List);
   }
 
@@ -38,7 +44,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (_loadingMore || !_hasMore) return;
     setState(() => _loadingMore = true);
     try {
-      final additions = await _load(offset: current.length);
+      final additions = await _load(offset: _nextOffset);
       if (!mounted) return;
       final known = current.map((row) => row['id']).toSet();
       final unique = additions.where((row) => !known.contains(row['id']));
@@ -128,12 +134,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   };
 
   Future<void> _refresh() async {
+    final next = _load();
     setState(() {
       _hasMore = true;
       _loadingMore = false;
-      _future = _load();
+      _nextOffset = 0;
+      _future = next;
     });
-    await _future;
+    try {
+      await next;
+    } catch (error, stack) {
+      AppErrorService.report(error, stack, source: 'notifications_refresh');
+      // FutureBuilder owns the visible error state; resolve refresh safely.
+    }
   }
 
   @override
