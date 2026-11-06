@@ -116,3 +116,5 @@ No source code, database schema, deployed function, provider configuration, or b
 | Community member viewer binding | `lib/features/communities/community_members_screen.dart` | Loaded list and role/removal actions are bound to the original viewer ID; stale UI is hidden after session changes | Real-device session-switch and role-policy integration tests remain pending |
 
 | Conversation preview session binding | `lib/features/messaging/messages_screen.dart` | Preview rows are hidden and taps blocked when the active user differs from the user who loaded the list; new-conversation flow rechecks the captured user | Device-level account-switch and conversation RLS integration tests remain pending |
+
+| Block/privacy/request session continuity | `block_account_service.dart`, `blocked_accounts_screen.dart`, `privacy_settings_screen.dart`, `friend_requests_screen.dart`, `follow_requests_screen.dart` | Read/write sequences verify the captured authenticated viewer; stale lists/actions are rejected after account changes | Device-level multi-account and RLS integration tests remain pending |
