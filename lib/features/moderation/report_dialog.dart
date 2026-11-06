@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_error.dart';
+import '../../core/theme/nexora_theme.dart';
 import 'report_submission_validation.dart';
 
 class ReportDialog extends StatefulWidget {
@@ -174,9 +175,9 @@ class _ReportDialogState extends State<ReportDialog> {
                 ),
               ),
               if (!viewerMatches)
-                const Text('تغير الحساب. لن يتم إرسال البلاغ من الحساب الجديد.', style: TextStyle(color: Colors.redAccent))
+                const Text('تغير الحساب. لن يتم إرسال البلاغ من الحساب الجديد.', style: TextStyle(color: NexoraColors.danger))
               else if (_error != null)
-                Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                Text(_error!, style: const TextStyle(color: NexoraColors.danger)),
             ],
           ),
         ),
