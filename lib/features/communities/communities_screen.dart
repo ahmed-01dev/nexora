@@ -25,6 +25,8 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
   bool _loading = true;
   bool _loadingMore = false;
   bool _hasMore = true;
+  int _nextOffset = 0;
+  int _requestGeneration = 0;
   String? _error;
 
   @override
@@ -33,9 +35,13 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
     _loadFirstPage();
   }
 
-  Future<List<Map<String, dynamic>>> _fetchPage(int offset) async {
+  Future<List<Map<String, dynamic>>> _fetchPage(
+    int offset, {
+    required int generation,
+  }) async {
     final db = Supabase.instance.client;
-    final uid = db.auth.currentUser!.id;
+    final uid = db.auth.currentUser?.id;
+    if (uid == null) throw StateError('يجب تسجيل الدخول لعرض المجتمعات.');
     final rows = await db
         .from('communities')
         .select('id,owner_id,name,slug,description,visibility,created_at')
@@ -52,6 +58,11 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
         .select('community_id,role')
         .eq('user_id', uid)
         .inFilter('community_id', ids);
+
+    if (!mounted || generation != _requestGeneration ||
+        db.auth.currentUser?.id != uid) {
+      return page;
+    }
 
     for (final membership in memberships) {
       final id = membership['community_id'] as String;
@@ -70,10 +81,12 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
   }
 
   Future<void> _loadFirstPage() async {
+    final generation = ++_requestGeneration;
     setState(() {
       _loading = true;
       _loadingMore = false;
       _hasMore = true;
+      _nextOffset = 0;
       _error = null;
       _communities.clear();
       _joined.clear();
@@ -81,16 +94,17 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
     });
 
     try {
-      final page = await _fetchPage(0);
-      if (!mounted) return;
+      final page = await _fetchPage(0, generation: generation);
+      if (!mounted || generation != _requestGeneration) return;
       setState(() {
         _communities.addAll(page);
+        _nextOffset = page.length;
         _hasMore = page.length == _pageSize;
         _loading = false;
       });
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'communities_load');
-      if (mounted) {
+      if (mounted && generation == _requestGeneration) {
         setState(() {
           _error = AppErrorService.message(error);
           _loading = false;
@@ -100,19 +114,23 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
   }
 
   Future<void> _loadMore() async {
-    if (_loadingMore || !_hasMore) return;
+    if (_loading || _loadingMore || !_hasMore) return;
+    final generation = _requestGeneration;
     setState(() => _loadingMore = true);
     try {
-      final page = await _fetchPage(_communities.length);
-      if (!mounted) return;
+      final page = await _fetchPage(_nextOffset, generation: generation);
+      if (!mounted || generation != _requestGeneration) return;
+      final knownIds = _communities.map((row) => row['id']).toSet();
+      final additions = page.where((row) => !knownIds.contains(row['id']));
       setState(() {
-        _communities.addAll(page);
+        _communities.addAll(additions);
+        _nextOffset += page.length;
         _hasMore = page.length == _pageSize;
         _loadingMore = false;
       });
     } catch (error, stack) {
       AppErrorService.report(error, stack, source: 'communities_load_more');
-      if (mounted) {
+      if (mounted && generation == _requestGeneration) {
         setState(() => _loadingMore = false);
         _showError(error);
       }
@@ -128,8 +146,8 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> {
 
   Future<void> _toggleMembership(Map<String, dynamic> community) async {
     final id = community['id'] as String;
-    final uid = Supabase.instance.client.auth.currentUser!.id;
-    if (_busyIds.contains(id) || community['owner_id'] == uid) return;
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid == null || _busyIds.contains(id) || community['owner_id'] == uid) return;
 
     setState(() => _busyIds.add(id));
     try {
