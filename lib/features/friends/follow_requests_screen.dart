@@ -38,6 +38,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
         .eq('following_id', userId)
         .eq('status', 'pending')
         .order('created_at', ascending: false)
+        .order('follower_id', ascending: true)
         .range(offset, offset + _pageSize - 1);
 
     return List<Map<String, dynamic>>.from(rows);
