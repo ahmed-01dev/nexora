@@ -17,7 +17,9 @@ The repository contains a working Flutter Android/Web codebase and a Supabase Po
 
 See [implementation status](docs/IMPLEMENTATION_STATUS.md) for the feature-by-feature state and remaining work.
 
-Detailed design: [Systems 63–90 — Ads & Commerce, Trust & Safety, Operations & Administration](docs/02-DETAILED-SPECS-I-J-K.md). This is a design specification, not a claim that every listed capability is implemented.
+Detailed design: [Systems 63–90 — Ads & Commerce, Trust & Safety, Operations & Administration](docs/02-DETAILED-SPECS-I-J-K.md). This is a working scope only; exact catalog titles and numbering remain unapproved until reconciled with the canonical Document 01.
+
+CNT-017 (Post Creation & Publishing): [functional specification](docs/02-CONTENT-SYSTEM-017.md), [publish-flow contract](docs/02-CONTENT-SYSTEM-017-PUBLISH-CONTRACT.md), and [29-case acceptance matrix](docs/02-CONTENT-SYSTEM-017-ACCEPTANCE.md). These are specifications and test plans, not proof that all cases passed.
 
 Documentation review: [Consistency audit and reconciliation plan](docs/DOCUMENTATION-CONSISTENCY-AUDIT.md). Implemented code does not mean every workflow has passed end-to-end testing with real users/devices.
 
@@ -51,10 +53,9 @@ The `supabase/migrations/` directory contains the schema and security changes ap
 
 ## Android preview APK
 
-- The Android platform folder is generated during the preview build if it is not committed.
-- The workflow uses Flutter 3.47.9 and Java 17, runs analysis and tests, then builds a **debug-only APK**.
-- Open **Actions → NEXORA Android Preview APK** and download the artifact named `nexora-debug-apk`.
-- This artifact is for installation/testing only. It is not signed for Google Play and does not make provider-dependent features production-ready.
+- A manual debug-APK workflow may exist for preview purposes, but it is **not authorized to run during the source/specification completion phase**.
+- Do not dispatch APK/AAB/Web build workflows until the source files, configuration, security review, and acceptance evidence are complete and a separate build approval is given.
+- A debug APK, if produced later, is for installation/testing only; it is not signed for Google Play and does not make provider-dependent features production-ready.
 
 ## CI and release builds
 
