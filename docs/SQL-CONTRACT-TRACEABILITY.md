@@ -187,3 +187,12 @@ Additional read-only catalog checks confirmed that several objects associated wi
 - Indexes: `public.reposts_user_post_unique_idx` and `public.profiles_username_lower_key`.
 
 This proves these objects exist live; it does not prove the local SQL file is byte-for-byte the source that created them. The reconciliation task is therefore to recover exact migration provenance/content, not to blindly apply every local-only filename.
+## 10. Live RLS and Storage baseline
+
+Read-only catalog inspection returned 38 ordinary tables in `public` and 1 in `private`; all 39 had RLS enabled. This is a positive baseline finding, not proof that every policy is correct or every operation is authorized as intended.
+
+The live `nexora-media` Storage bucket is private (`public = false`), has a 50 MiB per-object limit, and allows JPEG, PNG, WebP, GIF, MP4, WebM, MP3, M4A, OGG and PDF MIME types. Storage object policies observed for this bucket include owner-folder upload/delete and authorized reads through `private.can_read_media_path(name)`.
+
+Selected live policies inspected: post visibility filters deleted posts and blocks; story reads use `private.can_view_story(id)`; message attachment reads have a restrictive non-deleted-message + conversation-membership policy; attachment inserts have a restrictive MIME/10 MiB/image-message check; community invite direct table access is denied; nearby-location rows are owner-only.
+
+These findings are from policy catalog definitions, not authenticated behavior tests. In particular, the client-side media service accepts more formats/flows than the restrictive message-attachment policy; verify each upload purpose against its intended policy rather than assuming every bucket MIME type is accepted in every feature.
