@@ -221,3 +221,5 @@ For exact deployed definitions captured read-only on 2026-11-06, see:
 - `docs/ERD-LIVE-INDEXES.md` — all 106 deployed index definitions.
 
 These snapshots are descriptive only. They do not replace local migration source or authorize schema changes.
+
+- `docs/ERD-LIVE-POLICIES.md` — all 112 deployed RLS policy definitions, including command, roles, USING, and WITH CHECK expressions.
