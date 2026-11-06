@@ -281,3 +281,5 @@ NEXORA is **not yet production-ready for public launch**. Public release require
 - Community discovery pagination now uses a backend-row offset, deduplicates visible community IDs, and discards stale page/membership responses after a refresh. Membership actions also stop safely when the authenticated session is absent.
 
 - Comments pagination now uses a request-generation guard: an older load-more response cannot replace a newer refresh or post-submit reload, and refresh resets the loading-more state. Stable descending `(created_at, id)` ordering and backend offsets are retained; concurrent-session integration tests remain pending.
+
+- Community creation and owner badges now tolerate an expired session without force-unwrapping `currentUser`; creation stops with a safe sign-in message and list rendering no longer crashes.
