@@ -369,9 +369,13 @@ class _FriendRequestActionState extends State<FriendRequestAction> {
 
   @override
   Widget build(BuildContext context) {
-    final status = _request?['status'] as String?;
+    final viewerMatches = Supabase.instance.client.auth.currentUser?.id != null &&
+        Supabase.instance.client.auth.currentUser?.id == _myId;
+    final status = viewerMatches ? _request?['status'] as String? : null;
     final incoming = status == 'pending' && _request?['requester_id'] != _myId;
-    final tooltip = _loading
+    final tooltip = !viewerMatches
+        ? 'تغيرت جلسة الدخول'
+        : _loading
         ? 'تحميل حالة الصداقة'
         : status == 'accepted'
             ? 'إزالة الصديق'
@@ -382,8 +386,10 @@ class _FriendRequestActionState extends State<FriendRequestAction> {
                     : 'إضافة صديق';
     return IconButton(
       tooltip: tooltip,
-      onPressed: _loading || _busy ? null : _perform,
-      icon: _loading || _busy
+      onPressed: !viewerMatches || _loading || _busy ? null : _perform,
+      icon: !viewerMatches
+          ? const Icon(Icons.person_outline)
+          : _loading || _busy
           ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
           : Icon(status == 'accepted'
               ? Icons.person
